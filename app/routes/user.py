@@ -1,10 +1,17 @@
-from flask import Blueprint, jsonify
+from flask.views import MethodView
+from flask_smorest import Blueprint
 from app.services.user import get_all_users
+from app.schemas.user import UserSchema
 
-user_bp = Blueprint("users", __name__)
+
+user_bp = Blueprint(
+    "users", "users", url_prefix="/users",
+    description="Operações relacionadas aos usuários"
+)
 
 
-@user_bp.route("/", methods=["GET"])
-def list_users():
-    users = get_all_users()
-    return jsonify(users)
+@user_bp.route("")
+class UsersList(MethodView):
+    @user_bp.response(200, UserSchema(many=True))
+    def get(self):
+        return get_all_users()

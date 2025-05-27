@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_smorest import Api
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -22,8 +23,10 @@ def create_app():
     # models imports
     from app import models  # noqa: F401
 
+    api = Api(app)
+
     # routes register
-    from app.routes import api_bp
-    app.register_blueprint(api_bp, url_prefix="/api")
+    from app.routes import register_blueprints
+    register_blueprints(api)
 
     return app
