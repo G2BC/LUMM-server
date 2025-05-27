@@ -1,4 +1,4 @@
-from .user import user_bp
+from .user_routes import user_bp
 
 
 def register_blueprints(api):
