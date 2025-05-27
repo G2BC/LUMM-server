@@ -9,7 +9,7 @@ def list_users(page=None, per_page=None):
             "total": pagination.total,
             "page": page,
             "per_page": per_page,
-            "pages": pagination.pages
+            "pages": pagination.pages,
         }
 
     users = get_users()
@@ -18,5 +18,5 @@ def list_users(page=None, per_page=None):
         "total": len(users),
         "page": None,
         "per_page": None,
-        "pages": None
+        "pages": None,
     }
