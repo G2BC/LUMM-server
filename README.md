@@ -10,7 +10,7 @@
 ### 1️⃣ Clonar o repositório
 
 ```bash
-git clone git@github.com:G2BC/LUMM.git
+git@github.com:G2BC/LUMM-server.git
 cd backend
 ```
 
