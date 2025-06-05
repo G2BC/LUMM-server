@@ -11,7 +11,7 @@
 
 ```bash
 git@github.com:G2BC/LUMM-server.git
-cd backend
+cd LUMM-server
 ```
 
 ### 2️⃣ Criar e ativar o ambiente virtual (Recomendado)
