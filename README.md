@@ -63,3 +63,15 @@ flask db upgrade
 ```bash
 deactivate
 ```
+
+### ⚠️ Mantenha as regras de Lint e Formatação
+
+Para garantir a consistência e a qualidade do código neste projeto, **antes de mesclar uma PR**, certifique-se de que seu código passou na ferramenta de lint e formatação (`ruff`) durante a execução da action de CI.
+
+### 🛠️ Dicas
+
+Rode `ruff check .` e `ruff format .` antes de commitar.
+
+## 📄 Licença
+
+Distribuído sob a Licença MIT. Veja `LICENSE` para mais informações.
