@@ -1,9 +1,9 @@
+from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_smorest import Api
-from flask_cors import CORS
-from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 migrate = Migrate()

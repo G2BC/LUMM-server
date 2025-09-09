@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP"]
+ignore = []
+
+exclude = ["venv", ".venv", "build", "dist", "__pycache__", "migrations"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false

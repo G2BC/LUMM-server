@@ -1,9 +1,9 @@
+from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint
-from flask import request
-from app.services.user_service import list_users
-from app.schemas.user_schemas import UserPaginationSchema
 
+from app.schemas.user_schemas import UserPaginationSchema
+from app.services.user_service import list_users
 
 user_bp = Blueprint(
     "users",
