@@ -1,16 +1,13 @@
 [tool.ruff]
-line-length = 88
-indent-width = 4
 target-version = "py38"
+line-length = 100
+src = ["app", "scripts", "tests"]
+extend-exclude = ["migrations", "venv", ".venv", "node_modules", ".pytest_cache", ".ruff_cache"]
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "I", "UP"]
+select = ["E", "F", "I", "UP"]
 ignore = []
-
-exclude = ["venv", ".venv", "build", "dist", "__pycache__", "migrations"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-line-ending = "lf"
-skip-magic-trailing-comma = false

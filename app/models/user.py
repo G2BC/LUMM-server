@@ -3,13 +3,12 @@ from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
-from app.utils.generate_uuid import generate_uuid
 
 
 class User(db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.String, primary_key=True, default=generate_uuid)
+    id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     institution = db.Column(db.String(150), nullable=True)
     email = db.Column(db.String(150), nullable=False, unique=True)
