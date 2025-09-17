@@ -1,11 +1,26 @@
+"""
+Importa dados de espécies para a tabela `species` a partir de um arquivo .xlsx (release 1.0).
+
+Antes de executar, defina as ENVS:
+- EXCEL_PATH: caminho do arquivo .xlsx.
+- SHEET: nome da planilha (aba) com os dados.
+
+Exemplo:
+    export EXCEL_PATH="/caminho/arquivo.xlsx"
+    export SHEET="SPECIES"
+
+    python import_species_release_1.py
+"""
+
 import math
+import os
 
 import pandas as pd
 from app import create_app, db
 from app.models.specie import Specie
 
-EXCEL_PATH = "species.xlsx"
-SHEET = "SPECIES"
+EXCEL_PATH = os.getenv("EXCEL_PATH", "species.xlsx")
+SHEET = os.getenv("SHEET", "SPECIES")
 
 
 def _is_nan(x):

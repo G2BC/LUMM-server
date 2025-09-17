@@ -2,7 +2,9 @@ alembic==1.14.1
 apispec==6.6.1
 black==24.8.0
 blinker==1.8.2
+certifi==2025.8.3
 cfgv==3.4.0
+charset-normalizer==3.4.3
 click==8.1.8
 distlib==0.4.0
 et-xmlfile==2.0.0
@@ -13,6 +15,7 @@ Flask-Migrate==4.1.0
 flask-smorest==0.42.3
 flask-sqlalchemy==3.1.1
 identify==2.6.1
+idna==3.10
 importlib-metadata==8.5.0
 importlib-resources==6.4.5
 itsdangerous==2.2.0
@@ -35,12 +38,14 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2025.2
 pyyaml==6.0.2
+requests==2.32.4
 ruff==0.12.12
 six==1.17.0
 sqlalchemy==2.0.41
 tomli==2.2.1
 typing-extensions==4.13.2
 tzdata==2025.2
+urllib3==2.2.3
 virtualenv==20.34.0
 webargs==8.6.0
 werkzeug==2.3.8
