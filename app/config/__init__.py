@@ -13,3 +13,4 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
+    API_KEY = os.getenv("API_KEY", "")

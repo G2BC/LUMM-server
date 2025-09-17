@@ -22,7 +22,7 @@ def get_species_with_photos(search: str = ""):
     return base.filter(and_(*filters)).all()
 
 
-def get_species_with_photos_pagination(search: str = "", page: int = 1, per_page: int = 20):
+def get_species_with_photos_pagination(search: str = "", page: int = 1, per_page: int = 30):
     base = Specie.query.options(selectinload(Specie.photos)).order_by(Specie.scientific_name.asc())
 
     search = (search or "").strip()

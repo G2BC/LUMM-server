@@ -16,7 +16,7 @@ import math
 import os
 
 import pandas as pd
-from app import create_app, db
+from app import app, db
 from app.models.specie import Specie
 
 EXCEL_PATH = os.getenv("EXCEL_PATH", "species.xlsx")
@@ -60,7 +60,6 @@ def main():
 
     inserted = updated = skipped = 0
 
-    app = create_app()
     with app.app_context():
         for row in df.to_dict(orient="records"):
             sci = _txt(row.get("TAXON"))

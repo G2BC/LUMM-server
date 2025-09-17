@@ -9,6 +9,8 @@ class SpeciesPhotoSchema(Schema):
     attribution = fields.String(allow_none=True, dump_only=True)
     source = fields.String(dump_only=True)
     fetched_at = fields.DateTime(dump_only=True)
+    lumm = fields.Bool(allow_none=True)
+    featured = fields.Bool(allow_none=True)
 
 
 class SpecieWithPhotosSchema(Schema):
@@ -18,7 +20,15 @@ class SpecieWithPhotosSchema(Schema):
     photos = fields.List(
         fields.Nested(
             SpeciesPhotoSchema(
-                only=("photo_id", "medium_url", "original_url", "license_code", "attribution")
+                only=(
+                    "photo_id",
+                    "medium_url",
+                    "original_url",
+                    "license_code",
+                    "attribution",
+                    "lumm",
+                    "featured",
+                )
             ),
             dump_only=True,
         )

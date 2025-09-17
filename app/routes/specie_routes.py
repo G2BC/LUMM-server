@@ -4,6 +4,7 @@ from flask_smorest import Blueprint
 
 from app.schemas.specie_schemas import SpecieWithPhotosPaginationSchema
 from app.services.specie_service import list_species_with_photos
+from app.utils.require_api_key import require_api_key
 
 specie_bp = Blueprint(
     "species",
@@ -14,11 +15,13 @@ specie_bp = Blueprint(
 
 
 @specie_bp.route("")
-class UsersList(MethodView):
+class SpeciesSearchList(MethodView):
+    decorators = [require_api_key]
+
     @specie_bp.response(200, SpecieWithPhotosPaginationSchema)
     def get(self):
         search = request.args.get("search", type=str)
         page = request.args.get("page", type=int)
-        per_page = request.args.get("per_page", type=int)
+        per_page = request.args.get("per_page", type=int) or 30
 
         return list_species_with_photos(search, page, per_page)

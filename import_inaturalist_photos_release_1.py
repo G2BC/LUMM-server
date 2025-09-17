@@ -16,7 +16,7 @@ import time
 from typing import Any, Dict, List, Optional, Set
 
 import requests
-from app import create_app, db
+from app import app, db
 from app.models.specie import Specie, SpeciesPhoto
 
 INAT_API = "https://api.inaturalist.org/v1/taxa"
@@ -140,7 +140,6 @@ def upsert_species_photos(species_id: int, photos: List[Dict[str, Any]]) -> int:
 
 
 def main():
-    app = create_app()
     sess = get_session()
 
     BATCH_COMMIT = int(os.getenv("BATCH_COMMIT", "20"))

@@ -5,29 +5,22 @@ from flask_migrate import Migrate
 from flask_smorest import Api
 from flask_sqlalchemy import SQLAlchemy
 
+from app import models  # noqa: F401
+from app.routes import register_blueprints
+
+load_dotenv()
+
 db = SQLAlchemy()
 migrate = Migrate()
 
+app = Flask(__name__)
+app.config.from_object("app.config.Config")
 
-def create_app():
-    load_dotenv()
+CORS(app)
 
-    app = Flask(__name__)
-    app.config.from_object("app.config.Config")
+db.init_app(app)
+migrate.init_app(app, db)
 
-    CORS(app)
+api = Api(app)
 
-    db.init_app(app)
-    migrate.init_app(app, db)
-
-    # models imports
-    from app import models  # noqa: F401
-
-    api = Api(app)
-
-    # routes register
-    from app.routes import register_blueprints
-
-    register_blueprints(api)
-
-    return app
+register_blueprints(api)
