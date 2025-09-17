@@ -16,10 +16,11 @@ import math
 import os
 
 import pandas as pd
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models.specie import Specie
 
-EXCEL_PATH = os.getenv("EXCEL_PATH", "species.xlsx")
+EXCEL_PATH = os.getenv("EXCEL_PATH", "Bioluminescent fungi_Perryetal2025.xlsx")
 SHEET = os.getenv("SHEET", "SPECIES")
 
 
@@ -52,6 +53,9 @@ def _b(v):
     if s in {"false", "f", "0", "no", "n", "nao", "não", "-"}:
         return False
     return None  # Se desconhecido NULL
+
+
+app = create_app()
 
 
 def main():

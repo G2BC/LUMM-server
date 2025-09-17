@@ -1,7 +1,7 @@
 from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql import func
 
-from app import db
+from app.extensions import db
 
 
 class SpeciesPhoto(db.Model):

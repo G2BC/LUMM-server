@@ -16,7 +16,8 @@ import time
 from typing import Any, Dict, List, Optional, Set
 
 import requests
-from app import app, db
+from app import create_app
+from app.extensions import db
 from app.models.specie import Specie, SpeciesPhoto
 
 INAT_API = "https://api.inaturalist.org/v1/taxa"
@@ -137,6 +138,9 @@ def upsert_species_photos(species_id: int, photos: List[Dict[str, Any]]) -> int:
             inserted += 1
 
     return inserted
+
+
+app = create_app()
 
 
 def main():
