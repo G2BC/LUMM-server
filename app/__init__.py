@@ -21,6 +21,10 @@ def create_app():
 
     api = Api(app)
 
+    @app.route("/health", methods=["GET"])
+    def health():
+        return {"status": "ok"}, 200
+
     with app.app_context():
         from app import models  # noqa: F401
         from app.routes import register_blueprints
