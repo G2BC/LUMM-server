@@ -30,13 +30,13 @@ class SpeciesPhoto(db.Model):
     lumm = db.Column(db.Boolean, nullable=True)
     featured = db.Column(db.Boolean, nullable=True)
 
-    species = db.relationship("Specie", back_populates="photos")
+    species = db.relationship("Species", back_populates="photos")
 
     def __repr__(self):
         return f"<SpeciesPhoto species_id={self.species_id} photo_id={self.photo_id}>"
 
 
-class Specie(db.Model):
+class Species(db.Model):
     __tablename__ = "species"
     __table_args__ = (
         db.UniqueConstraint("scientific_name", name="uq_species_scientific_name"),

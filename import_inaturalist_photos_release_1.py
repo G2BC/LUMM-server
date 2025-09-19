@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Set
 import requests
 from app import create_app
 from app.extensions import db
-from app.models.specie import Specie, SpeciesPhoto
+from app.models.species import Species, SpeciesPhoto
 
 INAT_API = "https://api.inaturalist.org/v1/taxa"
 
@@ -150,9 +150,9 @@ def main():
 
     with app.app_context():
         rows = (
-            db.session.query(Specie.id, Specie.inaturalist_taxon_id)
-            .filter(Specie.inaturalist_taxon_id.isnot(None))
-            .order_by(Specie.id.asc())
+            db.session.query(Species.id, Species.inaturalist_taxon_id)
+            .filter(Species.inaturalist_taxon_id.isnot(None))
+            .order_by(Species.id.asc())
             .all()
         )
 

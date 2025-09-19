@@ -1,4 +1,4 @@
-from .specie import Specie, SpeciesPhoto
+from .species import Species, SpeciesPhoto
 from .user import User
 
-__all__ = ["User", "SpeciesPhoto", "Specie"]
+__all__ = ["User", "SpeciesPhoto", "Species"]

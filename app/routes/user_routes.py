@@ -10,7 +10,6 @@ user_bp = Blueprint(
     "users",
     "users",
     url_prefix="/users",
-    description="Operações relacionadas aos usuários",
 )
 
 

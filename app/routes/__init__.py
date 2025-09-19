@@ -3,6 +3,6 @@ def register_blueprints(api) -> None:
 
     api.register_blueprint(user_bp, url_prefix="/users")
 
-    from .specie_routes import specie_bp
+    from .species_routes import specie_bp
 
     api.register_blueprint(specie_bp, url_prefix="/species")

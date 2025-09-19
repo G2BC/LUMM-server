@@ -13,7 +13,7 @@ class SpeciesPhotoSchema(Schema):
     featured = fields.Bool(allow_none=True)
 
 
-class SpecieWithPhotosSchema(Schema):
+class SpeciesWithPhotosSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
     lineage = fields.String(required=True)
@@ -35,8 +35,8 @@ class SpecieWithPhotosSchema(Schema):
     )
 
 
-class SpecieWithPhotosPaginationSchema(Schema):
-    items = fields.List(fields.Nested(SpecieWithPhotosSchema))
+class SpeciesWithPhotosPaginationSchema(Schema):
+    items = fields.List(fields.Nested(SpeciesWithPhotosSchema))
     total = fields.Integer()
     page = fields.Integer(allow_none=True)
     per_page = fields.Integer(allow_none=True)

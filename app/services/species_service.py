@@ -1,6 +1,7 @@
-from app.repositories.specie_repository import (
+from app.repositories.species_repository import (
     get_species_with_photos,
     get_species_with_photos_pagination,
+    select_lineage,
 )
 
 
@@ -23,3 +24,7 @@ def list_species_with_photos(search="", page=None, per_page=None):
         "per_page": None,
         "pages": None,
     }
+
+
+def lineage_select(search=""):
+    return select_lineage(search)

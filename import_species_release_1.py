@@ -18,7 +18,7 @@ import os
 import pandas as pd
 from app import create_app
 from app.extensions import db
-from app.models.specie import Specie
+from app.models.species import Species
 
 EXCEL_PATH = os.getenv("EXCEL_PATH", "Bioluminescent fungi_Perryetal2025.xlsx")
 SHEET = os.getenv("SHEET", "SPECIES")
@@ -71,10 +71,10 @@ def main():
                 skipped += 1
                 continue
 
-            obj = Specie.query.filter_by(scientific_name=sci).one_or_none()
+            obj = Species.query.filter_by(scientific_name=sci).one_or_none()
             is_new = obj is None
             if is_new:
-                obj = Specie(scientific_name=sci)
+                obj = Species(scientific_name=sci)
                 db.session.add(obj)
 
             obj.authors_abbrev = _txt(row.get("AUTHORS (abbreviated)"))
