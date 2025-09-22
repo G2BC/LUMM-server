@@ -3,8 +3,9 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 
 from app.schemas import SelectSchema
-from app.schemas.species_schemas import SpeciesWithPhotosPaginationSchema
+from app.schemas.species_schemas import SpeciesWithPhotosPaginationSchema, SpeciesWithPhotosSchema
 from app.services.species_service import (
+    get_species_service,
     lineage_select,
     list_species_with_photos,
     species_country_select,
@@ -18,7 +19,7 @@ specie_bp = Blueprint(
 )
 
 
-@specie_bp.route("")
+@specie_bp.route("/list")
 class SpeciesSearchList(MethodView):
     decorators = [require_api_key]
 
@@ -53,3 +54,12 @@ class SpeciesCountrySelect(MethodView):
         search = request.args.get("search", type=str)
 
         return species_country_select(search)
+
+
+@specie_bp.route("/<string:species>")
+class GetSpecies(MethodView):
+    decorators = [require_api_key]
+
+    @specie_bp.response(200, SpeciesWithPhotosSchema)
+    def get(self, species: str):
+        return get_species_service(species)

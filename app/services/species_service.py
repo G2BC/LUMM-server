@@ -1,4 +1,5 @@
 from app.repositories.species_repository import (
+    get_species,
     get_species_with_photos,
     get_species_with_photos_pagination,
     select_lineage,
@@ -33,3 +34,7 @@ def lineage_select(search=""):
 
 def species_country_select(search=""):
     return select_species_country(search)
+
+
+def get_species_service(species=""):
+    return get_species(species)

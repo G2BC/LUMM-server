@@ -80,3 +80,21 @@ def select_species_country(search: str = ""):
     options = [{"label": country, "value": country} for (country,) in countries if country]
 
     return options
+
+
+def get_species(species: str = ""):
+    if not species:
+        return None
+
+    base = Species.query.options(selectinload(Species.photos)).order_by(
+        Species.scientific_name.asc()
+    )
+
+    if species.isdigit():
+        id = int(species)
+        base = base.filter(Species.id == id)
+    else:
+        name = species.replace("+", " ")
+        base = base.filter(Species.scientific_name.ilike(f"%{name}%"))
+
+    return base.first()
