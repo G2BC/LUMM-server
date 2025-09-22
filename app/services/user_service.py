@@ -3,7 +3,7 @@ from app.repositories.user_repository import UserRepository
 
 class UserService:
     @classmethod
-    def list_users(page=None, per_page=None):
+    def list_users(self, page=None, per_page=None):
         if page and per_page:
             pagination = UserRepository.get_users_pagination(page, per_page)
             return {

@@ -24,9 +24,9 @@ class SpeciesSearchList(MethodView):
         lineage = request.args.get("lineage", type=str)
         country = request.args.get("country", type=str)
         page = request.args.get("page", type=int)
-        per_page = request.args.get("per_page", type=int) or 30
+        per_page = request.args.get("per_page", type=int)
 
-        return SpeciesService.list(search, lineage, country, page, per_page)
+        return SpeciesService.search(search, lineage, country, page, per_page)
 
 
 @specie_bp.route("/lineage/select")

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.models.species import Species
 from sqlalchemy.orm import selectinload
 
@@ -5,11 +7,12 @@ from sqlalchemy.orm import selectinload
 class SpeciesRepository:
     @classmethod
     def list(
-        search: str = None,
-        lineage: str = None,
-        country: str = None,
-        page: int = None,
-        per_page: int = None,
+        self,
+        search: Optional[str] = "",
+        lineage: Optional[str] = "",
+        country: Optional[str] = "",
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
     ):
         base = Species.query.options(selectinload(Species.photos)).order_by(
             Species.scientific_name.asc()
@@ -35,7 +38,7 @@ class SpeciesRepository:
         return base.all()
 
     @classmethod
-    def get(species: str = None):
+    def get(self, species: Optional[str] = ""):
         if not species:
             return None
 
@@ -53,7 +56,7 @@ class SpeciesRepository:
         return base.first()
 
     @classmethod
-    def lineage_select(search: str = None):
+    def lineage_select(self, search: Optional[str] = ""):
         search = (search or "").strip()
 
         query = Species.query.with_entities(Species.lineage).distinct()
@@ -70,7 +73,10 @@ class SpeciesRepository:
         return options
 
     @classmethod
-    def country_select(search: str = ""):
+    def country_select(
+        self,
+        search: Optional[str] = "",
+    ):
         search = (search or "").strip()
 
         query = Species.query.with_entities(Species.type_country).distinct()
