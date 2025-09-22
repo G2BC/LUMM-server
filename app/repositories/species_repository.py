@@ -2,99 +2,86 @@ from app.models.species import Species
 from sqlalchemy.orm import selectinload
 
 
-def get_species_with_photos(search: str = "", lineage: str = "", country: str = ""):
-    base = Species.query.options(selectinload(Species.photos)).order_by(
-        Species.scientific_name.asc()
-    )
+class SpeciesRepository:
+    @classmethod
+    def list(
+        search: str = None,
+        lineage: str = None,
+        country: str = None,
+        page: int = None,
+        per_page: int = None,
+    ):
+        base = Species.query.options(selectinload(Species.photos)).order_by(
+            Species.scientific_name.asc()
+        )
 
-    filters = []
+        filters = []
 
-    if search := (search or "").strip():
-        filters.append(Species.scientific_name.ilike(f"%{search}%"))
+        if search := (search or "").strip():
+            filters.append(Species.scientific_name.ilike(f"%{search}%"))
 
-    if lineage:
-        filters.append(Species.lineage.ilike(f"%{lineage}%"))
+        if lineage:
+            filters.append(Species.lineage.ilike(f"%{lineage}%"))
 
-    if country:
-        filters.append(Species.type_country.ilike(f"%{country}%"))
+        if country:
+            filters.append(Species.type_country.ilike(f"%{country}%"))
 
-    if filters:
-        base = base.filter(*filters)
+        if filters:
+            base = base.filter(*filters)
 
-    return base.all()
+        if page:
+            return base.paginate(page=page, per_page=per_page, error_out=False)
 
+        return base.all()
 
-def get_species_with_photos_pagination(
-    search: str = "", lineage: str = "", country: str = "", page: int = 1, per_page: int = 30
-):
-    base = Species.query.options(selectinload(Species.photos)).order_by(
-        Species.scientific_name.asc()
-    )
+    @classmethod
+    def get(species: str = None):
+        if not species:
+            return None
 
-    filters = []
+        base = Species.query.options(selectinload(Species.photos)).order_by(
+            Species.scientific_name.asc()
+        )
 
-    if search := (search or "").strip():
-        filters.append(Species.scientific_name.ilike(f"%{search}%"))
+        if species.isdigit():
+            id = int(species)
+            base = base.filter(Species.id == id)
+        else:
+            name = species.replace("+", " ")
+            base = base.filter(Species.scientific_name.ilike(f"%{name}%"))
 
-    if lineage:
-        filters.append(Species.lineage.ilike(f"%{lineage}%"))
+        return base.first()
 
-    if country:
-        filters.append(Species.type_country.ilike(f"%{country}%"))
+    @classmethod
+    def lineage_select(search: str = None):
+        search = (search or "").strip()
 
-    if filters:
-        base = base.filter(*filters)
+        query = Species.query.with_entities(Species.lineage).distinct()
 
-    return base.paginate(page=page, per_page=per_page, error_out=False)
+        if search:
+            query = query.filter(Species.lineage.ilike(f"%{search}%"))
 
+        query = query.order_by(Species.lineage.asc())
 
-def select_lineage(search: str = ""):
-    search = (search or "").strip()
+        lineages = query.all()
 
-    query = Species.query.with_entities(Species.lineage).distinct()
+        options = [{"label": lineage, "value": lineage} for (lineage,) in lineages if lineage]
 
-    if search:
-        query = query.filter(Species.lineage.ilike(f"%{search}%"))
+        return options
 
-    query = query.order_by(Species.lineage.asc())
+    @classmethod
+    def country_select(search: str = ""):
+        search = (search or "").strip()
 
-    lineages = query.all()
+        query = Species.query.with_entities(Species.type_country).distinct()
 
-    options = [{"label": lineage, "value": lineage} for (lineage,) in lineages if lineage]
+        if search:
+            query = query.filter(Species.type_country.ilike(f"%{search}%"))
 
-    return options
+        query = query.order_by(Species.type_country.asc())
 
+        countries = query.all()
 
-def select_species_country(search: str = ""):
-    search = (search or "").strip()
+        options = [{"label": country, "value": country} for (country,) in countries if country]
 
-    query = Species.query.with_entities(Species.type_country).distinct()
-
-    if search:
-        query = query.filter(Species.type_country.ilike(f"%{search}%"))
-
-    query = query.order_by(Species.type_country.asc())
-
-    countries = query.all()
-
-    options = [{"label": country, "value": country} for (country,) in countries if country]
-
-    return options
-
-
-def get_species(species: str = ""):
-    if not species:
-        return None
-
-    base = Species.query.options(selectinload(Species.photos)).order_by(
-        Species.scientific_name.asc()
-    )
-
-    if species.isdigit():
-        id = int(species)
-        base = base.filter(Species.id == id)
-    else:
-        name = species.replace("+", " ")
-        base = base.filter(Species.scientific_name.ilike(f"%{name}%"))
-
-    return base.first()
+        return options

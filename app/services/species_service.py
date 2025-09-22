@@ -1,40 +1,37 @@
-from app.repositories.species_repository import (
-    get_species,
-    get_species_with_photos,
-    get_species_with_photos_pagination,
-    select_lineage,
-    select_species_country,
-)
+from app.repositories.species_repository import SpeciesRepository
 
 
-def list_species_with_photos(search="", lineage="", country="", page=None, per_page=None):
-    if page and per_page:
-        pagination = get_species_with_photos_pagination(search, lineage, country, page, per_page)
+class SpeciesService:
+    @classmethod
+    def list(search=None, lineage=None, country=None, page=None, per_page=None):
+        if page:
+            per_page = per_page or 30
+            pagination = SpeciesRepository.list(search, lineage, country, page, per_page)
+            return {
+                "items": pagination.items,
+                "total": pagination.total,
+                "page": page,
+                "per_page": per_page,
+                "pages": pagination.pages,
+            }
+
+        spacies = SpeciesRepository.list(search, lineage, country)
         return {
-            "items": pagination.items,
-            "total": pagination.total,
-            "page": page,
-            "per_page": per_page,
-            "pages": pagination.pages,
+            "items": spacies,
+            "total": len(spacies),
+            "page": None,
+            "per_page": None,
+            "pages": None,
         }
 
-    spacies = get_species_with_photos(search, lineage, country)
-    return {
-        "items": spacies,
-        "total": len(spacies),
-        "page": None,
-        "per_page": None,
-        "pages": None,
-    }
+    @classmethod
+    def select_lineage(search=None):
+        return SpeciesRepository.lineage_select(search)
 
+    @classmethod
+    def country_select(search=None):
+        return SpeciesRepository.country_select(search)
 
-def lineage_select(search=""):
-    return select_lineage(search)
-
-
-def species_country_select(search=""):
-    return select_species_country(search)
-
-
-def get_species_service(species=""):
-    return get_species(species)
+    @classmethod
+    def get(species=None):
+        return SpeciesRepository.get(species)

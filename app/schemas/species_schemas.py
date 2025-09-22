@@ -17,6 +17,14 @@ class SpeciesWithPhotosSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
     lineage = fields.String(required=True)
+    famiy = fields.String(required=True)
+    lumm_mycelium = fields.Bool(allow_none=True)
+    lumm_basidiome = fields.Bool(allow_none=True)
+    lumm_stipe = fields.Bool(allow_none=True)
+    lumm_pileus = fields.Bool(allow_none=True)
+    lumm_lamellae = fields.Bool(allow_none=True)
+    lumm_spores = fields.Bool(allow_none=True)
+    types_country = fields.String(allow_none=True)
     photos = fields.List(
         fields.Nested(
             SpeciesPhotoSchema(
