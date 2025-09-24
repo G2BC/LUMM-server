@@ -14,7 +14,6 @@ user_bp = Blueprint(
 
 
 @user_bp.route("")
-@require_api_key
 class UsersList(MethodView):
     decorators = [require_api_key]
 

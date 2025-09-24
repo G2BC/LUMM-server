@@ -16,7 +16,7 @@ class SpeciesPhoto(db.Model):
         db.ForeignKey("species.id", ondelete="CASCADE"),
         nullable=False,
     )
-    photo_id = db.Column(db.BigInteger, nullable=False)  # ID da foto no iNat
+    photo_id = db.Column(db.BigInteger, nullable=False)
     medium_url = db.Column(db.Text, nullable=False)
     original_url = db.Column(db.Text)
     license_code = db.Column(db.Text)  # ex.: 'CC-BY-NC'
@@ -49,8 +49,6 @@ class Species(db.Model):
 
     # Identidade científica
     scientific_name = db.Column(db.Text, nullable=False)
-    authors_abbrev = db.Column(db.Text)
-    publication_year = db.Column(db.Integer)
 
     # Taxonomia (simples)
     lineage = db.Column(db.Text)
@@ -101,6 +99,12 @@ class Species(db.Model):
     # Relações
     photos = db.relationship(
         "SpeciesPhoto",
+        back_populates="species",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    taxonomies = db.relationship(
+        "Taxon",
         back_populates="species",
         cascade="all, delete-orphan",
         passive_deletes=True,
