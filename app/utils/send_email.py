@@ -18,6 +18,8 @@ def send_email(subject: str, body: str, to: str, reply_to: Optional[str] = None)
     if reply_to:
         msg["Reply-To"] = reply_to
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp_server:
+    with smtplib.SMTP("smtp.gmail.com", 587) as smtp_server:
+        smtp_server.ehlo()
+        smtp_server.starttls()
         smtp_server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         smtp_server.sendmail(GMAIL_USER, to, msg.as_string())

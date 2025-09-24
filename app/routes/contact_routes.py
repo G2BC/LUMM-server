@@ -26,15 +26,15 @@ class Contact(MethodView):
         name = (data.get("name") or "").strip()
         email = (data.get("email") or "").strip()
         message = (data.get("message") or "").strip()
-        assunto = (data.get("subject") or "").lower().strip()
+        subject = (data.get("subject") or "").lower().strip()
 
-        if not name or not email or not message or not assunto:
+        if not name or not email or not message or not subject:
             return {"error": "Preencha todos os campos."}, 400
 
         try:
             send_email(
-                subject=f"[LUMM] Contato - {assunto.title()} - {name}",
-                body=f"Nome: {name}\nAssunto: {assunto}\nEmail: {email}\n\nMensagem:\n{message}\n",
+                subject=f"[LUMM] Contato - {subject.title()} - {name}",
+                body=f"Nome: {name}\nAssunto: {subject}\nEmail: {email}\n\nMensagem:\n{message}\n",
                 to=GMAIL_TO,
                 reply_to=email,
             )
