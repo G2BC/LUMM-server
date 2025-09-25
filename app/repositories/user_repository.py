@@ -3,9 +3,9 @@ from app.models.user import User
 
 class UserRepository:
     @classmethod
-    def get_users(self):
+    def get_users(cls):
         return User.query.all()
 
     @classmethod
-    def get_users_pagination(self, page, per_page):
+    def get_users_pagination(cls, page, per_page):
         return User.query.paginate(page=page, per_page=per_page, error_out=False)

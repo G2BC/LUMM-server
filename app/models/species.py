@@ -103,9 +103,10 @@ class Species(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    taxonomies = db.relationship(
+    taxonomy = db.relationship(
         "Taxon",
         back_populates="species",
+        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )

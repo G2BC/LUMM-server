@@ -8,7 +8,7 @@ class SpeciesService:
 
     @classmethod
     def search(
-        self,
+        cls,
         search: Optional[str] = "",
         lineage: Optional[str] = "",
         country: Optional[str] = "",
@@ -23,7 +23,7 @@ class SpeciesService:
             if not isinstance(page, int) or page < 1:
                 raise ValueError("`page` deve ser um inteiro >= 1.")
 
-            per_page = per_page or self.DEFAULT_PER_PAGE
+            per_page = per_page or cls.DEFAULT_PER_PAGE
             pagination = SpeciesRepository.list(search, lineage, country, page, per_page)
             return {
                 "items": pagination.items,
@@ -43,13 +43,13 @@ class SpeciesService:
         }
 
     @classmethod
-    def select_lineage(self, search: Optional[str] = ""):
+    def select_lineage(cls, search: Optional[str] = ""):
         return SpeciesRepository.lineage_select(search)
 
     @classmethod
-    def country_select(self, search: Optional[str] = ""):
+    def country_select(cls, search: Optional[str] = ""):
         return SpeciesRepository.country_select(search)
 
     @classmethod
-    def get(self, species: Optional[str] = ""):
+    def get(cls, species: Optional[str] = ""):
         return SpeciesRepository.get(species)

@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields
 
+from .taxon_schemas import TaxonSchema
+
 
 class SpeciesPhotoSchema(Schema):
     photo_id = fields.Integer(dump_only=True)
@@ -16,8 +18,8 @@ class SpeciesPhotoSchema(Schema):
 class SpeciesWithPhotosSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
-    lineage = fields.String(required=True)
-    family = fields.String(required=True)
+    lineage = fields.String(allow_none=True)
+    lineage = fields.String(allow_none=True)
     lumm_mycelium = fields.Bool(allow_none=True)
     lumm_basidiome = fields.Bool(allow_none=True)
     lumm_stipe = fields.Bool(allow_none=True)
@@ -25,6 +27,7 @@ class SpeciesWithPhotosSchema(Schema):
     lumm_lamellae = fields.Bool(allow_none=True)
     lumm_spores = fields.Bool(allow_none=True)
     types_country = fields.String(allow_none=True)
+    taxonomy = fields.Nested(TaxonSchema, dump_only=True)
     photos = fields.List(
         fields.Nested(
             SpeciesPhotoSchema(

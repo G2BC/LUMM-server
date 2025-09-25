@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 class SpeciesRepository:
     @classmethod
     def list(
-        self,
+        cls,
         search: Optional[str] = "",
         lineage: Optional[str] = "",
         country: Optional[str] = "",
@@ -38,13 +38,13 @@ class SpeciesRepository:
         return base.all()
 
     @classmethod
-    def get(self, species: Optional[str] = ""):
+    def get(cls, species: Optional[str] = ""):
         if not species:
             return None
 
-        base = Species.query.options(selectinload(Species.photos)).order_by(
-            Species.scientific_name.asc()
-        )
+        base = Species.query.options(
+            selectinload(Species.photos), selectinload(Species.taxonomy)
+        ).order_by(Species.scientific_name.asc())
 
         if species.isdigit():
             id = int(species)
@@ -56,7 +56,7 @@ class SpeciesRepository:
         return base.first()
 
     @classmethod
-    def lineage_select(self, search: Optional[str] = ""):
+    def lineage_select(cls, search: Optional[str] = ""):
         search = (search or "").strip()
 
         query = Species.query.with_entities(Species.lineage).distinct()
@@ -74,7 +74,7 @@ class SpeciesRepository:
 
     @classmethod
     def country_select(
-        self,
+        cls,
         search: Optional[str] = "",
     ):
         search = (search or "").strip()
