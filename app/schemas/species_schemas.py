@@ -27,6 +27,8 @@ class SpeciesWithPhotosSchema(Schema):
     lumm_lamellae = fields.Bool(allow_none=True)
     lumm_spores = fields.Bool(allow_none=True)
     types_country = fields.String(allow_none=True)
+    mycobank_type = fields.String(allow_none=True)
+    mycobank_index_fungorum_id = fields.String(allow_none=True)
     taxonomy = fields.Nested(TaxonSchema, dump_only=True)
     photos = fields.List(
         fields.Nested(
