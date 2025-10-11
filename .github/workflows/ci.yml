@@ -122,7 +122,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: backend-security-scan
+          name: server-security-scan
           path: artifacts/*
 
   dast:
@@ -176,5 +176,5 @@ jobs:
       - name: Upload DAST artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dast
+          name: server-dast
           path: artifacts/*
