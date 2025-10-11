@@ -90,8 +90,16 @@ jobs:
         run: |
           trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest -f json -o artifacts/trivy-image.json || echo '{}' > artifacts/trivy-image.json
 
+      - name: Trivy config (table)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'config'
+          format: 'table'
+          output: 'artifacts/trivy-config.txt'
+          ignore-unfixed: true
+
       - name: Trivy config (json)
-        uses: aquasecurity/trivy-action@v33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: 'config'
           format: 'json'
