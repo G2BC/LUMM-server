@@ -18,8 +18,8 @@ jobs:
     runs-on: self-hosted
 
     env:
-      APP_DIR: /home/alenz/G2BC-web-apps/lumm/LUMM-server
-      IMAGE: ghcr.io/g2bc/lumm-server
+      APP_DIR: ${{ vars.APP_DIR }}
+      IMAGE: ${{ vars.APP_IMAGE }}
 
     steps:
       - name: Login no GHCR
