@@ -52,8 +52,6 @@ jobs:
             ELAPSED=$((ELAPSED+2))
           done
           echo "$SERVICE is healthy."
-      - name: Check initial logs
-        run: docker logs --tail=30 lumm-server || true
 
       - name: Clean up old images
         run: docker image prune -f
