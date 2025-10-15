@@ -20,29 +20,30 @@ jobs:
     env:
       APP_DIR: ${{ vars.APP_DIR }}
       IMAGE: ${{ vars.APP_IMAGE }}
+      SERVICE: api
 
     steps:
-      - name: Login no GHCR
+      - name: Login on GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull da imagem
-        run: docker pull "$IMAGE:${{ github.event.inputs.tag }}"
-
-      - name: Deploy com docker compose
+      - name: Update repository
         working-directory: ${{ env.APP_DIR }}
         run: |
-          echo "Atualizando LUMM Server..."
-          docker compose down
-          docker compose up -d
-          echo "✅ Novo container em execução:"
-          docker ps --filter "name=lumm-server"
+          git config --global --add safe.directory "${{ env.APP_DIR }}"
+          git pull --ff-only origin main
 
-      - name: Verificar logs iniciais
+      - name: Deploy with Docker Compose
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          docker compose pull "${SERVICE}"
+          docker compose up -d --no-deps "${SERVICE}"
+
+      - name: Check initial logs
         run: docker logs --tail=30 lumm-server || true
 
-      - name: Limpeza de imagens antigas
+      - name: Clean up old images
         run: docker image prune -f
