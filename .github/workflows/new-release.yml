@@ -1,0 +1,57 @@
+name: Lançar nova release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    name: Deploy on self-hosted runner
+    runs-on: self-hosted
+
+    env:
+      APP_DIR: ${{ vars.APP_DIR }}
+      IMAGE: ${{ vars.APP_IMAGE }}
+      SERVICE: api
+
+    steps:
+      - name: Login on GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update repository
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          git config --global --add safe.directory "${{ env.APP_DIR }}"
+          git pull --ff-only origin main
+
+      - name: Update image and restart container
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          docker compose pull "$SERVICE"
+          docker compose up -d --no-deps "$SERVICE"
+
+      - name: Wait for container health
+        run: |
+          set -e
+          TIMEOUT=60
+          ELAPSED=0
+          while [ "$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")" != "healthy" ]; do
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "Container $SERVICE did not become healthy within $TIMEOUT seconds."
+              exit 1
+            fi
+            echo "Waiting for $SERVICE to become healthy..."
+            sleep 2
+            ELAPSED=$((ELAPSED+2))
+          done
+          echo "$SERVICE is healthy."
+
+      - name: Clean up old images
+        run: docker image prune -f
