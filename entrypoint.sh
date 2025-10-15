@@ -17,5 +17,5 @@ else
   fi
 
   echo "🌐 Starting Gunicorn..."
-  exec gunicorn -w 4 -b 127.0.0.1:4000 wsgi:app
+  exec gunicorn -w 4 -b 0.0.0.0:4000 wsgi:app
 fi
