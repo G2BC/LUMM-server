@@ -32,10 +32,6 @@ jobs:
       - name: Pull da imagem
         run: docker pull "$IMAGE:${{ github.event.inputs.tag }}"
 
-      - name: Pull da imagem atualizada
-        run: |
-          docker pull $IMAGE:${{ steps.tag.outputs.tag }}
-
       - name: Deploy com docker compose
         working-directory: ${{ env.APP_DIR }}
         run: |
