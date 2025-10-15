@@ -2,11 +2,6 @@ name: Lançar nova release
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag da imagem no GHCR (ex: latest ou v1.2.3)"
-        required: true
-        default: latest
 
 permissions:
   contents: read
@@ -36,11 +31,11 @@ jobs:
           git config --global --add safe.directory "${{ env.APP_DIR }}"
           git pull --ff-only origin main
 
-      - name: Deploy with Docker Compose
+      - name: Update image and restart container
         working-directory: ${{ env.APP_DIR }}
         run: |
-          docker compose pull "${SERVICE}"
-          docker compose up -d --no-deps "${SERVICE}"
+          docker compose pull "$SERVICE"
+          docker compose up -d --no-deps "$SERVICE"
 
       - name: Check initial logs
         run: docker logs --tail=30 lumm-server || true
