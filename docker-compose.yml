@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  api:
+    image: ghcr.io/g2bc/lumm-server:latest
+    container_name: lumm-server
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
