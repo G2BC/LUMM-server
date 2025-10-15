@@ -11,14 +11,9 @@ else
   MIGRATION_OUTPUT=$(flask db upgrade 2>&1)
   MIGRATION_EXIT_CODE=$?
   if [ $MIGRATION_EXIT_CODE -ne 0 ]; then
-    echo "$MIGRATION_OUTPUT" | grep -q -i "No migrations to apply"
-    if [ $? -eq 0 ]; then
-      echo "⚠️ No pending migrations."
-    else
-      echo "❌ Critical error while running migrations:"
-      echo "$MIGRATION_OUTPUT"
-      exit $MIGRATION_EXIT_CODE
-    fi
+    echo "❌ Critical error while running migrations:"
+    echo "$MIGRATION_OUTPUT"
+    exit $MIGRATION_EXIT_CODE
   fi
 
   echo "🌐 Starting Gunicorn..."
