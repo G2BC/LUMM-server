@@ -148,7 +148,7 @@ jobs:
 
       - name: Start test web
         run: |
-          docker run -d --name backend -p 4000:4000 ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
+          docker run -d --name api -p 4000:4000 ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
           for i in {1..30}; do
             if curl -fsS http://localhost:4000 >/dev/null; then echo "Up"; break; fi
             sleep 2
