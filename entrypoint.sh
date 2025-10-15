@@ -3,7 +3,7 @@ set -e
 
 if [ "$ENV" = "development" ]; then
   echo "🚀 Starting in development mode..."
-  exec python3 -m flask run --host=127.0.0.1 --port=8000
+  exec python3 -m flask run --host=127.0.0.1 --port=4000
 else
   echo "🚀 Starting in production mode..."
 
