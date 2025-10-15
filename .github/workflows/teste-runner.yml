@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: self-hosted
     steps:
       - name: Exibir hostname
         run: hostname
@@ -17,6 +17,3 @@ jobs:
         run: |
           date
           uname -a
-
-      - name: Testar Docker
-        run: docker ps
