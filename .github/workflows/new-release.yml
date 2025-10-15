@@ -37,6 +37,21 @@ jobs:
           docker compose pull "$SERVICE"
           docker compose up -d --no-deps "$SERVICE"
 
+      - name: Wait for container health
+        run: |
+          set -e
+          TIMEOUT=60
+          ELAPSED=0
+          while [ "$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")" != "healthy" ]; do
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "Container $SERVICE did not become healthy within $TIMEOUT seconds."
+              exit 1
+            fi
+            echo "Waiting for $SERVICE to become healthy..."
+            sleep 2
+            ELAPSED=$((ELAPSED+2))
+          done
+          echo "$SERVICE is healthy."
       - name: Check initial logs
         run: docker logs --tail=30 lumm-server || true
 
