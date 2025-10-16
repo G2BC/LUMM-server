@@ -8,13 +8,7 @@ else
   echo "🚀 Starting in production mode..."
 
   echo "📦 Running database migrations..."
-  MIGRATION_OUTPUT=$(flask db upgrade 2>&1)
-  MIGRATION_EXIT_CODE=$?
-  if [ $MIGRATION_EXIT_CODE -ne 0 ]; then
-    echo "❌ Critical error while running migrations:"
-    echo "$MIGRATION_OUTPUT"
-    exit $MIGRATION_EXIT_CODE
-  fi
+  flask db upgrade
 
   echo "🌐 Starting Gunicorn..."
   exec gunicorn -w 4 -b 0.0.0.0:4000 wsgi:app
