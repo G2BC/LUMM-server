@@ -40,33 +40,30 @@ jobs:
           docker compose up -d --no-deps "$SERVICE"
 
       - name: Wait for container health
+        working-directory: ${{ env.APP_DIR }}
         run: |
           set -e
-
-          CID=$(docker compose ps -q "$SERVICE")
+          CID=$(docker compose -f docker-compose.yml ps -q "$SERVICE")
           if [ -z "$CID" ]; then
             echo "❌ Could not find container for service: $SERVICE"
-            docker compose ps
+            docker compose -f docker-compose.yml ps
             exit 1
           fi
 
-          TIMEOUT=120
-          ELAPSED=0
-          while true; do
+          echo "⏳ Waiting for $SERVICE to become healthy..."
+          for i in {1..60}; do
             STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$CID" 2>/dev/null || echo "none")
             echo "Status: $STATUS"
             if [ "$STATUS" = "healthy" ]; then
               echo "✅ $SERVICE is healthy."
-              break
+              exit 0
             fi
-            if [ $ELAPSED -ge $TIMEOUT ]; then
-              echo "❌ $SERVICE did not become healthy within $TIMEOUT seconds."
-              docker logs "$CID" || true
-              exit 1
-            fi
-            sleep 5
-            ELAPSED=$((ELAPSED+5))
+            sleep 2
           done
+
+          echo "❌ $SERVICE did not become healthy after 120s."
+          docker logs "$CID" || true
+          exit 1
 
       - name: Run database migrations
         run: |
