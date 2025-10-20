@@ -66,6 +66,7 @@ jobs:
           exit 1
 
       - name: Run database migrations
+        working-directory: ${{ env.APP_DIR }}
         run: |
           echo "Running Flask migrations..."
           docker compose exec -T "$SERVICE" flask db upgrade
