@@ -55,5 +55,10 @@ jobs:
           done
           echo "$SERVICE is healthy."
 
+      - name: Run database migrations
+        run: |
+          echo "Running Flask migrations..."
+          docker compose exec -T "$SERVICE" flask db upgrade
+
       - name: Clean up old images
         run: docker image prune -f
