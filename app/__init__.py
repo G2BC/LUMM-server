@@ -21,6 +21,10 @@ def create_app():
 
     api = Api(app)
 
+    @app.route("/", methods=["GET"])
+    def index():
+        return {"name": "LUMM API"}, 200
+
     @app.route("/health", methods=["GET"])
     def health():
         return {"status": "ok"}, 200
