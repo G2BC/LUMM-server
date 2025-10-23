@@ -5,3 +5,11 @@ repos:
       - id: ruff-format
       - id: ruff
         args: [--fix]
+
+  - repo: local
+    hooks:
+      - id: compile-requirements
+        name: Compile requirements.txt
+        entry: bash compile-requirements.sh
+        language: system
+        types: [text]

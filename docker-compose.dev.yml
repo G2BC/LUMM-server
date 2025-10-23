@@ -13,3 +13,9 @@ services:
       - "4000:4000"
     environment:
       - ENV=development
+    networks:
+      - lumm-network
+
+networks:
+  lumm-network:
+    external: true
