@@ -45,6 +45,15 @@ def add_labels(ax):
                         ha='center', va='bottom',
                         fontsize=9, color='black')
 
+
+# Tradução para português
+traduzir = {
+    "LOW": "Baixa",
+    "MEDIUM": "Média",
+    "HIGH": "Alta",
+    "CRITICAL": "Crítica"
+}
+
 img = load_json_or_empty(path_image)
 fs = load_json_or_empty(path_fs)
 cfg = load_json_or_empty(path_config)
@@ -58,6 +67,7 @@ df = pd.DataFrame(
     [{"categoria": "fs", "severidade": k, "contagem": v} for k, v in sev_fs.items()] +
     [{"categoria": "config", "severidade": k, "contagem": v} for k, v in sev_cfg.items()]
 )
+df["severidade"] = df["severidade"].map(traduzir)
 
 plt.figure(figsize=(10, 6))
 ax = sns.barplot(data=df, x="categoria", y="contagem", hue="severidade")
@@ -88,7 +98,7 @@ df2 = pd.DataFrame({"categoria": ["imagem", "fs", "config"], "contagem": [count_
 plt.figure(figsize=(8, 5))
 ax = sns.barplot(data=df2, x="categoria", y="contagem")
 add_labels(ax)
-plt.title("Contagem de vulnerabilidades por categoria (M/H/C)")
+plt.title("Contagem de vulnerabilidades por categoria (Média/Alta/Crítica)")
 plt.tight_layout()
 plt.savefig("artifacts/epv_por_categoria.png")
 plt.savefig("artifacts/epv_por_categoria.pdf")
@@ -99,7 +109,7 @@ df3 = pd.DataFrame({"tipo": ["imagem", "fs", "config", "total"], "contagem": [co
 plt.figure(figsize=(8, 5))
 ax = sns.barplot(data=df3, x="tipo", y="contagem")
 add_labels(ax)
-plt.title("Vulnerabilidades totais + por categoria (M/H/C)")
+plt.title("Vulnerabilidades totais + por categoria (Média/Alta/Crítica)")
 plt.tight_layout()
 plt.savefig("artifacts/epv_total_completo.png")
 plt.savefig("artifacts/epv_total_completo.pdf")
