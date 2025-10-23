@@ -142,7 +142,7 @@ jobs:
           M=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' artifacts/trivy-image.json)
           L=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="LOW")] | length' artifacts/trivy-image.json)
 
-          echo "### 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔐 Security Scan" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Severity  | Count |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
@@ -154,11 +154,15 @@ jobs:
           echo "- **EPV**: \`$EPV\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Threshold**: \`$EPV_THRESHOLD\`" >> $GITHUB_STEP_SUMMARY
 
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            echo "- ℹ️ This is a Pull Request — image was built but not pushed." >> $GITHUB_STEP_SUMMARY
+          fi
+
           if [ "$RESULT" -eq 1 ]; then
-            echo "- ❌ **Build blocked**: EPV >= threshold" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ **Merge blocked**: EPV >= threshold" >> $GITHUB_STEP_SUMMARY
             exit 1
           else
-            echo "- ✅ **Build approved**: EPV below threshold" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ **Merge approved**: EPV below threshold" >> $GITHUB_STEP_SUMMARY
           fi
         env:
           EPV_THRESHOLD: 5
@@ -168,6 +172,13 @@ jobs:
         with:
           name: server-security-scan
           path: artifacts/*
+
+      - name: Clean workspace
+        run: |
+          echo "Cleaning up..."
+          docker container prune -f
+          docker volume prune -f
+          rm -rf artifacts/
 
   dast:
     if: github.ref == 'refs/heads/main'
