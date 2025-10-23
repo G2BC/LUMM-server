@@ -129,6 +129,11 @@ jobs:
 
           printf '%s,%s,%s\n' "$(date +%F)" "${GITHUB_SHA::7}" "$EPV" >> artifacts/epv.csv
 
+      - name: Generate EPV graph
+        run: |
+          pip install matplotlib pandas seaborn
+          python3 scripts/plot_epv.py
+
       - name: Check EPV threshold
         run: |
           EPV=$(< artifacts/epv.txt)
