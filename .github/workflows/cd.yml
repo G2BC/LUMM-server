@@ -1,0 +1,90 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check image exists
+        run: |
+          if ! docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest; then
+            echo "❌ Image not found. CI may have failed."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:${{ github.sha }}
+            ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
+
+  dast:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
+
+      - name: Start container
+        run: |
+          docker run -d --name api -p 4000:4000 ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
+          for i in {1..30}; do
+            if curl -fsS http://localhost:4000 >/dev/null; then echo "Up"; break; fi
+            sleep 2
+          done
+
+      - name: Set permissions for ZAP
+        run: chmod -R 777 ${{ github.workspace }}
+
+      - name: OWASP ZAP Baseline
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:4000"
+          cmd_options: "-I -J"
+          allow_issue_writing: false
+          artifact_name: "dast"
+        continue-on-error: true
+
+      - name: Collect DAST reports
+        run: |
+          mkdir -p artifacts
+          mv zap_report.* artifacts/ || true
+
+      - name: Upload DAST Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-dast
+          path: artifacts/*
