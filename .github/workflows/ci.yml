@@ -116,12 +116,31 @@ jobs:
       - name: Check EPV threshold
         run: |
           EPV=$(< artifacts/epv.txt)
+          echo "🔎 EPV detected: $EPV (threshold: $EPV_THRESHOLD)"
           RESULT=$(echo "$EPV >= $EPV_THRESHOLD" | bc)
+
+          C=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' artifacts/trivy-image.json)
+          H=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' artifacts/trivy-image.json)
+          M=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' artifacts/trivy-image.json)
+          L=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="LOW")] | length' artifacts/trivy-image.json)
+
+          echo "### 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity  | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟥 CRITICAL |   $C   |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟧 HIGH     |   $H   |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟨 MEDIUM   |   $M   |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟦 LOW      |   $L   |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **EPV**: \`$EPV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Threshold**: \`$EPV_THRESHOLD\`" >> $GITHUB_STEP_SUMMARY
+
           if [ "$RESULT" -eq 1 ]; then
-            echo "Merge blocked: EPV >= threshold ($EPV >= $EPV_THRESHOLD)"
+            echo "- ❌ **Rejected**: EPV >= threshold" >> $GITHUB_STEP_SUMMARY
             exit 1
           else
-            echo "EPV OK: $EPV < $EPV_THRESHOLD"
+            echo "- ✅ **Approved**: EPV below threshold" >> $GITHUB_STEP_SUMMARY
           fi
         env:
           EPV_THRESHOLD: ${{ vars.EPV_THRESHOLD || 5 }}
