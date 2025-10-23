@@ -145,7 +145,7 @@ jobs:
           M=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' artifacts/trivy-image.json)
           L=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="LOW")] | length' artifacts/trivy-image.json)
 
-          echo "### 🔐 Security Scan" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Severity  | Count |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
