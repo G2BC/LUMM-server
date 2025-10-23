@@ -73,7 +73,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.14.0
         with:
           target: "http://localhost:4000"
-          cmd_options: "-I -J zap-report.json"
+          cmd_options: "-I"
           allow_issue_writing: false
           artifact_name: "dast"
         continue-on-error: true
