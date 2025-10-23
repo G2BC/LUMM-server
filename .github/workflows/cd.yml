@@ -13,13 +13,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Check image exists
-        run: |
-          if ! docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest; then
-            echo "❌ Image not found. CI may have failed."
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
 
       - name: Setup Docker Buildx
@@ -54,6 +47,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Check image exists
+        run: |
+          if ! docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest; then
+            echo "❌ Image not found. CI may have failed."
+            exit 1
+          fi
 
       - name: Pull latest image
         run: docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest
