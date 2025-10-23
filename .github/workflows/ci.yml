@@ -165,15 +165,17 @@ jobs:
             echo "- ✅ **Merge approved**: EPV below threshold" >> $GITHUB_STEP_SUMMARY
           fi
         env:
-          EPV_THRESHOLD: 5
+          EPV_THRESHOLD: ${{ vars.EPV_THRESHOLD || 5 }}
 
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: server-security-scan
           path: artifacts/*
 
       - name: Clean workspace
+        if: always()
         run: |
           echo "Cleaning up..."
           docker container prune -f
