@@ -73,7 +73,7 @@ jobs:
         uses: zaproxy/action-api-scan@v0.9.0
         env:
           ZAP_AUTH_HEADER: X-API-Key
-          ZAP_AUTH_HEADER_VALUE: Bearer ${{ secrets.API_KEY }}
+          ZAP_AUTH_HEADER_VALUE: ${{ secrets.API_KEY }}
         with:
           target: "http://localhost:4000/openapi.json"
           cmd_options: "-I"
