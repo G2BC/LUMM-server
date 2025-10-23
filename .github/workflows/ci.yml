@@ -102,12 +102,10 @@ jobs:
           mkdir -p artifacts
           trivy config . \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
-            --ignore-unfixed \
             -f table -o artifacts/trivy-config.txt || true
 
           trivy config . \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
-            --ignore-unfixed \
             -f json -o artifacts/trivy-config.json || echo '{}' > artifacts/trivy-config.json
 
       - name: Calculate EPV
