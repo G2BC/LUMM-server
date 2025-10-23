@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: "3.8"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -60,64 +60,95 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trivy fs (table)
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          scan-type: 'fs'
-          scanners: 'vuln,secret'
-          format: 'table'
-          output: 'artifacts/trivy-fs.txt'
-          severity: 'MEDIUM,HIGH,CRITICAL'
-          ignore-unfixed: true
+      - name: Install Trivy CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
-      - name: Trivy fs (json)
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          scan-type: 'fs'
-          scanners: 'vuln,secret'
-          format: 'json'
-          output: 'artifacts/trivy-fs.json'
-          severity: 'MEDIUM,HIGH,CRITICAL'
-          ignore-unfixed: true
-      
-      - name: Trivy Image (table)
+      - name: Trivy fs
+        run: |
+          mkdir -p artifacts
+          trivy fs . \
+            --scanners vuln,secret \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f table -o artifacts/trivy-fs.txt || true
+
+          trivy fs . \
+            --scanners vuln,secret \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f json -o artifacts/trivy-fs.json || echo '{}' > artifacts/trivy-fs.json
+
+      - name: Trivy image
         run: |
           if ! docker pull ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest; then
             docker build -t ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest .
           fi
-          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest --severity MEDIUM,HIGH,CRITICAL --ignore-unfixed -f table -o artifacts/trivy-image.txt || true
 
-      - name: Trivy image (json)
+          # Table format
+          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f table -o artifacts/trivy-image.txt || true
+
+          # JSON format
+          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f json -o artifacts/trivy-image.json || echo '{}' > artifacts/trivy-image.json
+
+      - name: Trivy config
         run: |
-          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:latest -f json -o artifacts/trivy-image.json || echo '{}' > artifacts/trivy-image.json
+          mkdir -p artifacts
+          trivy config . \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f table -o artifacts/trivy-config.txt || true
 
-      - name: Trivy config (table)
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          scan-type: 'config'
-          format: 'table'
-          output: 'artifacts/trivy-config.txt'
-          ignore-unfixed: true
+          trivy config . \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            -f json -o artifacts/trivy-config.json || echo '{}' > artifacts/trivy-config.json
 
-      - name: Trivy config (json)
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          scan-type: 'config'
-          format: 'json'
-          output: 'artifacts/trivy-config.json'
-          ignore-unfixed: true
-
-      - name: EPV metrics
+      - name: Calculate EPV
         run: |
-          jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' artifacts/trivy-image.json > artifacts/epv.txt || echo 0 > artifacts/epv.txt
-          jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM" or .Severity=="HIGH" or .Severity=="CRITICAL")] | length' artifacts/trivy-image.json > artifacts/epv-total.txt || echo 0 > artifacts/epv-total.txt
-          if [ ! -f artifacts/epv.csv ]; then echo 'date,commit,epv_high,epv_total' > artifacts/epv.csv; fi
-          printf '%s,%s,%s,%s\n' "$(date +%F)" "${GITHUB_SHA::7}" "$(< artifacts/epv.txt)" "$(< artifacts/epv-total.txt)" >> artifacts/epv.csv
+          mkdir -p artifacts
 
-      - name: Generate EPV graph
+          C=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' artifacts/trivy-image.json)
+          H=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' artifacts/trivy-image.json)
+          M=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' artifacts/trivy-image.json)
+          L=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="LOW")] | length' artifacts/trivy-image.json)
+
+          echo "Detected failures - CRITICAL: $C, HIGH: $H, MEDIUM: $M, LOW: $L"
+
+          EPV=$(echo "scale=2; (1.0*$C) + (0.75*$H) + (0.5*$M) + (0.25*$L)" | bc)
+          echo "Calculated EPV: $EPV"
+          echo "$EPV" > artifacts/epv.txt
+
+          if [ ! -f artifacts/epv.csv ]; then
+            echo 'date,commit,epv' > artifacts/epv.csv
+          fi
+
+          printf '%s,%s,%s\n' "$(date +%F)" "${GITHUB_SHA::7}" "$EPV" >> artifacts/epv.csv
+
+      - name: Check EPV threshold
         run: |
-          pip install matplotlib pandas seaborn
-          python3 scripts/plot_epv.py
+          EPV=$(< artifacts/epv.txt)
+          echo "🔎 EPV detected: $EPV (threshold: $EPV_THRESHOLD)"
+          RESULT=$(echo "$EPV >= $EPV_THRESHOLD" | bc)
+
+          echo "### 🔐 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **EPV**: \`$EPV\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Threshold**: \`$EPV_THRESHOLD\`" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$RESULT" -eq 1 ]; then
+            echo "- ❌ **Build blocked**: EPV >= threshold" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "- ✅ **Build approved**: EPV below threshold" >> $GITHUB_STEP_SUMMARY
+          fi
+        env:
+          EPV_THRESHOLD: 5
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -128,7 +159,7 @@ jobs:
   dast:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build
+    needs: scan
     steps:
       - uses: actions/checkout@v4
 
@@ -161,10 +192,10 @@ jobs:
       - name: OWASP ZAP Baseline
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: 'http://localhost:4000'
-          cmd_options: '-I'
+          target: "http://localhost:4000"
+          cmd_options: "-I -J"
           allow_issue_writing: false
-          artifact_name: 'dast'
+          artifact_name: "dast"
         continue-on-error: true
 
       - name: Collect DAST reports
@@ -172,6 +203,7 @@ jobs:
           mkdir -p artifacts
           mv zap_report.html artifacts/dast-baseline.html || true
           mv zap_report.md artifacts/dast-baseline.md || true
+          mv zap_report.json artifacts/dast-baseline.json || true
 
       - name: Upload DAST artifacts
         uses: actions/upload-artifact@v4
