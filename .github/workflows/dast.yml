@@ -2,10 +2,10 @@ name: DAST
 
 on:
   workflow_run:
-    workflows: [ "CD" ]
+    workflows: [ "Lançar nova release" ]
     types: [ completed ]
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 */14 * *"
   workflow_dispatch:
 
 permissions:
@@ -18,8 +18,7 @@ jobs:
 
     if: >
       github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+      (github.event.workflow_run.conclusion == 'success')
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +29,7 @@ jobs:
           ZAP_AUTH_HEADER: X-API-Key
           ZAP_AUTH_HEADER_VALUE: ${{ secrets.API_KEY }}
         with:
-          target: "https://api.lumm.uneb.br/openapi.json"
+          target: ${{ secrets.DAST_TARGET }}
           cmd_options: "-I"
           allow_issue_writing: false
           artifact_name: "dast"
