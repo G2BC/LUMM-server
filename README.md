@@ -2,7 +2,7 @@
 
 ## Requisitos
 
-- Python 3.8
+- Python 3.10
 - PostgreSQL rodando localmente ou via Docker
 
 ## Setup do Projeto
