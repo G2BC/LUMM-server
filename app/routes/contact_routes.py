@@ -3,9 +3,8 @@ import os
 
 from flask import request
 from flask.views import MethodView
-from flask_smorest import Blueprint
+from flask_smorest import Blueprint, abort
 
-from app.utils.require_api_key import require_api_key
 from app.utils.send_email import send_email
 
 contact_bp = Blueprint(
@@ -19,9 +18,9 @@ GMAIL_TO = os.getenv("GMAIL_TO", "alenz@uneb.br")
 
 @contact_bp.route("")
 class Contact(MethodView):
-    decorators = [require_api_key]
-
     @contact_bp.response(200)
+    @contact_bp.alt_response(400, description="Payload inválido")
+    @contact_bp.alt_response(500, description="Falha ao enviar contato")
     def post(self):
         data = request.get_json(silent=True) or {}
         name = (data.get("name") or "").strip()
@@ -31,7 +30,7 @@ class Contact(MethodView):
         to = (data.get("to") or "").strip()
 
         if not name or not email or not message or not subject:
-            return {"error": "Preencha todos os campos."}, 400
+            abort(400, message="Preencha todos os campos.")
 
         try:
             send_email(
@@ -52,5 +51,5 @@ class Contact(MethodView):
                 to=to or GMAIL_TO,
             )
             return {"ok": True}
-        except Exception as e:
-            return {"error": "Falha ao enviar email", "detail": str(e)}, 500
+        except Exception:
+            abort(500, message="Falha ao enviar email.")
