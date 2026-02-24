@@ -2,7 +2,7 @@
 
 ## Requisitos
 
-- Python 3.8
+- Python 3.9
 - PostgreSQL rodando localmente ou via Docker
 
 ## Setup do Projeto
@@ -17,9 +17,9 @@ cd backend
 ### 2️⃣ Criar e ativar o ambiente virtual (Recomendado)
 
 ```bash
-python -m venv venv
-source venv/bin/activate       # Linux/macOS
-venv\Scripts\activate          # Windows
+python -m venv .venv
+source .venv/bin/activate       # Linux/macOS
+.venv\Scripts\activate          # Windows
 ```
 
 ### 3️⃣ Instalar dependências

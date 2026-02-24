@@ -22,3 +22,29 @@ class UserService:
             "per_page": None,
             "pages": None,
         }
+
+    @classmethod
+    def create_user(cls, data):
+        email = data["email"].strip().lower()
+        name = data["name"].strip()
+        institution = data.get("institution")
+        normalized_institution = institution.strip() if institution else None
+
+        if UserRepository.get_by_email(email):
+            raise ValueError("Email já cadastrado.")
+
+        return UserRepository.create_user(
+            name=name,
+            institution=normalized_institution,
+            email=email,
+            password=data["password"],
+        )
+
+    @classmethod
+    def get_user_by_id(cls, id: str):
+        user = UserRepository.get_by_id(id)
+
+        if not user:
+            raise ValueError("Usuário não encontrado.")
+
+        return user

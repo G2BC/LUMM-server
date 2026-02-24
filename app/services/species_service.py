@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from app.repositories.species_repository import SpeciesRepository
 
@@ -14,7 +14,7 @@ class SpeciesService:
         country: Optional[str] = "",
         page: Optional[int] = None,
         per_page: Optional[int] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         search = (search or "").strip()
         lineage = (lineage or "").strip()
         country = (country or "").strip()
@@ -52,4 +52,7 @@ class SpeciesService:
 
     @classmethod
     def get(cls, species: Optional[str] = ""):
-        return SpeciesRepository.get(species)
+        found = SpeciesRepository.get(species)
+        if not found:
+            raise ValueError("Espécie não encontrada.")
+        return found
