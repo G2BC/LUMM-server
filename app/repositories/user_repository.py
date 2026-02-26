@@ -92,3 +92,10 @@ class UserRepository:
         db.session.add(user)
         db.session.commit()
         return user
+
+    @classmethod
+    def update_admin_status(cls, user: User, is_admin: bool) -> User:
+        user.is_admin = is_admin
+        db.session.add(user)
+        db.session.commit()
+        return user

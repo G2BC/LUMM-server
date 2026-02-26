@@ -72,6 +72,16 @@ class UserPaginationSchema(Schema):
     pages = fields.Integer(allow_none=True)
 
 
+class UserAdminUpdateSchema(Schema):
+    is_admin = fields.Boolean(
+        required=True,
+        error_messages={
+            "required": "O campo is_admin é obrigatório.",
+            "null": "O campo is_admin não pode ser nulo.",
+        },
+    )
+
+
 class UserListQuerySchema(Schema):
     class Meta:
         unknown = EXCLUDE
