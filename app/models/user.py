@@ -14,7 +14,9 @@ class User(db.Model):
     email = db.Column(db.String(150), nullable=False, unique=True)
     password = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    is_active = db.Column(db.Boolean, default=False, nullable=False)
+    must_change_password = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -29,5 +31,7 @@ class User(db.Model):
             "email": self.email,
             "institution": self.institution,
             "is_admin": self.is_admin,
+            "is_active": self.is_active,
+            "must_change_password": self.must_change_password,
             "created_at": self.created_at.isoformat(),
         }
