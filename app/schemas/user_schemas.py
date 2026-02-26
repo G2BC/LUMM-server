@@ -1,6 +1,6 @@
 import re
 
-from marshmallow import Schema, ValidationError, fields, validate, validates
+from marshmallow import EXCLUDE, Schema, ValidationError, fields, pre_load, validate, validates
 
 
 class UserSchema(Schema):
@@ -16,6 +16,8 @@ class UserSchema(Schema):
         },
     )
     is_admin = fields.Boolean(dump_only=True)
+    is_active = fields.Boolean(dump_only=True)
+    must_change_password = fields.Boolean(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
 
 
@@ -68,3 +70,30 @@ class UserPaginationSchema(Schema):
     page = fields.Integer(allow_none=True)
     per_page = fields.Integer(allow_none=True)
     pages = fields.Integer(allow_none=True)
+
+
+class UserListQuerySchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    search = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=150, error="`search` deve ter no máximo 150 caracteres."),
+    )
+    page = fields.Integer(
+        allow_none=True,
+        validate=validate.Range(min=1, error="`page` deve ser um inteiro >= 1."),
+    )
+    per_page = fields.Integer(
+        allow_none=True,
+        validate=validate.Range(min=1, max=100, error="`per_page` deve estar entre 1 e 100."),
+    )
+    is_active = fields.Boolean(allow_none=True, missing=None)
+    isactive = fields.Boolean(allow_none=True, load_only=True, missing=None)
+
+    @pre_load
+    def map_isactive_alias(self, data, **kwargs):
+        payload = dict(data or {})
+        if payload.get("is_active") in (None, "") and "isactive" in payload:
+            payload["is_active"] = payload.get("isactive")
+        return payload

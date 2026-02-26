@@ -20,3 +20,24 @@ class Config:
         seconds=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", "2592000"))
     )
     API_KEY = os.getenv("API_KEY", "")
+    APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+    _default_cors_origins = (
+        "http://localhost:3000,http://localhost:5173,http://localhost:3333,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:3333"
+        if APP_ENV == "development"
+        else "https://lumm.uneb.br"
+    )
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", _default_cors_origins).split(",")
+        if origin.strip()
+    ]
+    CORS_ALLOW_HEADERS = [
+        header.strip()
+        for header in "Content-Type,Authorization,X-API-Key".split(",")
+        if header.strip()
+    ]
+    CORS_METHODS = [
+        method.strip().upper()
+        for method in "GET,POST,PUT,PATCH,DELETE,OPTIONS".split(",")
+        if method.strip()
+    ]

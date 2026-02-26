@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from flask import Flask, request
 from flask_cors import CORS
+from flask_jwt_extended import get_jwt, verify_jwt_in_request
 from flask_migrate import Migrate
 from flask_smorest import Api
 
@@ -15,7 +16,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object("app.config.Config")
 
-    CORS(app)
+    CORS(
+        app,
+        resources={r"/*": {"origins": app.config["CORS_ALLOWED_ORIGINS"]}},
+        methods=app.config["CORS_METHODS"],
+        allow_headers=app.config["CORS_ALLOW_HEADERS"],
+    )
 
     db.init_app(app)
     jwt.init_app(app)
@@ -45,6 +51,34 @@ def create_app():
 
         if any(path == prefix or path.startswith(f"{prefix}/") for prefix in protected_prefixes):
             enforce_api_key()
+
+        return None
+
+    @app.before_request
+    def require_password_change_for_protected_routes():
+        if request.method == "OPTIONS":
+            return None
+
+        path = request.path
+        allowed_paths = {
+            "/",
+            "/health",
+            "/auth/login",
+            "/auth/refresh",
+            "/auth/change-password",
+        }
+        if path in allowed_paths or path.startswith("/docs") or path.startswith("/openapi"):
+            return None
+
+        verify_jwt_in_request(optional=True)
+        claims = get_jwt()
+
+        if claims and claims.get("must_change_password", False):
+            return {
+                "code": 403,
+                "status": "Forbidden",
+                "message": "Troca de senha obrigatória antes de continuar.",
+            }, 403
 
         return None
 
