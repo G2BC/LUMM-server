@@ -1,18 +1,31 @@
 from marshmallow import Schema, fields
 
+from app.utils.object_storage import normalize_object_url
+
 from .taxon_schemas import TaxonSchema
 
 
 class SpeciesPhotoSchema(Schema):
     photo_id = fields.Integer(dump_only=True)
-    medium_url = fields.String(dump_only=True)
-    original_url = fields.String(allow_none=True, dump_only=True)
+    medium_url = fields.Method("get_medium_url", dump_only=True)
+    original_url = fields.Method("get_original_url", dump_only=True)
     license_code = fields.String(allow_none=True, dump_only=True)
     attribution = fields.String(allow_none=True, dump_only=True)
+    rights_holder = fields.String(allow_none=True, dump_only=True)
+    source_url = fields.String(allow_none=True, dump_only=True)
+    declaration_accepted_at = fields.DateTime(allow_none=True, dump_only=True)
     source = fields.String(dump_only=True)
     fetched_at = fields.DateTime(dump_only=True)
     lumm = fields.Boolean(allow_none=True)
     featured = fields.Boolean(allow_none=True)
+
+    @staticmethod
+    def get_medium_url(obj):
+        return normalize_object_url(getattr(obj, "medium_url", None))
+
+    @staticmethod
+    def get_original_url(obj):
+        return normalize_object_url(getattr(obj, "original_url", None))
 
 
 class SpeciesWithPhotosSchema(Schema):
@@ -38,6 +51,9 @@ class SpeciesWithPhotosSchema(Schema):
                     "original_url",
                     "license_code",
                     "attribution",
+                    "rights_holder",
+                    "source_url",
+                    "declaration_accepted_at",
                     "lumm",
                     "featured",
                 )

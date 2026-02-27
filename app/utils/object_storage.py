@@ -70,6 +70,15 @@ def generate_presigned_post(
     )
 
 
+def generate_presigned_get_url(bucket: str, key: str, expires_in_seconds: int) -> str:
+    client = _get_client()
+    return client.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": bucket, "Key": key},
+        ExpiresIn=expires_in_seconds,
+    )
+
+
 def head_object(bucket: str, key: str) -> dict[str, Any]:
     client = _get_client()
     return client.head_object(Bucket=bucket, Key=key)
@@ -94,6 +103,52 @@ def list_objects(bucket: str, prefix: str) -> list[dict[str, Any]]:
         for item in page.get("Contents", []):
             result.append(item)
     return result
+
+
+def _normalize_public_base_url(raw: str, secure_default: bool) -> str:
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if value.startswith(("http://", "https://")):
+        return value.rstrip("/")
+    scheme = "https" if secure_default else "http"
+    return f"{scheme}://{value}".rstrip("/")
+
+
+def build_public_object_url(bucket: str, key: str) -> str:
+    safe_bucket = (bucket or "").strip()
+    safe_key = (key or "").strip().lstrip("/")
+    if not safe_bucket or not safe_key:
+        return ""
+
+    base = _normalize_public_base_url(
+        current_app.config.get("MINIO_PUBLIC_BASE_URL", ""),
+        bool(current_app.config.get("MINIO_SECURE", False)),
+    )
+    if not base:
+        return f"minio://{safe_bucket}/{safe_key}"
+
+    if base.endswith(f"/{safe_bucket}"):
+        return f"{base}/{safe_key}"
+    return f"{base}/{safe_bucket}/{safe_key}"
+
+
+def normalize_object_url(url: str | None) -> str | None:
+    raw = (url or "").strip()
+    if not raw:
+        return None
+    if raw.startswith(("http://", "https://")):
+        return raw
+    if not raw.startswith("minio://"):
+        return raw
+
+    path = raw[len("minio://") :]
+    if "/" not in path:
+        return raw
+
+    bucket, key = path.split("/", 1)
+    normalized = build_public_object_url(bucket, key)
+    return normalized or raw
 
 
 def utc_now() -> datetime:

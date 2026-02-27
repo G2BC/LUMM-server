@@ -7,12 +7,13 @@ class SpeciesChangeRequest(db.Model):
     __tablename__ = "species_change_requests"
     STATUS_PENDING = "pending"
     STATUS_APPROVED = "approved"
+    STATUS_PARTIAL_APPROVED = "partial_approved"
     STATUS_REJECTED = "rejected"
-    STATUSES = (STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED)
+    STATUSES = (STATUS_PENDING, STATUS_APPROVED, STATUS_PARTIAL_APPROVED, STATUS_REJECTED)
 
     __table_args__ = (
         db.CheckConstraint(
-            "status IN ('pending', 'approved', 'rejected')",
+            "status IN ('pending', 'approved', 'partial_approved', 'rejected')",
             name="ck_species_change_requests_status_valid",
         ),
         db.Index("idx_species_change_requests_species", "species_id"),
@@ -98,6 +99,9 @@ class SpeciesPhotoRequest(db.Model):
     caption = db.Column(db.Text, nullable=True)
     license_code = db.Column(db.Text, nullable=True)
     attribution = db.Column(db.Text, nullable=True)
+    rights_holder = db.Column(db.Text, nullable=True)
+    source_url = db.Column(db.Text, nullable=True)
+    declaration_accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     status = db.Column(
         db.String(20),
         nullable=False,

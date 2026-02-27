@@ -68,6 +68,15 @@ class SpeciesCountrySelect(MethodView):
         return SpeciesService.country_select(search)
 
 
+@specie_bp.route("/family/select")
+class SpeciesFamilySelect(MethodView):
+    @specie_bp.response(200, SelectSchema(many=True))
+    def get(self):
+        search = request.args.get("search", type=str)
+
+        return SpeciesService.family_select(search)
+
+
 @specie_bp.route("/<string:species>")
 class GetSpecies(MethodView):
     @specie_bp.response(200, SpeciesWithPhotosSchema)
@@ -183,8 +192,10 @@ class ReviewSpeciesChangeRequest(MethodView):
             return SpeciesChangeRequestService.review_request(
                 request_id=request_id,
                 reviewer_user_id=str(identity),
-                decision=payload["decision"],
+                decision=payload.get("decision"),
                 review_note=payload.get("review_note"),
+                proposed_data_decision=payload.get("proposed_data_decision"),
+                photo_decisions=payload.get("photos") or [],
             )
         except ValueError as exc:
             message = str(exc)

@@ -1,5 +1,6 @@
 from typing import Optional
 
+import app.utils.object_storage as object_storage
 from app.extensions import db
 from app.models.species import Species, SpeciesPhoto
 from app.models.species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
@@ -42,6 +43,9 @@ class SpeciesChangeRequestRepository:
                     caption=photo.get("caption"),
                     license_code=photo.get("license_code"),
                     attribution=photo.get("attribution"),
+                    rights_holder=photo.get("rights_holder"),
+                    source_url=photo.get("source_url"),
+                    declaration_accepted_at=photo.get("declaration_accepted_at"),
                 )
             )
 
@@ -93,6 +97,7 @@ class SpeciesChangeRequestRepository:
         cls, species_id: int, photo_request: SpeciesPhotoRequest
     ) -> bool:
         url = cls._build_object_url(photo_request)
+        formatted_attribution = cls._format_attribution(photo_request)
         already_exists = (
             SpeciesPhoto.query.filter(
                 SpeciesPhoto.species_id == species_id,
@@ -110,7 +115,10 @@ class SpeciesChangeRequestRepository:
                 medium_url=url,
                 original_url=url,
                 license_code=photo_request.license_code,
-                attribution=photo_request.attribution,
+                attribution=formatted_attribution,
+                rights_holder=photo_request.rights_holder,
+                source_url=photo_request.source_url,
+                declaration_accepted_at=photo_request.declaration_accepted_at,
                 source="LUMM-Upload",
                 lumm=True,
             )
@@ -120,8 +128,44 @@ class SpeciesChangeRequestRepository:
     @staticmethod
     def _build_object_url(photo_request: SpeciesPhotoRequest) -> str:
         if photo_request.bucket_name:
-            return f"minio://{photo_request.bucket_name}/{photo_request.object_key}"
+            return object_storage.build_public_object_url(
+                photo_request.bucket_name, photo_request.object_key
+            )
         return f"minio://{photo_request.object_key}"
+
+    @staticmethod
+    def _normalize_license_display(license_code: Optional[str]) -> str:
+        raw = (license_code or "").strip().upper()
+        if not raw:
+            return "LICENSE NOT PROVIDED"
+        if raw == "ALL-RIGHTS-RESERVED":
+            return "ALL RIGHTS RESERVED"
+
+        normalized = raw
+        if normalized.startswith("CC-"):
+            normalized = "CC " + normalized[3:]
+        normalized = normalized.replace("-4.0", "").replace("-3.0", "").replace("-2.0", "")
+        normalized = normalized.replace("-1.0", "")
+        return normalized
+
+    @staticmethod
+    def _rights_clause(license_code: Optional[str]) -> str:
+        raw = (license_code or "").strip().upper()
+        if raw == "ALL-RIGHTS-RESERVED":
+            return "all rights reserved"
+        if raw.startswith("CC0"):
+            return "no rights reserved"
+        return "some rights reserved"
+
+    @classmethod
+    def _format_attribution(cls, photo_request: SpeciesPhotoRequest) -> str:
+        uploader = (photo_request.attribution or "").strip() or "unknown uploader"
+        rights_holder = (photo_request.rights_holder or "").strip() or uploader
+        rights_clause = cls._rights_clause(photo_request.license_code)
+        license_display = cls._normalize_license_display(photo_request.license_code)
+        return (
+            f"(c) {rights_holder}, {rights_clause} ({license_display}), " f"uploaded by {uploader}"
+        )
 
     @classmethod
     def save_review(
@@ -135,13 +179,6 @@ class SpeciesChangeRequestRepository:
         req.reviewed_by_user_id = reviewed_by_user_id
         req.review_note = review_note
         req.reviewed_at = db.func.now()
-
-        if status == SpeciesChangeRequest.STATUS_APPROVED:
-            for photo in req.photos:
-                photo.status = SpeciesChangeRequest.STATUS_APPROVED
-        elif status == SpeciesChangeRequest.STATUS_REJECTED:
-            for photo in req.photos:
-                photo.status = SpeciesChangeRequest.STATUS_REJECTED
 
         db.session.add(req)
         db.session.commit()

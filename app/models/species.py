@@ -21,6 +21,9 @@ class SpeciesPhoto(db.Model):
     original_url = db.Column(db.Text)
     license_code = db.Column(db.Text)  # ex.: 'CC-BY-NC'
     attribution = db.Column(db.Text)  # crédito do autor
+    rights_holder = db.Column(db.Text)
+    source_url = db.Column(db.Text)
+    declaration_accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     source = db.Column(db.Text, nullable=False, server_default="iNaturalist")
     fetched_at = db.Column(
         db.DateTime(timezone=True),
