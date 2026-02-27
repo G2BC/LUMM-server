@@ -19,8 +19,6 @@ class SpeciesChangeRequestService:
     MAX_PER_PAGE = 100
     ALLOWED_SPECIES_FIELDS = {
         "scientific_name",
-        "lineage",
-        "family",
         "group_name",
         "section",
         "lum_mycelium",
@@ -29,7 +27,6 @@ class SpeciesChangeRequestService:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
-        "type_country",
         "distribution_regions",
         "mycobank_index_fungorum_id",
         "mycobank_type",
