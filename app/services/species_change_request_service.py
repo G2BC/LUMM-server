@@ -118,10 +118,13 @@ class SpeciesChangeRequestService:
     def list_requests(cls, status=None, page=None, per_page=None):
         normalized_status = (status or "").strip().lower() or None
         if normalized_status and normalized_status not in SpeciesChangeRequest.STATUSES:
-            raise ValueError("`status` inválido. Use: pending, approved, rejected.")
+            raise ValueError(
+                "`status` inválido. Use: pending, approved, partial_approved, rejected."
+            )
 
         if page is None and per_page is None:
             items = SpeciesChangeRequestRepository.list(normalized_status, None, None)
+            cls._enrich_requests(items)
             return {
                 "items": items,
                 "total": len(items),
@@ -143,6 +146,7 @@ class SpeciesChangeRequestService:
             raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}.")
 
         pagination = SpeciesChangeRequestRepository.list(normalized_status, page, per_page)
+        cls._enrich_requests(pagination.items)
         return {
             "items": pagination.items,
             "total": pagination.total,
@@ -156,6 +160,7 @@ class SpeciesChangeRequestService:
         req = SpeciesChangeRequestRepository.get_by_id(cls._parse_id(request_id))
         if not req:
             raise ValueError("Solicitação não encontrada.")
+        cls._enrich_requests([req])
         return req
 
     @classmethod
@@ -163,8 +168,10 @@ class SpeciesChangeRequestService:
         cls,
         request_id: str,
         reviewer_user_id: str,
-        decision: str,
+        decision: Optional[str],
         review_note: Optional[str],
+        proposed_data_decision: Optional[str] = None,
+        photo_decisions: Optional[list[dict[str, Any]]] = None,
     ):
         req = SpeciesChangeRequestRepository.get_by_id(cls._parse_id(request_id))
         if not req:
@@ -176,35 +183,119 @@ class SpeciesChangeRequestService:
         if not reviewer:
             raise ValueError("Usuário autenticado não encontrado.")
 
-        normalized_decision = (decision or "").strip().lower()
-        if normalized_decision not in {"approve", "reject"}:
-            raise ValueError("`decision` deve ser `approve` ou `reject`.")
+        normalized_decision = cls._normalize_review_decision(decision, "decision")
+        normalized_proposed_data_decision = cls._normalize_review_decision(
+            proposed_data_decision, "proposed_data_decision"
+        )
+        normalized_photo_decisions = cls._normalize_photo_decisions(photo_decisions or [])
+        photo_decision_map = {
+            item["photo_request_id"]: item["decision"] for item in normalized_photo_decisions
+        }
 
-        if normalized_decision == "approve":
+        has_proposed_data = bool(req.proposed_data or {})
+        if not normalized_decision:
+            if has_proposed_data and not normalized_proposed_data_decision:
+                raise ValueError(
+                    "Informe `proposed_data_decision` quando `decision` não for enviado."
+                )
+            if req.photos and len(photo_decision_map) != len(req.photos):
+                raise ValueError(
+                    "Informe decisão para todas as fotos quando `decision` não for enviado."
+                )
+
+        proposed_data_final_decision = None
+        if has_proposed_data:
+            proposed_data_final_decision = normalized_proposed_data_decision or normalized_decision
+
+        approved_items = 0
+        rejected_items = 0
+
+        if proposed_data_final_decision == "approve":
             species = SpeciesChangeRequestRepository.get_species_by_id(req.species_id)
             if not species:
                 raise ValueError("Espécie não encontrada.")
-
             SpeciesChangeRequestRepository.apply_species_updates(species, req.proposed_data or {})
-            for photo in req.photos:
+            approved_items += 1
+        elif proposed_data_final_decision == "reject":
+            rejected_items += 1
+
+        photo_ids = {photo.id for photo in req.photos}
+        unknown_photo_ids = sorted(set(photo_decision_map.keys()) - photo_ids)
+        if unknown_photo_ids:
+            raise ValueError(
+                "IDs de foto inválidos em `photos`: "
+                + ", ".join(str(photo_id) for photo_id in unknown_photo_ids)
+            )
+
+        for photo in req.photos:
+            photo_final_decision = photo_decision_map.get(photo.id) or normalized_decision
+            if not photo_final_decision:
+                raise ValueError(f"Decisão ausente para foto {photo.id}.")
+
+            if photo_final_decision == "approve":
                 promoted_bucket, promoted_key = cls._promote_object_to_final(photo, req.species_id)
                 photo.bucket_name = promoted_bucket
                 photo.object_key = promoted_key
                 SpeciesChangeRequestRepository.create_or_skip_species_photo_from_request(
                     req.species_id, photo
                 )
+                photo.status = SpeciesChangeRequest.STATUS_APPROVED
+                approved_items += 1
+            else:
+                cls._delete_tmp_object_if_exists(photo)
+                photo.status = SpeciesChangeRequest.STATUS_REJECTED
+                rejected_items += 1
+
+        if approved_items > 0 and rejected_items > 0:
+            status = SpeciesChangeRequest.STATUS_PARTIAL_APPROVED
+        elif approved_items > 0:
             status = SpeciesChangeRequest.STATUS_APPROVED
         else:
-            for photo in req.photos:
-                cls._delete_tmp_object_if_exists(photo)
             status = SpeciesChangeRequest.STATUS_REJECTED
 
-        return SpeciesChangeRequestRepository.save_review(
+        reviewed = SpeciesChangeRequestRepository.save_review(
             req=req,
             status=status,
             reviewed_by_user_id=reviewer.id,
             review_note=review_note,
         )
+        cls._enrich_requests([reviewed])
+        return reviewed
+
+    @staticmethod
+    def _normalize_review_decision(value: Optional[str], field_name: str) -> Optional[str]:
+        normalized = (value or "").strip().lower()
+        if not normalized:
+            return None
+        if normalized not in {"approve", "reject"}:
+            raise ValueError(f"`{field_name}` deve ser `approve` ou `reject`.")
+        return normalized
+
+    @classmethod
+    def _normalize_photo_decisions(
+        cls, photo_decisions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        normalized = []
+        seen_ids = set()
+
+        for item in photo_decisions:
+            raw_photo_id = item.get("photo_request_id")
+            try:
+                photo_id = int(raw_photo_id)
+            except (TypeError, ValueError):
+                raise ValueError("`photo_request_id` deve ser inteiro positivo.")
+            if photo_id < 1:
+                raise ValueError("`photo_request_id` deve ser inteiro positivo.")
+            if photo_id in seen_ids:
+                raise ValueError(f"`photo_request_id` duplicado: {photo_id}.")
+            seen_ids.add(photo_id)
+
+            decision = cls._normalize_review_decision(item.get("decision"), "photos.decision")
+            if not decision:
+                raise ValueError("`photos.decision` é obrigatório.")
+            normalized.append({"photo_request_id": photo_id, "decision": decision})
+
+        return normalized
 
     @staticmethod
     def _parse_id(raw_id: str) -> int:
@@ -332,3 +423,52 @@ class SpeciesChangeRequestService:
         except (object_storage.ObjectStorageError, BotoCoreError, ClientError):
             # Cleanup best-effort: a revisão não deve falhar por lixo já removido.
             return
+
+    @classmethod
+    def _attach_preview_urls(cls, req) -> None:
+        expires_in = int(current_app.config.get("SPECIES_REQUEST_PREVIEW_URL_EXPIRES_SECONDS", 900))
+        for photo in req.photos:
+            photo.preview_url = cls._build_preview_url(photo, expires_in)
+
+    @classmethod
+    def _enrich_requests(cls, requests) -> None:
+        species_cache = {}
+        for req in requests:
+            cls._attach_preview_urls(req)
+
+            species_id = getattr(req, "species_id", None)
+            if species_id not in species_cache:
+                species_cache[species_id] = (
+                    SpeciesChangeRequestRepository.get_species_by_id(species_id)
+                    if species_id is not None
+                    else None
+                )
+
+            species = species_cache.get(species_id)
+            cls._attach_current_data(req, species)
+
+    @staticmethod
+    def _attach_current_data(req, species) -> None:
+        proposed_data = getattr(req, "proposed_data", None) or {}
+        current_data = {}
+
+        for field in proposed_data.keys():
+            current_data[field] = getattr(species, field, None) if species else None
+
+        req.current_data = current_data
+
+    @staticmethod
+    def _build_preview_url(photo, expires_in_seconds: int) -> Optional[str]:
+        source_url = (getattr(photo, "source_url", None) or "").strip()
+        if source_url.startswith(("http://", "https://")):
+            return source_url
+
+        bucket = (getattr(photo, "bucket_name", None) or "").strip()
+        key = (getattr(photo, "object_key", None) or "").strip()
+        if not bucket or not key:
+            return None
+
+        try:
+            return object_storage.generate_presigned_get_url(bucket, key, expires_in_seconds)
+        except (object_storage.ObjectStorageError, BotoCoreError, ClientError):
+            return None

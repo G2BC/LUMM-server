@@ -91,3 +91,23 @@ class SpeciesRepository:
         options = [{"label": country, "value": country} for (country,) in countries if country]
 
         return options
+
+    @classmethod
+    def family_select(
+        cls,
+        search: Optional[str] = "",
+    ):
+        search = (search or "").strip()
+
+        query = Species.query.with_entities(Species.family).distinct()
+
+        if search:
+            query = query.filter(Species.family.ilike(f"%{search}%"))
+
+        query = query.order_by(Species.family.asc())
+
+        families = query.all()
+
+        options = [{"label": family, "value": family} for (family,) in families if family]
+
+        return options

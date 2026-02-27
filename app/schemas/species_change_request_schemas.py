@@ -11,6 +11,9 @@ class SpeciesPhotoRequestInputSchema(Schema):
     caption = fields.String(allow_none=True)
     license_code = fields.String(allow_none=True)
     attribution = fields.String(allow_none=True)
+    rights_holder = fields.String(allow_none=True)
+    source_url = fields.Url(allow_none=True)
+    declaration_accepted_at = fields.DateTime(allow_none=True)
 
 
 class SpeciesChangeRequestCreateSchema(Schema):
@@ -51,6 +54,10 @@ class SpeciesPhotoRequestSchema(Schema):
     caption = fields.String(allow_none=True, dump_only=True)
     license_code = fields.String(allow_none=True, dump_only=True)
     attribution = fields.String(allow_none=True, dump_only=True)
+    rights_holder = fields.String(allow_none=True, dump_only=True)
+    source_url = fields.String(allow_none=True, dump_only=True)
+    preview_url = fields.String(allow_none=True, dump_only=True)
+    declaration_accepted_at = fields.DateTime(allow_none=True, dump_only=True)
     status = fields.String(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
 
@@ -64,6 +71,7 @@ class SpeciesChangeRequestSchema(Schema):
     requester_institution = fields.String(allow_none=True, dump_only=True)
     request_note = fields.String(allow_none=True, dump_only=True)
     proposed_data = fields.Dict(dump_only=True)
+    current_data = fields.Dict(allow_none=True, dump_only=True)
     status = fields.String(dump_only=True)
     review_note = fields.String(allow_none=True, dump_only=True)
     reviewed_by_user_id = fields.String(allow_none=True, dump_only=True)
@@ -81,17 +89,83 @@ class SpeciesChangeRequestPaginationSchema(Schema):
     pages = fields.Integer(allow_none=True)
 
 
-class SpeciesChangeRequestReviewSchema(Schema):
+class SpeciesPhotoReviewDecisionInputSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    photo_request_id = fields.Integer(required=True)
     decision = fields.String(required=True)
+
+
+class SpeciesChangeRequestReviewSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    decision = fields.String(allow_none=True)
+    proposed_data_decision = fields.String(allow_none=True)
+    photos = fields.List(
+        fields.Nested(SpeciesPhotoReviewDecisionInputSchema),
+        required=False,
+        load_default=list,
+    )
     review_note = fields.String(allow_none=True)
 
     @validates_schema
     def validate_decision(self, data, **kwargs):
-        if (data.get("decision") or "").lower() not in {"approve", "reject"}:
+        decision = (data.get("decision") or "").lower()
+        proposed_data_decision = (data.get("proposed_data_decision") or "").lower()
+        photos = data.get("photos") or []
+
+        if not decision and not proposed_data_decision and not photos:
             raise ValidationError(
-                "`decision` deve ser `approve` ou `reject`.",
+                "Informe `decision` geral ou decisões granulares.",
                 field_name="decision",
             )
+
+        if decision and decision not in {"approve", "reject"}:
+            raise ValidationError(
+                "`decision` deve ser `approve` ou `reject`.", field_name="decision"
+            )
+
+        if proposed_data_decision and proposed_data_decision not in {"approve", "reject"}:
+            raise ValidationError(
+                "`proposed_data_decision` deve ser `approve` ou `reject`.",
+                field_name="proposed_data_decision",
+            )
+
+        seen_photo_ids = set()
+        for index, item in enumerate(photos):
+            photo_id = item.get("photo_request_id")
+            if photo_id is None:
+                raise ValidationError(
+                    f"`photos[{index}].photo_request_id` é obrigatório.",
+                    field_name="photos",
+                )
+            try:
+                photo_id = int(photo_id)
+            except (TypeError, ValueError):
+                raise ValidationError(
+                    f"`photos[{index}].photo_request_id` deve ser inteiro.",
+                    field_name="photos",
+                )
+            if photo_id < 1:
+                raise ValidationError(
+                    f"`photos[{index}].photo_request_id` deve ser >= 1.",
+                    field_name="photos",
+                )
+            if photo_id in seen_photo_ids:
+                raise ValidationError(
+                    f"`photo_request_id` duplicado em `photos`: {photo_id}.",
+                    field_name="photos",
+                )
+            seen_photo_ids.add(photo_id)
+
+            photo_decision = (item.get("decision") or "").lower()
+            if photo_decision not in {"approve", "reject"}:
+                raise ValidationError(
+                    f"`photos[{index}].decision` deve ser `approve` ou `reject`.",
+                    field_name="photos",
+                )
 
 
 class SpeciesPhotoUploadUrlRequestSchema(Schema):

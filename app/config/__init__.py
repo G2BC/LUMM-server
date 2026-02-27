@@ -46,6 +46,7 @@ class Config:
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "").strip()
     MINIO_SECURE = os.getenv("MINIO_SECURE", "false").strip().lower() in {"1", "true", "yes"}
     MINIO_REGION = os.getenv("MINIO_REGION", "us-east-1").strip()
+    MINIO_PUBLIC_BASE_URL = os.getenv("MINIO_PUBLIC_BASE_URL", "").strip()
     MINIO_TMP_BUCKET = os.getenv("MINIO_TMP_BUCKET", "lumm-web-tmp").strip()
     MINIO_FINAL_BUCKET = os.getenv("MINIO_FINAL_BUCKET", "lumm-web").strip()
     SPECIES_PHOTO_MAX_BYTES = int(os.getenv("SPECIES_PHOTO_MAX_BYTES", str(5 * 1024 * 1024)))
@@ -58,3 +59,6 @@ class Config:
     ]
     SPECIES_REQUEST_MAX_PHOTOS = int(os.getenv("SPECIES_REQUEST_MAX_PHOTOS", "5"))
     SPECIES_TMP_RETENTION_DAYS = int(os.getenv("SPECIES_TMP_RETENTION_DAYS", "30"))
+    SPECIES_REQUEST_PREVIEW_URL_EXPIRES_SECONDS = int(
+        os.getenv("SPECIES_REQUEST_PREVIEW_URL_EXPIRES_SECONDS", "900")
+    )

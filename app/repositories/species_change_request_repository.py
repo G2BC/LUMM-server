@@ -1,5 +1,6 @@
 from typing import Optional
 
+import app.utils.object_storage as object_storage
 from app.extensions import db
 from app.models.species import Species, SpeciesPhoto
 from app.models.species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
@@ -42,6 +43,9 @@ class SpeciesChangeRequestRepository:
                     caption=photo.get("caption"),
                     license_code=photo.get("license_code"),
                     attribution=photo.get("attribution"),
+                    rights_holder=photo.get("rights_holder"),
+                    source_url=photo.get("source_url"),
+                    declaration_accepted_at=photo.get("declaration_accepted_at"),
                 )
             )
 
@@ -111,6 +115,9 @@ class SpeciesChangeRequestRepository:
                 original_url=url,
                 license_code=photo_request.license_code,
                 attribution=photo_request.attribution,
+                rights_holder=photo_request.rights_holder,
+                source_url=photo_request.source_url,
+                declaration_accepted_at=photo_request.declaration_accepted_at,
                 source="LUMM-Upload",
                 lumm=True,
             )
@@ -120,7 +127,9 @@ class SpeciesChangeRequestRepository:
     @staticmethod
     def _build_object_url(photo_request: SpeciesPhotoRequest) -> str:
         if photo_request.bucket_name:
-            return f"minio://{photo_request.bucket_name}/{photo_request.object_key}"
+            return object_storage.build_public_object_url(
+                photo_request.bucket_name, photo_request.object_key
+            )
         return f"minio://{photo_request.object_key}"
 
     @classmethod
@@ -135,13 +144,6 @@ class SpeciesChangeRequestRepository:
         req.reviewed_by_user_id = reviewed_by_user_id
         req.review_note = review_note
         req.reviewed_at = db.func.now()
-
-        if status == SpeciesChangeRequest.STATUS_APPROVED:
-            for photo in req.photos:
-                photo.status = SpeciesChangeRequest.STATUS_APPROVED
-        elif status == SpeciesChangeRequest.STATUS_REJECTED:
-            for photo in req.photos:
-                photo.status = SpeciesChangeRequest.STATUS_REJECTED
 
         db.session.add(req)
         db.session.commit()

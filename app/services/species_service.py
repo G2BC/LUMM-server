@@ -51,6 +51,10 @@ class SpeciesService:
         return SpeciesRepository.country_select(search)
 
     @classmethod
+    def family_select(cls, search: Optional[str] = ""):
+        return SpeciesRepository.family_select(search)
+
+    @classmethod
     def get(cls, species: Optional[str] = ""):
         found = SpeciesRepository.get(species)
         if not found:
