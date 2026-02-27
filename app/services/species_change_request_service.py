@@ -1,6 +1,7 @@
 import mimetypes
 import os
 import re
+import time
 from datetime import timedelta
 from typing import Any, Optional
 from uuid import uuid4
@@ -39,6 +40,8 @@ class SpeciesChangeRequestService:
         "references_raw",
     }
     UPLOAD_EXPIRES_SECONDS = 900
+    UPLOAD_HEAD_MAX_ATTEMPTS = 4
+    UPLOAD_HEAD_RETRY_SECONDS = 0.35
     TMP_PREFIX = "species/pending/"
     FINAL_PREFIX = "species/approved/"
 
@@ -360,9 +363,11 @@ class SpeciesChangeRequestService:
                 raise ValueError("Fotos devem vir do bucket temporário.")
 
             try:
-                meta = object_storage.head_object(tmp_bucket, key)
-            except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
-                raise ValueError(f"Arquivo não encontrado no bucket temporário: {exc}")
+                meta = cls._head_object_with_retry(tmp_bucket, key)
+            except ValueError:
+                raise
+            except (object_storage.ObjectStorageError, BotoCoreError, ClientError):
+                raise ValueError("Falha ao validar arquivo no bucket temporário.")
 
             content_length = int(meta.get("ContentLength") or 0)
             content_type = (meta.get("ContentType") or "").lower()
@@ -375,6 +380,30 @@ class SpeciesChangeRequestService:
             photo["size_bytes"] = content_length
             if not photo.get("mime_type"):
                 photo["mime_type"] = content_type
+
+    @classmethod
+    def _head_object_with_retry(cls, bucket: str, key: str) -> dict[str, Any]:
+        attempts = max(1, cls.UPLOAD_HEAD_MAX_ATTEMPTS)
+
+        for attempt in range(1, attempts + 1):
+            try:
+                return object_storage.head_object(bucket, key)
+            except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
+                if not cls._is_not_found_error(exc):
+                    raise
+                if attempt < attempts:
+                    time.sleep(cls.UPLOAD_HEAD_RETRY_SECONDS)
+
+        raise ValueError("Arquivo não encontrado no bucket temporário.")
+
+    @staticmethod
+    def _is_not_found_error(exc: Exception) -> bool:
+        if not isinstance(exc, ClientError):
+            return False
+
+        code = str((exc.response.get("Error") or {}).get("Code") or "").strip()
+        status = (exc.response.get("ResponseMetadata") or {}).get("HTTPStatusCode")
+        return code in {"404", "NoSuchKey", "NotFound"} or status == 404
 
     @classmethod
     def _promote_object_to_final(cls, photo, species_id: int) -> tuple[str, str]:
