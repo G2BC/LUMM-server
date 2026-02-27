@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import boto3
 from botocore.client import BaseClient
@@ -61,13 +62,15 @@ def generate_presigned_post(
         "key": key,
         "Content-Type": content_type,
     }
-    return client.generate_presigned_post(
+    signed = client.generate_presigned_post(
         Bucket=bucket,
         Key=key,
         Fields=fields,
         Conditions=conditions,
         ExpiresIn=expires_in_seconds,
     )
+    signed["url"] = _normalize_presigned_post_url(signed.get("url", ""))
+    return signed
 
 
 def generate_presigned_get_url(bucket: str, key: str, expires_in_seconds: int) -> str:
@@ -113,6 +116,35 @@ def _normalize_public_base_url(raw: str, secure_default: bool) -> str:
         return value.rstrip("/")
     scheme = "https" if secure_default else "http"
     return f"{scheme}://{value}".rstrip("/")
+
+
+def _normalize_presigned_post_url(url: str) -> str:
+    raw = (url or "").strip()
+    if not raw:
+        return raw
+
+    base = _normalize_public_base_url(
+        current_app.config.get("MINIO_PUBLIC_BASE_URL", ""),
+        bool(current_app.config.get("MINIO_SECURE", False)),
+    )
+    if not base:
+        return raw
+
+    src = urlsplit(raw)
+    target = urlsplit(base)
+    base_path = (target.path or "").rstrip("/")
+    src_path = src.path or ""
+    merged_path = f"{base_path}{src_path}" if base_path else src_path
+
+    return urlunsplit(
+        (
+            target.scheme or src.scheme,
+            target.netloc or src.netloc,
+            merged_path,
+            src.query,
+            src.fragment,
+        )
+    )
 
 
 def build_public_object_url(bucket: str, key: str) -> str:
