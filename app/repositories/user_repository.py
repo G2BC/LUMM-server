@@ -10,6 +10,13 @@ EXACT_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class UserRepository:
+    @staticmethod
+    def _normalize_role(role: Optional[str]) -> str:
+        normalized = (role or User.ROLE_RESEARCHER).strip().lower()
+        if normalized not in User.ROLES:
+            raise ValueError("Role inválida.")
+        return normalized
+
     @classmethod
     def _build_users_query(cls, search: Optional[str] = None, is_active: Optional[bool] = None):
         query = User.query.order_by(User.id.asc())
@@ -60,8 +67,22 @@ class UserRepository:
         return User.query.filter_by(id=parsed_id).first()
 
     @classmethod
-    def create_user(cls, name: str, institution: Optional[str], email: str, password: str) -> User:
-        user = User(name=name, institution=institution, email=email.strip().lower())
+    def create_user(
+        cls,
+        name: str,
+        institution: Optional[str],
+        email: str,
+        password: str,
+        role: Optional[str] = None,
+    ) -> User:
+        normalized_role = cls._normalize_role(role)
+        user = User(
+            name=name,
+            institution=institution,
+            email=email.strip().lower(),
+            role=normalized_role,
+            is_admin=(normalized_role == User.ROLE_ADMIN),
+        )
         user.set_password(password)
         db.session.add(user)
         try:
@@ -96,6 +117,16 @@ class UserRepository:
     @classmethod
     def update_admin_status(cls, user: User, is_admin: bool) -> User:
         user.is_admin = is_admin
+        user.role = User.ROLE_ADMIN if is_admin else User.ROLE_RESEARCHER
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    @classmethod
+    def update_role(cls, user: User, role: str) -> User:
+        normalized_role = cls._normalize_role(role)
+        user.role = normalized_role
+        user.is_admin = normalized_role == User.ROLE_ADMIN
         db.session.add(user)
         db.session.commit()
         return user

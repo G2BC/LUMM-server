@@ -16,6 +16,8 @@ class UserSchema(Schema):
         },
     )
     is_admin = fields.Boolean(dump_only=True)
+    role = fields.String(dump_only=True)
+    is_curator = fields.Boolean(dump_only=True)
     is_active = fields.Boolean(dump_only=True)
     must_change_password = fields.Boolean(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
