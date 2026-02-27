@@ -3,6 +3,16 @@ from flask_jwt_extended import create_access_token, create_refresh_token, get_jw
 
 
 class AuthService:
+    @staticmethod
+    def _build_claims(user):
+        return {
+            "is_admin": user.is_admin,
+            "role": user.role,
+            "is_curator": user.is_curator,
+            "email": user.email,
+            "must_change_password": user.must_change_password,
+        }
+
     @classmethod
     def login(cls, email: str, password: str):
         user = UserRepository.get_by_email(email)
@@ -13,11 +23,7 @@ class AuthService:
             raise PermissionError("Conta inativa. Aguarde aprovação do administrador.")
 
         identity = str(user.id)
-        additional_claims = {
-            "is_admin": user.is_admin,
-            "email": user.email,
-            "must_change_password": user.must_change_password,
-        }
+        additional_claims = cls._build_claims(user)
 
         return {
             "access_token": create_access_token(
@@ -42,11 +48,7 @@ class AuthService:
         return {
             "access_token": create_access_token(
                 identity=str(user.id),
-                additional_claims={
-                    "is_admin": user.is_admin,
-                    "email": user.email,
-                    "must_change_password": user.must_change_password,
-                },
+                additional_claims=cls._build_claims(user),
             )
         }
 
@@ -78,11 +80,8 @@ class AuthService:
             must_change_password=False,
         )
 
-        additional_claims = {
-            "is_admin": user.is_admin,
-            "email": user.email,
-            "must_change_password": False,
-        }
+        additional_claims = cls._build_claims(user)
+        additional_claims["must_change_password"] = False
         return {
             "access_token": create_access_token(
                 identity=str(user.id), additional_claims=additional_claims

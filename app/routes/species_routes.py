@@ -1,9 +1,20 @@
 from flask import request
 from flask.views import MethodView
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required, verify_jwt_in_request
 from flask_smorest import Blueprint, abort
 
 from app.schemas import SelectSchema
+from app.schemas.species_change_request_schemas import (
+    SpeciesChangeRequestCreateSchema,
+    SpeciesChangeRequestPaginationSchema,
+    SpeciesChangeRequestReviewSchema,
+    SpeciesChangeRequestSchema,
+    SpeciesPhotoUploadUrlRequestSchema,
+    SpeciesPhotoUploadUrlResponseSchema,
+    SpeciesTmpCleanupResponseSchema,
+)
 from app.schemas.species_schemas import SpeciesWithPhotosPaginationSchema, SpeciesWithPhotosSchema
+from app.services.species_change_request_service import SpeciesChangeRequestService
 from app.services.species_service import SpeciesService
 
 specie_bp = Blueprint(
@@ -11,6 +22,15 @@ specie_bp = Blueprint(
     "species",
     url_prefix="/species",
 )
+
+
+def _ensure_curator_or_admin():
+    claims = get_jwt()
+    is_admin = bool(claims.get("is_admin", False))
+    role = (claims.get("role") or "").lower()
+    is_curator = bool(claims.get("is_curator", False))
+    if not (is_admin or is_curator or role in {"curator", "admin"}):
+        abort(403, message="Acesso permitido apenas para curadores ou administradores.")
 
 
 @specie_bp.route("/list")
@@ -57,3 +77,117 @@ class GetSpecies(MethodView):
             return SpeciesService.get(species)
         except ValueError as exc:
             abort(404, message=str(exc))
+
+
+@specie_bp.route("/requests")
+class SpeciesChangeRequests(MethodView):
+    @specie_bp.arguments(SpeciesChangeRequestCreateSchema)
+    @specie_bp.response(201, SpeciesChangeRequestSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    def post(self, payload):
+        verify_jwt_in_request(optional=True)
+        identity = None
+        if get_jwt():
+            identity = get_jwt_identity()
+
+        try:
+            return SpeciesChangeRequestService.create_request(payload, identity)
+        except ValueError as exc:
+            abort(400, message=str(exc))
+
+    @jwt_required()
+    @specie_bp.response(200, SpeciesChangeRequestPaginationSchema)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def get(self):
+        _ensure_curator_or_admin()
+
+        status = request.args.get("status", type=str)
+        page = request.args.get("page", type=int)
+        per_page = request.args.get("per_page", type=int)
+
+        try:
+            return SpeciesChangeRequestService.list_requests(status, page, per_page)
+        except ValueError as exc:
+            abort(400, message=str(exc))
+
+
+@specie_bp.route("/requests/<string:request_id>")
+class GetSpeciesChangeRequest(MethodView):
+    @jwt_required()
+    @specie_bp.response(200, SpeciesChangeRequestSchema)
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Solicitação não encontrada")
+    def get(self, request_id: str):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesChangeRequestService.get_request(request_id)
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
+
+
+@specie_bp.route("/requests/upload-url")
+class SpeciesChangeRequestUploadUrl(MethodView):
+    @specie_bp.arguments(SpeciesPhotoUploadUrlRequestSchema, location="json")
+    @specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    def post(self, payload):
+        try:
+            return SpeciesChangeRequestService.generate_upload_url(
+                filename=payload["filename"],
+                mime_type=payload["mime_type"],
+                size_bytes=payload["size_bytes"],
+                species_id=payload.get("species_id"),
+            )
+        except ValueError as exc:
+            abort(400, message=str(exc))
+
+
+@specie_bp.route("/requests/cleanup-tmp")
+class CleanupSpeciesTmpUploads(MethodView):
+    @jwt_required()
+    @specie_bp.response(200, SpeciesTmpCleanupResponseSchema)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def post(self):
+        _ensure_curator_or_admin()
+        retention_days = request.args.get("retention_days", type=int)
+        dry_run = request.args.get("dry_run", default="true", type=str).lower() != "false"
+
+        try:
+            return SpeciesChangeRequestService.cleanup_tmp_objects(
+                retention_days=retention_days,
+                dry_run=dry_run,
+            )
+        except ValueError as exc:
+            abort(400, message=str(exc))
+
+
+@specie_bp.route("/requests/<string:request_id>/review")
+class ReviewSpeciesChangeRequest(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesChangeRequestReviewSchema)
+    @specie_bp.response(200, SpeciesChangeRequestSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Solicitação não encontrada")
+    def patch(self, payload, request_id: str):
+        _ensure_curator_or_admin()
+        identity = get_jwt_identity()
+
+        try:
+            return SpeciesChangeRequestService.review_request(
+                request_id=request_id,
+                reviewer_user_id=str(identity),
+                decision=payload["decision"],
+                review_note=payload.get("review_note"),
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)

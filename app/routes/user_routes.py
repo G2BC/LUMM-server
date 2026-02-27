@@ -1,9 +1,10 @@
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
 
 from app.schemas.login import AdminResetPasswordSchema
 from app.schemas.user_schemas import (
+    UserAdminUpdateSchema,
     UserCreateSchema,
     UserListQuerySchema,
     UserPaginationSchema,
@@ -98,3 +99,30 @@ class ResetUserPassword(MethodView):
             return UserService.admin_reset_password(user_id)
         except ValueError as exc:
             abort(404, message=str(exc))
+
+
+@user_bp.route("/<string:user_id>/admin")
+class UpdateUserAdminRole(MethodView):
+    @jwt_required()
+    @user_bp.arguments(UserAdminUpdateSchema)
+    @user_bp.response(200, UserSchema)
+    @user_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @user_bp.alt_response(403, description="Acesso permitido apenas para administradores")
+    @user_bp.alt_response(404, description="Usuário não encontrado")
+    def patch(self, payload, user_id):
+        claims = get_jwt()
+        if not claims.get("is_admin", False):
+            abort(403, message="Acesso permitido apenas para administradores.")
+
+        identity = get_jwt_identity()
+        try:
+            return UserService.update_admin_role(
+                actor_id=str(identity),
+                target_user_id=user_id,
+                is_admin=payload["is_admin"],
+            )
+        except ValueError as exc:
+            error_message = str(exc)
+            if error_message == "Usuário não encontrado.":
+                abort(404, message=error_message)
+            abort(400, message=error_message)

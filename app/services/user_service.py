@@ -122,3 +122,21 @@ class UserService:
             "temporary_password": temporary_password,
             "must_change_password": True,
         }
+
+    @classmethod
+    def update_admin_role(cls, actor_id: str, target_user_id: str, is_admin: bool):
+        actor = UserRepository.get_by_id(actor_id)
+        if not actor:
+            raise ValueError("Usuário autenticado não encontrado.")
+
+        target_user = UserRepository.get_by_id(target_user_id)
+        if not target_user:
+            raise ValueError("Usuário não encontrado.")
+
+        if actor.id == target_user.id and not is_admin:
+            raise ValueError("Você não pode revogar o próprio perfil de administrador.")
+
+        if target_user.is_admin == is_admin:
+            return target_user
+
+        return UserRepository.update_admin_status(target_user, is_admin)

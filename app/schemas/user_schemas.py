@@ -16,6 +16,8 @@ class UserSchema(Schema):
         },
     )
     is_admin = fields.Boolean(dump_only=True)
+    role = fields.String(dump_only=True)
+    is_curator = fields.Boolean(dump_only=True)
     is_active = fields.Boolean(dump_only=True)
     must_change_password = fields.Boolean(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
@@ -70,6 +72,16 @@ class UserPaginationSchema(Schema):
     page = fields.Integer(allow_none=True)
     per_page = fields.Integer(allow_none=True)
     pages = fields.Integer(allow_none=True)
+
+
+class UserAdminUpdateSchema(Schema):
+    is_admin = fields.Boolean(
+        required=True,
+        error_messages={
+            "required": "O campo is_admin é obrigatório.",
+            "null": "O campo is_admin não pode ser nulo.",
+        },
+    )
 
 
 class UserListQuerySchema(Schema):

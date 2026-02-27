@@ -1,6 +1,7 @@
 alembic==1.14.1
 apispec==6.6.1
 blinker==1.8.2
+boto3==1.40.54
 certifi==2026.1.4
 cfgv==3.4.0
 charset-normalizer==3.4.4
@@ -35,7 +36,7 @@ requests==2.32.4
 ruff==0.12.12
 SQLAlchemy==2.0.46
 typing_extensions==4.13.2
-urllib3==2.6.3
+urllib3==1.26.20
 virtualenv==20.39.0
 webargs==8.6.0
 Werkzeug==3.0.6
