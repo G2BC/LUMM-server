@@ -41,6 +41,14 @@ class SpeciesChangeRequestService:
     UPLOAD_HEAD_RETRY_SECONDS = 0.35
     TMP_PREFIX = "species/pending/"
     FINAL_PREFIX = "species/approved/"
+    CHARACTERISTICS_FIELDS = {
+        "lum_mycelium",
+        "lum_basidiome",
+        "lum_stipe",
+        "lum_pileus",
+        "lum_lamellae",
+        "lum_spores",
+    }
 
     @classmethod
     def create_request(cls, payload: dict[str, Any], requester_user_id: Optional[str] = None):
@@ -477,8 +485,15 @@ class SpeciesChangeRequestService:
     def _attach_current_data(req, species) -> None:
         proposed_data = getattr(req, "proposed_data", None) or {}
         current_data = {}
+        characteristics = getattr(species, "characteristics", None) if species else None
 
         for field in proposed_data.keys():
+            if field in SpeciesChangeRequestService.CHARACTERISTICS_FIELDS and species:
+                if characteristics is not None:
+                    current_data[field] = getattr(characteristics, field, None)
+                else:
+                    current_data[field] = getattr(species, field, None)
+                continue
             current_data[field] = getattr(species, field, None) if species else None
 
         req.current_data = current_data

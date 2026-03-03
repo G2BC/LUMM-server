@@ -2,12 +2,21 @@ from typing import Optional
 
 import app.utils.object_storage as object_storage
 from app.extensions import db
-from app.models.species import Species, SpeciesPhoto
+from app.models.species import Species, SpeciesCharacteristics, SpeciesPhoto
 from app.models.species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
 from sqlalchemy.orm import selectinload
 
 
 class SpeciesChangeRequestRepository:
+    CHARACTERISTICS_FIELDS = {
+        "lum_mycelium",
+        "lum_basidiome",
+        "lum_stipe",
+        "lum_pileus",
+        "lum_lamellae",
+        "lum_spores",
+    }
+
     @classmethod
     def create(
         cls,
@@ -82,13 +91,28 @@ class SpeciesChangeRequestRepository:
 
     @classmethod
     def get_species_by_id(cls, species_id: int) -> Optional[Species]:
-        return Species.query.filter(Species.id == species_id).first()
+        return (
+            Species.query.options(selectinload(Species.characteristics))
+            .filter(Species.id == species_id)
+            .first()
+        )
 
     @classmethod
     def apply_species_updates(cls, species: Species, proposed_data: dict) -> Species:
+        characteristics = species.characteristics
         for field, value in proposed_data.items():
+            if field in cls.CHARACTERISTICS_FIELDS:
+                if characteristics is None:
+                    characteristics = SpeciesCharacteristics(species_id=species.id)
+                    species.characteristics = characteristics
+                setattr(characteristics, field, value)
+                # Compatibilidade temporária: mantém campo legado em `species`.
+                setattr(species, field, value)
+                continue
             setattr(species, field, value)
 
+        if characteristics is not None:
+            db.session.add(characteristics)
         db.session.add(species)
         return species
 

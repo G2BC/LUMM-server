@@ -60,6 +60,7 @@ class Species(db.Model):
     section = db.Column(db.Text)
 
     # Bioluminescência (NULL = desconhecido)
+    # Campos legados mantidos temporariamente para compatibilidade durante a migração.
     lum_mycelium = db.Column(db.Boolean)
     lum_basidiome = db.Column(db.Boolean)
     lum_stipe = db.Column(db.Boolean)
@@ -113,6 +114,34 @@ class Species(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    characteristics = db.relationship(
+        "SpeciesCharacteristics",
+        back_populates="species",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<Specie id={self.id} scientific_name={self.scientific_name!r}>"
+
+
+class SpeciesCharacteristics(db.Model):
+    __tablename__ = "species_characteristics"
+
+    species_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("species.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    lum_mycelium = db.Column(db.Boolean)
+    lum_basidiome = db.Column(db.Boolean)
+    lum_stipe = db.Column(db.Boolean)
+    lum_pileus = db.Column(db.Boolean)
+    lum_lamellae = db.Column(db.Boolean)
+    lum_spores = db.Column(db.Boolean)
+
+    species = db.relationship("Species", back_populates="characteristics")
+
+    def __repr__(self):
+        return f"<SpeciesCharacteristics species_id={self.species_id}>"

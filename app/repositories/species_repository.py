@@ -14,9 +14,10 @@ class SpeciesRepository:
         page: Optional[int] = None,
         per_page: Optional[int] = None,
     ):
-        base = Species.query.options(selectinload(Species.photos)).order_by(
-            Species.scientific_name.asc()
-        )
+        base = Species.query.options(
+            selectinload(Species.photos),
+            selectinload(Species.characteristics),
+        ).order_by(Species.scientific_name.asc())
 
         filters = []
 
@@ -43,7 +44,9 @@ class SpeciesRepository:
             return None
 
         base = Species.query.options(
-            selectinload(Species.photos), selectinload(Species.taxonomy)
+            selectinload(Species.photos),
+            selectinload(Species.taxonomy),
+            selectinload(Species.characteristics),
         ).order_by(Species.scientific_name.asc())
 
         if species.isdigit():
