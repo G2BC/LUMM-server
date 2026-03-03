@@ -106,8 +106,6 @@ class SpeciesChangeRequestRepository:
                     characteristics = SpeciesCharacteristics(species_id=species.id)
                     species.characteristics = characteristics
                 setattr(characteristics, field, value)
-                # Compatibilidade temporária: mantém campo legado em `species`.
-                setattr(species, field, value)
                 continue
             setattr(species, field, value)
 

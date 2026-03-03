@@ -6,7 +6,7 @@ from .taxon_schemas import TaxonSchema
 
 
 class SpeciesPhotoSchema(Schema):
-    photo_id = fields.Integer(dump_only=True)
+    photo_id = fields.String(dump_only=True)
     medium_url = fields.Method("get_medium_url", dump_only=True)
     original_url = fields.Method("get_original_url", dump_only=True)
     license_code = fields.String(allow_none=True, dump_only=True)
@@ -29,7 +29,7 @@ class SpeciesPhotoSchema(Schema):
 
 
 class SpeciesWithPhotosSchema(Schema):
-    id = fields.Integer(dump_only=True)
+    id = fields.String(dump_only=True)
     scientific_name = fields.String(required=True)
     lineage = fields.String(allow_none=True)
     lum_mycelium = fields.Method("get_lum_mycelium", allow_none=True)
@@ -67,7 +67,7 @@ class SpeciesWithPhotosSchema(Schema):
         characteristics = getattr(obj, "characteristics", None)
         if characteristics is not None:
             return getattr(characteristics, field_name, None)
-        return getattr(obj, field_name, None)
+        return None
 
     def get_lum_mycelium(self, obj):
         return self._get_characteristic_value(obj, "lum_mycelium")

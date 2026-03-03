@@ -59,15 +59,6 @@ class Species(db.Model):
     group_name = db.Column(db.Text)
     section = db.Column(db.Text)
 
-    # Bioluminescência (NULL = desconhecido)
-    # Campos legados mantidos temporariamente para compatibilidade durante a migração.
-    lum_mycelium = db.Column(db.Boolean)
-    lum_basidiome = db.Column(db.Boolean)
-    lum_stipe = db.Column(db.Boolean)
-    lum_pileus = db.Column(db.Boolean)
-    lum_lamellae = db.Column(db.Boolean)
-    lum_spores = db.Column(db.Boolean)
-
     # Localidade tipo + distribuição
     type_country = db.Column(db.Text)
     distribution_regions = db.Column(
