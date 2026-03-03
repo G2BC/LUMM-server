@@ -38,6 +38,19 @@ class SpeciesWithPhotosSchema(Schema):
     lum_pileus = fields.Method("get_lum_pileus", allow_none=True)
     lum_lamellae = fields.Method("get_lum_lamellae", allow_none=True)
     lum_spores = fields.Method("get_lum_spores", allow_none=True)
+    cultivation = fields.Method("get_cultivation", allow_none=True)
+    finding_tips = fields.Method("get_finding_tips", allow_none=True)
+    nearby_trees = fields.Method("get_nearby_trees", allow_none=True)
+    curiosities = fields.Method("get_curiosities", allow_none=True)
+    general_description = fields.Method("get_general_description", allow_none=True)
+    colors = fields.Method("get_colors", allow_none=True)
+    size_cm = fields.Method("get_size_cm", allow_none=True)
+    growth_form_id = fields.Method("get_growth_form_id", allow_none=True)
+    substrate_id = fields.Method("get_substrate_id", allow_none=True)
+    nutrition_mode_id = fields.Method("get_nutrition_mode_id", allow_none=True)
+    habitat_ids = fields.Method("get_habitat_ids", allow_none=True)
+    season_start_month = fields.Method("get_season_start_month", allow_none=True)
+    season_end_month = fields.Method("get_season_end_month", allow_none=True)
     types_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
@@ -86,6 +99,49 @@ class SpeciesWithPhotosSchema(Schema):
 
     def get_lum_spores(self, obj):
         return self._get_characteristic_value(obj, "lum_spores")
+
+    def get_cultivation(self, obj):
+        return self._get_characteristic_value(obj, "cultivation")
+
+    def get_finding_tips(self, obj):
+        return self._get_characteristic_value(obj, "finding_tips")
+
+    def get_nearby_trees(self, obj):
+        return self._get_characteristic_value(obj, "nearby_trees")
+
+    def get_curiosities(self, obj):
+        return self._get_characteristic_value(obj, "curiosities")
+
+    def get_general_description(self, obj):
+        return self._get_characteristic_value(obj, "general_description")
+
+    def get_colors(self, obj):
+        return self._get_characteristic_value(obj, "colors")
+
+    def get_size_cm(self, obj):
+        return self._get_characteristic_value(obj, "size_cm")
+
+    def get_growth_form_id(self, obj):
+        return self._get_characteristic_value(obj, "growth_form_id")
+
+    def get_substrate_id(self, obj):
+        return self._get_characteristic_value(obj, "substrate_id")
+
+    def get_nutrition_mode_id(self, obj):
+        return self._get_characteristic_value(obj, "nutrition_mode_id")
+
+    def get_habitat_ids(self, obj):
+        characteristics = getattr(obj, "characteristics", None)
+        if not characteristics:
+            return []
+        habitats = getattr(characteristics, "habitats", None) or []
+        return [habitat.id for habitat in habitats]
+
+    def get_season_start_month(self, obj):
+        return self._get_characteristic_value(obj, "season_start_month")
+
+    def get_season_end_month(self, obj):
+        return self._get_characteristic_value(obj, "season_end_month")
 
 
 class SpeciesWithPhotosPaginationSchema(Schema):

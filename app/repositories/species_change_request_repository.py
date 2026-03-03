@@ -2,8 +2,11 @@ from typing import Optional
 
 import app.utils.object_storage as object_storage
 from app.extensions import db
-from app.models.species import Species, SpeciesCharacteristics, SpeciesPhoto
+from app.models.habitat import Habitat
+from app.models.species import Species
 from app.models.species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
+from app.models.species_characteristics import SpeciesCharacteristics
+from app.models.species_photo import SpeciesPhoto
 from sqlalchemy.orm import selectinload
 
 
@@ -15,6 +18,19 @@ class SpeciesChangeRequestRepository:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
+        "cultivation",
+        "finding_tips",
+        "nearby_trees",
+        "curiosities",
+        "general_description",
+        "colors",
+        "size_cm",
+        "growth_form_id",
+        "substrate_id",
+        "nutrition_mode_id",
+        "habitat_ids",
+        "season_start_month",
+        "season_end_month",
     }
 
     @classmethod
@@ -105,6 +121,21 @@ class SpeciesChangeRequestRepository:
                 if characteristics is None:
                     characteristics = SpeciesCharacteristics(species_id=species.id)
                     species.characteristics = characteristics
+                if field == "habitat_ids":
+                    habitat_ids = value or []
+                    if habitat_ids:
+                        habitats = (
+                            Habitat.query.filter(
+                                Habitat.id.in_(habitat_ids),
+                                Habitat.is_active.is_(True),
+                            )
+                            .order_by(Habitat.id.asc())
+                            .all()
+                        )
+                    else:
+                        habitats = []
+                    characteristics.habitats = habitats
+                    continue
                 setattr(characteristics, field, value)
                 continue
             setattr(species, field, value)

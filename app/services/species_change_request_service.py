@@ -7,7 +7,11 @@ from typing import Any, Optional
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
+from app.models.growth_form import GrowthForm
+from app.models.habitat import Habitat
+from app.models.nutrition_mode import NutritionMode
 from app.models.species_change_request import SpeciesChangeRequest
+from app.models.substrate import Substrate
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.user_repository import UserRepository
 from botocore.exceptions import BotoCoreError, ClientError
@@ -27,13 +31,20 @@ class SpeciesChangeRequestService:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
+        "cultivation",
+        "finding_tips",
+        "nearby_trees",
+        "curiosities",
+        "general_description",
+        "colors",
+        "size_cm",
+        "growth_form_id",
+        "substrate_id",
+        "nutrition_mode_id",
+        "habitat_ids",
+        "season_start_month",
+        "season_end_month",
         "distribution_regions",
-        "mycobank_index_fungorum_id",
-        "mycobank_type",
-        "ncbi_taxonomy_id",
-        "inaturalist_taxon_id",
-        "iucn_redlist",
-        "unite_taxon_id",
         "references_raw",
     }
     UPLOAD_EXPIRES_SECONDS = 900
@@ -48,6 +59,19 @@ class SpeciesChangeRequestService:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
+        "cultivation",
+        "finding_tips",
+        "nearby_trees",
+        "curiosities",
+        "general_description",
+        "colors",
+        "size_cm",
+        "growth_form_id",
+        "substrate_id",
+        "nutrition_mode_id",
+        "habitat_ids",
+        "season_start_month",
+        "season_end_month",
     }
 
     @classmethod
@@ -63,6 +87,7 @@ class SpeciesChangeRequestService:
             raise ValueError(
                 f"Campos não permitidos em `proposed_data`: {', '.join(invalid_fields)}"
             )
+        cls._validate_proposed_data(proposed_data)
 
         photos_payload = payload.get("photos") or []
         cls._validate_photos_payload(photos_payload)
@@ -121,6 +146,95 @@ class SpeciesChangeRequestService:
             "object_key": object_key,
             "expires_at": object_storage.utc_now() + timedelta(seconds=cls.UPLOAD_EXPIRES_SECONDS),
         }
+
+    @staticmethod
+    def _validate_proposed_data(proposed_data: dict[str, Any]) -> None:
+        size_cm = proposed_data.get("size_cm")
+        if size_cm is not None:
+            if isinstance(size_cm, bool) or not isinstance(size_cm, (int, float)):
+                raise ValueError("`size_cm` deve ser numérico.")
+            if size_cm < 0:
+                raise ValueError("`size_cm` deve ser >= 0.")
+
+        growth_form_id = proposed_data.get("growth_form_id")
+        if growth_form_id is not None:
+            if isinstance(growth_form_id, bool) or not isinstance(growth_form_id, int):
+                raise ValueError("`growth_form_id` deve ser inteiro.")
+            if growth_form_id < 1:
+                raise ValueError("`growth_form_id` deve ser >= 1.")
+
+            growth_form = GrowthForm.query.filter(
+                GrowthForm.id == growth_form_id,
+                GrowthForm.is_active.is_(True),
+            ).first()
+            if not growth_form:
+                raise ValueError("`growth_form_id` inválido ou inativo.")
+
+        substrate_id = proposed_data.get("substrate_id")
+        if substrate_id is not None:
+            if isinstance(substrate_id, bool) or not isinstance(substrate_id, int):
+                raise ValueError("`substrate_id` deve ser inteiro.")
+            if substrate_id < 1:
+                raise ValueError("`substrate_id` deve ser >= 1.")
+
+            substrate = Substrate.query.filter(
+                Substrate.id == substrate_id,
+                Substrate.is_active.is_(True),
+            ).first()
+            if not substrate:
+                raise ValueError("`substrate_id` inválido ou inativo.")
+
+        nutrition_mode_id = proposed_data.get("nutrition_mode_id")
+        if nutrition_mode_id is not None:
+            if isinstance(nutrition_mode_id, bool) or not isinstance(nutrition_mode_id, int):
+                raise ValueError("`nutrition_mode_id` deve ser inteiro.")
+            if nutrition_mode_id < 1:
+                raise ValueError("`nutrition_mode_id` deve ser >= 1.")
+
+            nutrition_mode = NutritionMode.query.filter(
+                NutritionMode.id == nutrition_mode_id,
+                NutritionMode.is_active.is_(True),
+            ).first()
+            if not nutrition_mode:
+                raise ValueError("`nutrition_mode_id` inválido ou inativo.")
+
+        habitat_ids = proposed_data.get("habitat_ids")
+        if habitat_ids is not None:
+            if not isinstance(habitat_ids, list):
+                raise ValueError("`habitat_ids` deve ser uma lista de inteiros.")
+            normalized_habitat_ids = []
+            for hid in habitat_ids:
+                if isinstance(hid, bool) or not isinstance(hid, int):
+                    raise ValueError("`habitat_ids` deve conter apenas inteiros.")
+                if hid < 1:
+                    raise ValueError("`habitat_ids` deve conter apenas inteiros >= 1.")
+                normalized_habitat_ids.append(hid)
+
+            unique_habitat_ids = sorted(set(normalized_habitat_ids))
+            if len(unique_habitat_ids) != len(normalized_habitat_ids):
+                raise ValueError("`habitat_ids` contém IDs duplicados.")
+
+            if unique_habitat_ids:
+                active_count = Habitat.query.filter(
+                    Habitat.id.in_(unique_habitat_ids),
+                    Habitat.is_active.is_(True),
+                ).count()
+                if active_count != len(unique_habitat_ids):
+                    raise ValueError("`habitat_ids` contém IDs inválidos ou inativos.")
+
+        start = proposed_data.get("season_start_month")
+        end = proposed_data.get("season_end_month")
+
+        if start is None and end is None:
+            return
+        if start is None or end is None:
+            raise ValueError(
+                "`season_start_month` e `season_end_month` devem ser informados juntos."
+            )
+        if not isinstance(start, int) or not isinstance(end, int):
+            raise ValueError("`season_start_month` e `season_end_month` devem ser inteiros.")
+        if start < 1 or start > 12 or end < 1 or end > 12:
+            raise ValueError("`season_start_month` e `season_end_month` devem estar entre 1 e 12.")
 
     @classmethod
     def list_requests(cls, status=None, page=None, per_page=None):
@@ -488,6 +602,13 @@ class SpeciesChangeRequestService:
         characteristics = getattr(species, "characteristics", None) if species else None
 
         for field in proposed_data.keys():
+            if field == "habitat_ids" and species:
+                if characteristics is None:
+                    current_data[field] = []
+                else:
+                    habitats = getattr(characteristics, "habitats", None) or []
+                    current_data[field] = [habitat.id for habitat in habitats]
+                continue
             if field in SpeciesChangeRequestService.CHARACTERISTICS_FIELDS and species:
                 if characteristics is not None:
                     current_data[field] = getattr(characteristics, field, None)
