@@ -1,7 +1,7 @@
-name: Importar status IUCN Red List
+name: Import IUCN Red List Status
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
     - cron: "0 3 1 * *"
 
@@ -15,6 +15,8 @@ concurrency:
 jobs:
   import:
     runs-on: self-hosted
+    container:
+      image: python:3.9.19-slim
     timeout-minutes: 30
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -25,24 +27,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Python from runner
-        shell: bash
-        run: |
-          if command -v python3.9 >/dev/null 2>&1; then
-            PYTHON_BIN=python3.9
-          elif command -v python3 >/dev/null 2>&1; then
-            PYTHON_BIN=python3
-          else
-            echo "Python not found on self-hosted runner"
-            exit 1
-          fi
-          echo "PYTHON_BIN=$PYTHON_BIN" >> "$GITHUB_ENV"
-          "$PYTHON_BIN" --version
+      - name: Python version
+        run: python --version
 
       - name: Install dependencies
         run: |
-          "$PYTHON_BIN" -m pip install --upgrade pip
-          "$PYTHON_BIN" -m pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Run import script
-        run: "$PYTHON_BIN" scripts/import_iucn_red_list_status.py
+        run: python scripts/import_iucn_red_list_status.py
