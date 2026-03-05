@@ -1,6 +1,8 @@
 from typing import Optional
 
 from app.models.species import Species
+from app.models.species_characteristics import SpeciesCharacteristics
+from app.models.species_similarity import SpeciesSimilarity
 from sqlalchemy.orm import selectinload
 
 
@@ -16,7 +18,13 @@ class SpeciesRepository:
     ):
         base = Species.query.options(
             selectinload(Species.photos),
-            selectinload(Species.characteristics),
+            selectinload(Species.characteristics).selectinload(
+                SpeciesCharacteristics.nutrition_modes
+            ),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.habitats),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.growth_forms),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.substrates),
+            selectinload(Species.similar_species_links),
         ).order_by(Species.scientific_name.asc())
 
         filters = []
@@ -46,7 +54,15 @@ class SpeciesRepository:
         base = Species.query.options(
             selectinload(Species.photos),
             selectinload(Species.taxonomy),
-            selectinload(Species.characteristics),
+            selectinload(Species.characteristics).selectinload(
+                SpeciesCharacteristics.nutrition_modes
+            ),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.habitats),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.growth_forms),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.substrates),
+            selectinload(Species.similar_species_links).selectinload(
+                SpeciesSimilarity.similar_species
+            ),
         ).order_by(Species.scientific_name.asc())
 
         if species.isdigit():

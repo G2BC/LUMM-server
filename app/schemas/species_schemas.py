@@ -6,7 +6,7 @@ from .taxon_schemas import TaxonSchema
 
 
 class SpeciesPhotoSchema(Schema):
-    photo_id = fields.String(dump_only=True)
+    photo_id = fields.Integer(dump_only=True)
     medium_url = fields.Method("get_medium_url", dump_only=True)
     original_url = fields.Method("get_original_url", dump_only=True)
     license_code = fields.String(allow_none=True, dump_only=True)
@@ -28,8 +28,87 @@ class SpeciesPhotoSchema(Schema):
         return normalize_object_url(getattr(obj, "original_url", None))
 
 
+class SpeciesCharacteristicsSchema(Schema):
+    species_id = fields.Integer(allow_none=True)
+    lum_mycelium = fields.Boolean(allow_none=True)
+    lum_basidiome = fields.Boolean(allow_none=True)
+    lum_stipe = fields.Boolean(allow_none=True)
+    lum_pileus = fields.Boolean(allow_none=True)
+    lum_lamellae = fields.Boolean(allow_none=True)
+    lum_spores = fields.Boolean(allow_none=True)
+    edible = fields.Boolean(allow_none=True)
+    cultivation = fields.String(allow_none=True)
+    cultivation_pt = fields.String(allow_none=True)
+    finding_tips = fields.String(allow_none=True)
+    finding_tips_pt = fields.String(allow_none=True)
+    nearby_trees = fields.String(allow_none=True)
+    nearby_trees_pt = fields.String(allow_none=True)
+    curiosities = fields.String(allow_none=True)
+    curiosities_pt = fields.String(allow_none=True)
+    general_description = fields.String(allow_none=True)
+    general_description_pt = fields.String(allow_none=True)
+    conservation_status = fields.String(allow_none=True)
+    colors = fields.String(allow_none=True)
+    colors_pt = fields.String(allow_none=True)
+    size_cm = fields.Float(allow_none=True)
+    growth_forms = fields.Method("get_growth_forms", allow_none=True)
+    substrates = fields.Method("get_substrates", allow_none=True)
+    nutrition_modes = fields.Method("get_nutrition_modes", allow_none=True)
+    season_start_month = fields.Integer(allow_none=True)
+    season_end_month = fields.Integer(allow_none=True)
+    habitats = fields.Method("get_habitats", allow_none=True)
+
+    @staticmethod
+    def get_habitats(obj):
+        habitats = getattr(obj, "habitats", None) or []
+        return [
+            {
+                "id": habitat.id,
+                "label_pt": habitat.label_pt,
+                "label_en": habitat.label_en,
+            }
+            for habitat in habitats
+        ]
+
+    @staticmethod
+    def get_growth_forms(obj):
+        growth_forms = getattr(obj, "growth_forms", None) or []
+        return [
+            {
+                "id": growth_form.id,
+                "label_pt": growth_form.label_pt,
+                "label_en": growth_form.label_en,
+            }
+            for growth_form in growth_forms
+        ]
+
+    @staticmethod
+    def get_substrates(obj):
+        substrates = getattr(obj, "substrates", None) or []
+        return [
+            {
+                "id": substrate.id,
+                "label_pt": substrate.label_pt,
+                "label_en": substrate.label_en,
+            }
+            for substrate in substrates
+        ]
+
+    @staticmethod
+    def get_nutrition_modes(obj):
+        nutrition_modes = getattr(obj, "nutrition_modes", None) or []
+        return [
+            {
+                "id": nutrition_mode.id,
+                "label_pt": nutrition_mode.label_pt,
+                "label_en": nutrition_mode.label_en,
+            }
+            for nutrition_mode in nutrition_modes
+        ]
+
+
 class SpeciesWithPhotosSchema(Schema):
-    id = fields.String(dump_only=True)
+    id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
     lineage = fields.String(allow_none=True)
     lum_mycelium = fields.Method("get_lum_mycelium", allow_none=True)
@@ -38,9 +117,29 @@ class SpeciesWithPhotosSchema(Schema):
     lum_pileus = fields.Method("get_lum_pileus", allow_none=True)
     lum_lamellae = fields.Method("get_lum_lamellae", allow_none=True)
     lum_spores = fields.Method("get_lum_spores", allow_none=True)
+    edible = fields.Method("get_edible", allow_none=True)
+    cultivation = fields.Method("get_cultivation", allow_none=True)
+    finding_tips = fields.Method("get_finding_tips", allow_none=True)
+    nearby_trees = fields.Method("get_nearby_trees", allow_none=True)
+    curiosities = fields.Method("get_curiosities", allow_none=True)
+    general_description = fields.Method("get_general_description", allow_none=True)
+    conservation_status = fields.Method("get_conservation_status", allow_none=True)
+    colors = fields.Method("get_colors", allow_none=True)
+    size_cm = fields.Method("get_size_cm", allow_none=True)
+    growth_forms = fields.Method("get_growth_forms", allow_none=True)
+    substrates = fields.Method("get_substrates", allow_none=True)
+    habitats = fields.Method("get_habitats", allow_none=True)
+    similar_species_ids = fields.Method("get_similar_species_ids", allow_none=True)
+    season_start_month = fields.Method("get_season_start_month", allow_none=True)
+    season_end_month = fields.Method("get_season_end_month", allow_none=True)
     types_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
+    species_characteristics = fields.Nested(
+        SpeciesCharacteristicsSchema,
+        attribute="characteristics",
+        allow_none=True,
+    )
     taxonomy = fields.Nested(TaxonSchema, dump_only=True)
     photos = fields.List(
         fields.Nested(
@@ -87,6 +186,85 @@ class SpeciesWithPhotosSchema(Schema):
     def get_lum_spores(self, obj):
         return self._get_characteristic_value(obj, "lum_spores")
 
+    def get_edible(self, obj):
+        return self._get_characteristic_value(obj, "edible")
+
+    def get_cultivation(self, obj):
+        return self._get_characteristic_value(obj, "cultivation")
+
+    def get_finding_tips(self, obj):
+        return self._get_characteristic_value(obj, "finding_tips")
+
+    def get_nearby_trees(self, obj):
+        return self._get_characteristic_value(obj, "nearby_trees")
+
+    def get_curiosities(self, obj):
+        return self._get_characteristic_value(obj, "curiosities")
+
+    def get_general_description(self, obj):
+        return self._get_characteristic_value(obj, "general_description")
+
+    def get_conservation_status(self, obj):
+        return self._get_characteristic_value(obj, "conservation_status")
+
+    def get_colors(self, obj):
+        return self._get_characteristic_value(obj, "colors")
+
+    def get_size_cm(self, obj):
+        return self._get_characteristic_value(obj, "size_cm")
+
+    def get_growth_forms(self, obj):
+        characteristics = getattr(obj, "characteristics", None)
+        if not characteristics:
+            return []
+        growth_forms = getattr(characteristics, "growth_forms", None) or []
+        return [
+            {
+                "id": growth_form.id,
+                "label_pt": growth_form.label_pt,
+                "label_en": growth_form.label_en,
+            }
+            for growth_form in growth_forms
+        ]
+
+    def get_substrates(self, obj):
+        characteristics = getattr(obj, "characteristics", None)
+        if not characteristics:
+            return []
+        substrates = getattr(characteristics, "substrates", None) or []
+        return [
+            {
+                "id": substrate.id,
+                "label_pt": substrate.label_pt,
+                "label_en": substrate.label_en,
+            }
+            for substrate in substrates
+        ]
+
+    def get_habitats(self, obj):
+        characteristics = getattr(obj, "characteristics", None)
+        if not characteristics:
+            return []
+        habitats = getattr(characteristics, "habitats", None) or []
+        return [
+            {
+                "id": habitat.id,
+                "label_pt": habitat.label_pt,
+                "label_en": habitat.label_en,
+            }
+            for habitat in habitats
+        ]
+
+    def get_similar_species_ids(self, obj):
+        links = getattr(obj, "similar_species_links", None) or []
+        return sorted(link.similar_species_id for link in links)
+
+    def get_season_start_month(self, obj):
+        return self._get_characteristic_value(obj, "season_start_month")
+
+    def get_season_end_month(self, obj):
+        return self._get_characteristic_value(obj, "season_end_month")
+
 
 class SpeciesWithPhotosPaginationSchema(Schema):
     items = fields.List(fields.Nested(SpeciesWithPhotosSchema))
@@ -94,3 +272,47 @@ class SpeciesWithPhotosPaginationSchema(Schema):
     page = fields.Integer(allow_none=True)
     per_page = fields.Integer(allow_none=True)
     pages = fields.Integer(allow_none=True)
+
+
+class SpeciesDetailSchema(Schema):
+    id = fields.Integer(dump_only=True)
+    scientific_name = fields.String(required=True)
+    lineage = fields.String(allow_none=True)
+    types_country = fields.String(allow_none=True)
+    mycobank_type = fields.String(allow_none=True)
+    mycobank_index_fungorum_id = fields.String(allow_none=True)
+    species_characteristics = fields.Nested(
+        SpeciesCharacteristicsSchema,
+        attribute="characteristics",
+        allow_none=True,
+    )
+    taxonomy = fields.Nested(TaxonSchema, dump_only=True)
+    similar_species = fields.Method("get_similar_species", allow_none=True)
+    photos = fields.List(
+        fields.Nested(
+            SpeciesPhotoSchema(
+                only=(
+                    "photo_id",
+                    "medium_url",
+                    "original_url",
+                    "license_code",
+                    "attribution",
+                    "rights_holder",
+                    "source_url",
+                    "declaration_accepted_at",
+                    "lumm",
+                    "featured",
+                )
+            ),
+            dump_only=True,
+        )
+    )
+
+    def get_similar_species(self, obj):
+        links = getattr(obj, "similar_species_links", None) or []
+        items = []
+        for link in links:
+            related = getattr(link, "similar_species", None)
+            name = getattr(related, "scientific_name", None)
+            items.append({"id": link.similar_species_id, "name": name})
+        return sorted(items, key=lambda item: item["id"])
