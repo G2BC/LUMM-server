@@ -66,7 +66,7 @@ def main():
                 for assessment in assessments:
                     if assessment.get("latest", False):
                         conservation_status = assessment.get("red_list_category_code")
-                        assessment_id = assetment.get("assessment_id")
+                        assessment_id = assessment.get("assessment_id")
 
                         Species.query.filter_by(id=species.id).update(
                             {"iucn_redlist": assessment_id},
