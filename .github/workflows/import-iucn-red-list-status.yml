@@ -25,15 +25,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
-          cache: "pip"
-          cache-dependency-path: requirements.txt
+      - name: Select Python from runner
+        shell: bash
+        run: |
+          if command -v python3.9 >/dev/null 2>&1; then
+            PYTHON_BIN=python3.9
+          elif command -v python3 >/dev/null 2>&1; then
+            PYTHON_BIN=python3
+          else
+            echo "Python not found on self-hosted runner"
+            exit 1
+          fi
+          echo "PYTHON_BIN=$PYTHON_BIN" >> "$GITHUB_ENV"
+          "$PYTHON_BIN" --version
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          "$PYTHON_BIN" -m pip install --upgrade pip
+          "$PYTHON_BIN" -m pip install -r requirements.txt
 
       - name: Run import script
-        run: python scripts/import_iucn_red_list_status.py
+        run: "$PYTHON_BIN" scripts/import_iucn_red_list_status.py
