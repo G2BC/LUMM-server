@@ -13,7 +13,10 @@ from app.schemas.species_change_request_schemas import (
     SpeciesPhotoUploadUrlResponseSchema,
     SpeciesTmpCleanupResponseSchema,
 )
-from app.schemas.species_schemas import SpeciesWithPhotosPaginationSchema, SpeciesWithPhotosSchema
+from app.schemas.species_schemas import (
+    SpeciesDetailSchema,
+    SpeciesWithPhotosPaginationSchema,
+)
 from app.services.species_change_request_service import SpeciesChangeRequestService
 from app.services.species_service import SpeciesService
 
@@ -79,7 +82,7 @@ class SpeciesFamilySelect(MethodView):
 
 @specie_bp.route("/<string:species>")
 class GetSpecies(MethodView):
-    @specie_bp.response(200, SpeciesWithPhotosSchema)
+    @specie_bp.response(200, SpeciesDetailSchema)
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def get(self, species: str):
         try:
@@ -195,6 +198,7 @@ class ReviewSpeciesChangeRequest(MethodView):
                 decision=payload.get("decision"),
                 review_note=payload.get("review_note"),
                 proposed_data_decision=payload.get("proposed_data_decision"),
+                proposed_data_fields=payload.get("proposed_data_fields") or [],
                 photo_decisions=payload.get("photos") or [],
             )
         except ValueError as exc:

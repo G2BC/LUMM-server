@@ -97,12 +97,25 @@ class SpeciesPhotoReviewDecisionInputSchema(Schema):
     decision = fields.String(required=True)
 
 
+class SpeciesProposedDataReviewDecisionInputSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    field = fields.String(required=True)
+    decision = fields.String(required=True)
+
+
 class SpeciesChangeRequestReviewSchema(Schema):
     class Meta:
         unknown = EXCLUDE
 
     decision = fields.String(allow_none=True)
     proposed_data_decision = fields.String(allow_none=True)
+    proposed_data_fields = fields.List(
+        fields.Nested(SpeciesProposedDataReviewDecisionInputSchema),
+        required=False,
+        load_default=list,
+    )
     photos = fields.List(
         fields.Nested(SpeciesPhotoReviewDecisionInputSchema),
         required=False,
@@ -114,9 +127,10 @@ class SpeciesChangeRequestReviewSchema(Schema):
     def validate_decision(self, data, **kwargs):
         decision = (data.get("decision") or "").lower()
         proposed_data_decision = (data.get("proposed_data_decision") or "").lower()
+        proposed_data_fields = data.get("proposed_data_fields") or []
         photos = data.get("photos") or []
 
-        if not decision and not proposed_data_decision and not photos:
+        if not decision and not proposed_data_decision and not proposed_data_fields and not photos:
             raise ValidationError(
                 "Informe `decision` geral ou decisões granulares.",
                 field_name="decision",
@@ -132,6 +146,28 @@ class SpeciesChangeRequestReviewSchema(Schema):
                 "`proposed_data_decision` deve ser `approve` ou `reject`.",
                 field_name="proposed_data_decision",
             )
+
+        seen_fields = set()
+        for index, item in enumerate(proposed_data_fields):
+            field_name = (item.get("field") or "").strip()
+            if not field_name:
+                raise ValidationError(
+                    f"`proposed_data_fields[{index}].field` é obrigatório.",
+                    field_name="proposed_data_fields",
+                )
+            if field_name in seen_fields:
+                raise ValidationError(
+                    f"`field` duplicado em `proposed_data_fields`: {field_name}.",
+                    field_name="proposed_data_fields",
+                )
+            seen_fields.add(field_name)
+
+            field_decision = (item.get("decision") or "").lower()
+            if field_decision not in {"approve", "reject"}:
+                raise ValidationError(
+                    f"`proposed_data_fields[{index}].decision` deve ser `approve` ou `reject`.",
+                    field_name="proposed_data_fields",
+                )
 
         seen_photo_ids = set()
         for index, item in enumerate(photos):

@@ -77,6 +77,13 @@ class Species(db.Model):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    similar_species_links = db.relationship(
+        "SpeciesSimilarity",
+        foreign_keys="SpeciesSimilarity.species_id",
+        back_populates="species",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<Specie id={self.id} scientific_name={self.scientific_name!r}>"

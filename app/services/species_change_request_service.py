@@ -31,16 +31,23 @@ class SpeciesChangeRequestService:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
+        "edible",
         "cultivation",
+        "cultivation_pt",
         "finding_tips",
+        "finding_tips_pt",
         "nearby_trees",
+        "nearby_trees_pt",
         "curiosities",
+        "curiosities_pt",
         "general_description",
+        "general_description_pt",
         "colors",
+        "colors_pt",
         "size_cm",
-        "growth_form_id",
-        "substrate_id",
-        "nutrition_mode_id",
+        "growth_form_ids",
+        "substrate_ids",
+        "nutrition_mode_ids",
         "habitat_ids",
         "season_start_month",
         "season_end_month",
@@ -59,16 +66,23 @@ class SpeciesChangeRequestService:
         "lum_pileus",
         "lum_lamellae",
         "lum_spores",
+        "edible",
         "cultivation",
+        "cultivation_pt",
         "finding_tips",
+        "finding_tips_pt",
         "nearby_trees",
+        "nearby_trees_pt",
         "curiosities",
+        "curiosities_pt",
         "general_description",
+        "general_description_pt",
         "colors",
+        "colors_pt",
         "size_cm",
-        "growth_form_id",
-        "substrate_id",
-        "nutrition_mode_id",
+        "growth_form_ids",
+        "substrate_ids",
+        "nutrition_mode_ids",
         "habitat_ids",
         "season_start_month",
         "season_end_month",
@@ -87,7 +101,7 @@ class SpeciesChangeRequestService:
             raise ValueError(
                 f"Campos não permitidos em `proposed_data`: {', '.join(invalid_fields)}"
             )
-        cls._validate_proposed_data(proposed_data)
+        cls._validate_proposed_data(proposed_data, species_id=species_id)
 
         photos_payload = payload.get("photos") or []
         cls._validate_photos_payload(photos_payload)
@@ -148,7 +162,13 @@ class SpeciesChangeRequestService:
         }
 
     @staticmethod
-    def _validate_proposed_data(proposed_data: dict[str, Any]) -> None:
+    def _validate_proposed_data(
+        proposed_data: dict[str, Any], species_id: Optional[int] = None
+    ) -> None:
+        edible = proposed_data.get("edible")
+        if edible is not None and not isinstance(edible, bool):
+            raise ValueError("`edible` deve ser booleano ou null.")
+
         size_cm = proposed_data.get("size_cm")
         if size_cm is not None:
             if isinstance(size_cm, bool) or not isinstance(size_cm, (int, float)):
@@ -156,47 +176,75 @@ class SpeciesChangeRequestService:
             if size_cm < 0:
                 raise ValueError("`size_cm` deve ser >= 0.")
 
-        growth_form_id = proposed_data.get("growth_form_id")
-        if growth_form_id is not None:
-            if isinstance(growth_form_id, bool) or not isinstance(growth_form_id, int):
-                raise ValueError("`growth_form_id` deve ser inteiro.")
-            if growth_form_id < 1:
-                raise ValueError("`growth_form_id` deve ser >= 1.")
+        growth_form_ids = proposed_data.get("growth_form_ids")
+        if growth_form_ids is not None:
+            if not isinstance(growth_form_ids, list):
+                raise ValueError("`growth_form_ids` deve ser uma lista de inteiros.")
+            normalized_growth_form_ids = []
+            for growth_form_value in growth_form_ids:
+                if isinstance(growth_form_value, bool) or not isinstance(growth_form_value, int):
+                    raise ValueError("`growth_form_ids` deve conter apenas inteiros.")
+                if growth_form_value < 1:
+                    raise ValueError("`growth_form_ids` deve conter apenas inteiros >= 1.")
+                normalized_growth_form_ids.append(growth_form_value)
+            unique_growth_form_ids = sorted(set(normalized_growth_form_ids))
+            if len(unique_growth_form_ids) != len(normalized_growth_form_ids):
+                raise ValueError("`growth_form_ids` contém IDs duplicados.")
+            if unique_growth_form_ids:
+                active_count = GrowthForm.query.filter(
+                    GrowthForm.id.in_(unique_growth_form_ids),
+                    GrowthForm.is_active.is_(True),
+                ).count()
+                if active_count != len(unique_growth_form_ids):
+                    raise ValueError("`growth_form_ids` contém IDs inválidos ou inativos.")
 
-            growth_form = GrowthForm.query.filter(
-                GrowthForm.id == growth_form_id,
-                GrowthForm.is_active.is_(True),
-            ).first()
-            if not growth_form:
-                raise ValueError("`growth_form_id` inválido ou inativo.")
+        substrate_ids = proposed_data.get("substrate_ids")
+        if substrate_ids is not None:
+            if not isinstance(substrate_ids, list):
+                raise ValueError("`substrate_ids` deve ser uma lista de inteiros.")
+            normalized_substrate_ids = []
+            for substrate_value in substrate_ids:
+                if isinstance(substrate_value, bool) or not isinstance(substrate_value, int):
+                    raise ValueError("`substrate_ids` deve conter apenas inteiros.")
+                if substrate_value < 1:
+                    raise ValueError("`substrate_ids` deve conter apenas inteiros >= 1.")
+                normalized_substrate_ids.append(substrate_value)
+            unique_substrate_ids = sorted(set(normalized_substrate_ids))
+            if len(unique_substrate_ids) != len(normalized_substrate_ids):
+                raise ValueError("`substrate_ids` contém IDs duplicados.")
+            if unique_substrate_ids:
+                active_count = Substrate.query.filter(
+                    Substrate.id.in_(unique_substrate_ids),
+                    Substrate.is_active.is_(True),
+                ).count()
+                if active_count != len(unique_substrate_ids):
+                    raise ValueError("`substrate_ids` contém IDs inválidos ou inativos.")
 
-        substrate_id = proposed_data.get("substrate_id")
-        if substrate_id is not None:
-            if isinstance(substrate_id, bool) or not isinstance(substrate_id, int):
-                raise ValueError("`substrate_id` deve ser inteiro.")
-            if substrate_id < 1:
-                raise ValueError("`substrate_id` deve ser >= 1.")
+        nutrition_mode_ids = proposed_data.get("nutrition_mode_ids")
+        if nutrition_mode_ids is not None:
+            if not isinstance(nutrition_mode_ids, list):
+                raise ValueError("`nutrition_mode_ids` deve ser uma lista de inteiros.")
+            normalized_nutrition_mode_ids = []
+            for nutrition_mode_value in nutrition_mode_ids:
+                if isinstance(nutrition_mode_value, bool) or not isinstance(
+                    nutrition_mode_value, int
+                ):
+                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros.")
+                if nutrition_mode_value < 1:
+                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros >= 1.")
+                normalized_nutrition_mode_ids.append(nutrition_mode_value)
 
-            substrate = Substrate.query.filter(
-                Substrate.id == substrate_id,
-                Substrate.is_active.is_(True),
-            ).first()
-            if not substrate:
-                raise ValueError("`substrate_id` inválido ou inativo.")
+            unique_nutrition_mode_ids = sorted(set(normalized_nutrition_mode_ids))
+            if len(unique_nutrition_mode_ids) != len(normalized_nutrition_mode_ids):
+                raise ValueError("`nutrition_mode_ids` contém IDs duplicados.")
 
-        nutrition_mode_id = proposed_data.get("nutrition_mode_id")
-        if nutrition_mode_id is not None:
-            if isinstance(nutrition_mode_id, bool) or not isinstance(nutrition_mode_id, int):
-                raise ValueError("`nutrition_mode_id` deve ser inteiro.")
-            if nutrition_mode_id < 1:
-                raise ValueError("`nutrition_mode_id` deve ser >= 1.")
-
-            nutrition_mode = NutritionMode.query.filter(
-                NutritionMode.id == nutrition_mode_id,
-                NutritionMode.is_active.is_(True),
-            ).first()
-            if not nutrition_mode:
-                raise ValueError("`nutrition_mode_id` inválido ou inativo.")
+            if unique_nutrition_mode_ids:
+                active_count = NutritionMode.query.filter(
+                    NutritionMode.id.in_(unique_nutrition_mode_ids),
+                    NutritionMode.is_active.is_(True),
+                ).count()
+                if active_count != len(unique_nutrition_mode_ids):
+                    raise ValueError("`nutrition_mode_ids` contém IDs inválidos ou inativos.")
 
         habitat_ids = proposed_data.get("habitat_ids")
         if habitat_ids is not None:
@@ -293,6 +341,7 @@ class SpeciesChangeRequestService:
         decision: Optional[str],
         review_note: Optional[str],
         proposed_data_decision: Optional[str] = None,
+        proposed_data_fields: Optional[list[dict[str, Any]]] = None,
         photo_decisions: Optional[list[dict[str, Any]]] = None,
     ):
         req = SpeciesChangeRequestRepository.get_by_id(cls._parse_id(request_id))
@@ -309,6 +358,12 @@ class SpeciesChangeRequestService:
         normalized_proposed_data_decision = cls._normalize_review_decision(
             proposed_data_decision, "proposed_data_decision"
         )
+        normalized_proposed_data_fields = cls._normalize_proposed_data_field_decisions(
+            proposed_data_fields or []
+        )
+        proposed_data_decision_map = {
+            item["field"]: item["decision"] for item in normalized_proposed_data_fields
+        }
         normalized_photo_decisions = cls._normalize_photo_decisions(photo_decisions or [])
         photo_decision_map = {
             item["photo_request_id"]: item["decision"] for item in normalized_photo_decisions
@@ -316,30 +371,63 @@ class SpeciesChangeRequestService:
 
         has_proposed_data = bool(req.proposed_data or {})
         if not normalized_decision:
-            if has_proposed_data and not normalized_proposed_data_decision:
+            proposed_fields_count = len((req.proposed_data or {}).keys())
+            if (
+                has_proposed_data
+                and not normalized_proposed_data_decision
+                and len(proposed_data_decision_map) != proposed_fields_count
+            ):
                 raise ValueError(
-                    "Informe `proposed_data_decision` quando `decision` não for enviado."
+                    "Informe `proposed_data_decision` ou decisões para todos os campos "
+                    "em `proposed_data_fields` quando `decision` não for enviado."
                 )
             if req.photos and len(photo_decision_map) != len(req.photos):
                 raise ValueError(
                     "Informe decisão para todas as fotos quando `decision` não for enviado."
                 )
 
-        proposed_data_final_decision = None
-        if has_proposed_data:
-            proposed_data_final_decision = normalized_proposed_data_decision or normalized_decision
-
         approved_items = 0
         rejected_items = 0
 
-        if proposed_data_final_decision == "approve":
-            species = SpeciesChangeRequestRepository.get_species_by_id(req.species_id)
-            if not species:
-                raise ValueError("Espécie não encontrada.")
-            SpeciesChangeRequestRepository.apply_species_updates(species, req.proposed_data or {})
-            approved_items += 1
-        elif proposed_data_final_decision == "reject":
-            rejected_items += 1
+        approved_proposed_data = {}
+        if not has_proposed_data and proposed_data_decision_map:
+            raise ValueError(
+                "`proposed_data_fields` só pode ser usado quando a solicitação "
+                "tiver `proposed_data`."
+            )
+        if has_proposed_data:
+            proposed_data_keys = list((req.proposed_data or {}).keys())
+            unknown_proposed_fields = sorted(
+                set(proposed_data_decision_map.keys()) - set(proposed_data_keys)
+            )
+            if unknown_proposed_fields:
+                raise ValueError(
+                    "Campos inválidos em `proposed_data_fields`: "
+                    + ", ".join(unknown_proposed_fields)
+                )
+
+            for field in proposed_data_keys:
+                field_final_decision = (
+                    proposed_data_decision_map.get(field)
+                    or normalized_proposed_data_decision
+                    or normalized_decision
+                )
+                if not field_final_decision:
+                    raise ValueError(f"Decisão ausente para o campo `{field}`.")
+
+                if field_final_decision == "approve":
+                    approved_proposed_data[field] = req.proposed_data[field]
+                    approved_items += 1
+                else:
+                    rejected_items += 1
+
+            if approved_proposed_data:
+                species = SpeciesChangeRequestRepository.get_species_by_id(req.species_id)
+                if not species:
+                    raise ValueError("Espécie não encontrada.")
+                SpeciesChangeRequestRepository.apply_species_updates(
+                    species, approved_proposed_data
+                )
 
         photo_ids = {photo.id for photo in req.photos}
         unknown_photo_ids = sorted(set(photo_decision_map.keys()) - photo_ids)
@@ -391,6 +479,31 @@ class SpeciesChangeRequestService:
             return None
         if normalized not in {"approve", "reject"}:
             raise ValueError(f"`{field_name}` deve ser `approve` ou `reject`.")
+        return normalized
+
+    @classmethod
+    def _normalize_proposed_data_field_decisions(
+        cls, proposed_data_fields: list[dict[str, Any]]
+    ) -> list[dict[str, str]]:
+        normalized = []
+        seen_fields = set()
+
+        for item in proposed_data_fields:
+            field_name = str(item.get("field") or "").strip()
+            if not field_name:
+                raise ValueError("`proposed_data_fields.field` é obrigatório.")
+            if field_name in seen_fields:
+                raise ValueError(f"`field` duplicado em `proposed_data_fields`: {field_name}.")
+            seen_fields.add(field_name)
+
+            decision = cls._normalize_review_decision(
+                item.get("decision"), "proposed_data_fields.decision"
+            )
+            if not decision:
+                raise ValueError("`proposed_data_fields.decision` é obrigatório.")
+
+            normalized.append({"field": field_name, "decision": decision})
+
         return normalized
 
     @classmethod
@@ -608,6 +721,27 @@ class SpeciesChangeRequestService:
                 else:
                     habitats = getattr(characteristics, "habitats", None) or []
                     current_data[field] = [habitat.id for habitat in habitats]
+                continue
+            if field == "growth_form_ids" and species:
+                if characteristics is None:
+                    current_data[field] = []
+                else:
+                    growth_forms = getattr(characteristics, "growth_forms", None) or []
+                    current_data[field] = [growth_form.id for growth_form in growth_forms]
+                continue
+            if field == "substrate_ids" and species:
+                if characteristics is None:
+                    current_data[field] = []
+                else:
+                    substrates = getattr(characteristics, "substrates", None) or []
+                    current_data[field] = [substrate.id for substrate in substrates]
+                continue
+            if field == "nutrition_mode_ids" and species:
+                if characteristics is None:
+                    current_data[field] = []
+                else:
+                    nutrition_modes = getattr(characteristics, "nutrition_modes", None) or []
+                    current_data[field] = [nutrition_mode.id for nutrition_mode in nutrition_modes]
                 continue
             if field in SpeciesChangeRequestService.CHARACTERISTICS_FIELDS and species:
                 if characteristics is not None:
