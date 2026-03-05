@@ -29,7 +29,13 @@ def main():
         for species in species:
             print(f"Searching - {species.scientific_name}")
 
-            genus_name, species_name = species.scientific_name.split(" ")
+            name_parts = (species.scientific_name or "").split()
+            if len(name_parts) < 2:
+                print(f"Error: {species.scientific_name} - Invalid scientific name format")
+                continue
+
+            genus_name = name_parts[0]
+            species_name = " ".join(name_parts[1:])
 
             print(f"Genus: {genus_name} - Species: {species_name}")
 
