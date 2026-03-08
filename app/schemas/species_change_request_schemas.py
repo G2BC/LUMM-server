@@ -70,7 +70,7 @@ class SpeciesChangeRequestSchema(Schema):
     requester_email = fields.String(allow_none=True, dump_only=True)
     requester_institution = fields.String(allow_none=True, dump_only=True)
     request_note = fields.String(allow_none=True, dump_only=True)
-    proposed_data = fields.Dict(dump_only=True)
+    proposed_data = fields.Method("get_proposed_data", dump_only=True)
     current_data = fields.Dict(allow_none=True, dump_only=True)
     status = fields.String(dump_only=True)
     review_note = fields.String(allow_none=True, dump_only=True)
@@ -79,6 +79,12 @@ class SpeciesChangeRequestSchema(Schema):
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     photos = fields.List(fields.Nested(SpeciesPhotoRequestSchema), dump_only=True)
+
+    @staticmethod
+    def get_proposed_data(obj):
+        if hasattr(obj, "proposed_data_enriched"):
+            return obj.proposed_data_enriched
+        return getattr(obj, "proposed_data", None) or {}
 
 
 class SpeciesChangeRequestPaginationSchema(Schema):

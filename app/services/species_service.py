@@ -55,6 +55,10 @@ class SpeciesService:
         return SpeciesRepository.family_select(search)
 
     @classmethod
+    def domain_select(cls, domain: str, search: Optional[str] = ""):
+        return SpeciesRepository.domain_select(domain, search)
+
+    @classmethod
     def get(cls, species: Optional[str] = ""):
         found = SpeciesRepository.get(species)
         if not found:

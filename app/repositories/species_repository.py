@@ -1,12 +1,23 @@
 from typing import Optional
 
+from app.models.growth_form import GrowthForm
+from app.models.habitat import Habitat
+from app.models.nutrition_mode import NutritionMode
 from app.models.species import Species
 from app.models.species_characteristics import SpeciesCharacteristics
 from app.models.species_similarity import SpeciesSimilarity
+from app.models.substrate import Substrate
 from sqlalchemy.orm import selectinload
 
 
 class SpeciesRepository:
+    DOMAIN_MODELS = {
+        "growth_form": GrowthForm,
+        "nutrition_mode": NutritionMode,
+        "substrate": Substrate,
+        "habitat": Habitat,
+    }
+
     @classmethod
     def list(
         cls,
@@ -130,3 +141,35 @@ class SpeciesRepository:
         options = [{"label": family, "value": family} for (family,) in families if family]
 
         return options
+
+    @classmethod
+    def domain_select(
+        cls,
+        domain: str,
+        search: Optional[str] = "",
+    ):
+        model = cls.DOMAIN_MODELS.get((domain or "").strip().lower())
+        if not model:
+            allowed = ", ".join(sorted(cls.DOMAIN_MODELS.keys()))
+            raise ValueError(f"`domain` inválido. Use um de: {allowed}.")
+
+        search = (search or "").strip()
+        query = model.query.filter(model.is_active.is_(True))
+
+        if search:
+            query = query.filter(
+                (model.label_pt.ilike(f"%{search}%"))
+                | (model.label_en.ilike(f"%{search}%"))
+                | (model.slug.ilike(f"%{search}%"))
+            )
+
+        items = query.order_by(model.label_pt.asc()).all()
+
+        return [
+            {
+                "value": item.id,
+                "label_pt": item.label_pt,
+                "label_en": item.label_en,
+            }
+            for item in items
+        ]
