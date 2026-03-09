@@ -277,6 +277,7 @@ class SpeciesWithPhotosPaginationSchema(Schema):
 class SpeciesDetailSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
+    ncbi_taxonomy_id = fields.Integer(allow_none=True)
     lineage = fields.String(allow_none=True)
     types_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)

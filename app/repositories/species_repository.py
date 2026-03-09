@@ -173,3 +173,27 @@ class SpeciesRepository:
             }
             for item in items
         ]
+
+    @classmethod
+    def get_ncbi_taxon_id(cls, species_id: Optional[str] = ""):
+        if not species_id:
+            return None
+
+        species = (
+            Species.query.filter(Species.id == species_id)
+            .where(Species.ncbi_taxonomy_id.is_not(None))
+            .first()
+        )
+
+        if not species:
+            return None
+
+        return species.ncbi_taxonomy_id
+
+    @classmethod
+    def exists_by_id(cls, species_id: Optional[str] = "") -> bool:
+        if not species_id:
+            return False
+
+        species = Species.query.with_entities(Species.id).filter(Species.id == species_id).first()
+        return species is not None

@@ -220,3 +220,21 @@ class ReviewSpeciesChangeRequest(MethodView):
             if "não encontrada" in message.lower():
                 abort(404, message=message)
             abort(400, message=message)
+
+
+@specie_bp.route("/<string:species>/ncbi")
+class GetNCBISpeciesData(MethodView):
+    @specie_bp.response(200)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
+    def get(self, species: str):
+        try:
+            return SpeciesService.get_ncbi_data(species)
+        except ValueError as exc:
+            message = str(exc)
+            if message == "Espécie não encontrada.":
+                abort(404, message=message)
+            abort(400, message=message)
+        except RuntimeError as exc:
+            abort(502, message=str(exc))
