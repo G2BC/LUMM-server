@@ -3,7 +3,7 @@ from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required, verify_jwt_in_request
 from flask_smorest import Blueprint, abort
 
-from app.schemas import SelectSchema
+from app.schemas import DomainSelectSchema, SelectSchema
 from app.schemas.species_change_request_schemas import (
     SpeciesChangeRequestCreateSchema,
     SpeciesChangeRequestPaginationSchema,
@@ -78,6 +78,20 @@ class SpeciesFamilySelect(MethodView):
         search = request.args.get("search", type=str)
 
         return SpeciesService.family_select(search)
+
+
+@specie_bp.route("/domains/select")
+class SpeciesDomainsSelect(MethodView):
+    @specie_bp.response(200, DomainSelectSchema(many=True))
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    def get(self):
+        domain = request.args.get("domain", type=str)
+        search = request.args.get("search", type=str)
+
+        try:
+            return SpeciesService.domain_select(domain, search)
+        except ValueError as exc:
+            abort(400, message=str(exc))
 
 
 @specie_bp.route("/<string:species>")
@@ -206,3 +220,21 @@ class ReviewSpeciesChangeRequest(MethodView):
             if "não encontrada" in message.lower():
                 abort(404, message=message)
             abort(400, message=message)
+
+
+@specie_bp.route("/<string:species>/ncbi")
+class GetNCBISpeciesData(MethodView):
+    @specie_bp.response(200)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
+    def get(self, species: str):
+        try:
+            return SpeciesService.get_ncbi_data(species)
+        except ValueError as exc:
+            message = str(exc)
+            if message == "Espécie não encontrada.":
+                abort(404, message=message)
+            abort(400, message=message)
+        except RuntimeError as exc:
+            abort(502, message=str(exc))

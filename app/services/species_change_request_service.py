@@ -87,6 +87,12 @@ class SpeciesChangeRequestService:
         "season_start_month",
         "season_end_month",
     }
+    RELATION_FIELD_MODELS = {
+        "growth_form_ids": GrowthForm,
+        "substrate_ids": Substrate,
+        "nutrition_mode_ids": NutritionMode,
+        "habitat_ids": Habitat,
+    }
 
     @classmethod
     def create_request(cls, payload: dict[str, Any], requester_user_id: Optional[str] = None):
@@ -694,8 +700,10 @@ class SpeciesChangeRequestService:
     @classmethod
     def _enrich_requests(cls, requests) -> None:
         species_cache = {}
+        relation_label_cache = {field: {} for field in cls.RELATION_FIELD_MODELS.keys()}
         for req in requests:
             cls._attach_preview_urls(req)
+            cls._attach_enriched_proposed_data(req, relation_label_cache)
 
             species_id = getattr(req, "species_id", None)
             if species_id not in species_cache:
@@ -706,10 +714,71 @@ class SpeciesChangeRequestService:
                 )
 
             species = species_cache.get(species_id)
-            cls._attach_current_data(req, species)
+            cls._attach_current_data(req, species, relation_label_cache)
+
+    @classmethod
+    def _attach_enriched_proposed_data(cls, req, relation_label_cache: dict[str, dict]) -> None:
+        proposed_data = getattr(req, "proposed_data", None) or {}
+        enriched = {}
+
+        for field, value in proposed_data.items():
+            model = cls.RELATION_FIELD_MODELS.get(field)
+            if model and isinstance(value, list):
+                enriched[field] = cls._resolve_relation_items(
+                    value,
+                    model,
+                    relation_label_cache[field],
+                )
+                continue
+            enriched[field] = value
+
+        req.proposed_data_enriched = enriched
 
     @staticmethod
-    def _attach_current_data(req, species) -> None:
+    def _resolve_relation_items(
+        ids: list[Any],
+        model,
+        cache: dict[int, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        normalized_ids = []
+        for value in ids:
+            if isinstance(value, bool):
+                continue
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed < 1:
+                continue
+            normalized_ids.append(parsed)
+
+        if not normalized_ids:
+            return []
+
+        missing_ids = sorted(set(normalized_ids) - set(cache.keys()))
+        if missing_ids:
+            rows = model.query.filter(model.id.in_(missing_ids)).order_by(model.id.asc()).all()
+            for row in rows:
+                cache[row.id] = {
+                    "id": row.id,
+                    "label_pt": row.label_pt,
+                    "label_en": row.label_en,
+                }
+
+        return [
+            cache.get(
+                item_id,
+                {
+                    "id": item_id,
+                    "label_pt": None,
+                    "label_en": None,
+                },
+            )
+            for item_id in normalized_ids
+        ]
+
+    @classmethod
+    def _attach_current_data(cls, req, species, relation_label_cache: dict[str, dict]) -> None:
         proposed_data = getattr(req, "proposed_data", None) or {}
         current_data = {}
         characteristics = getattr(species, "characteristics", None) if species else None
@@ -720,28 +789,80 @@ class SpeciesChangeRequestService:
                     current_data[field] = []
                 else:
                     habitats = getattr(characteristics, "habitats", None) or []
-                    current_data[field] = [habitat.id for habitat in habitats]
+                    current_data[field] = [
+                        {
+                            "id": habitat.id,
+                            "label_pt": habitat.label_pt,
+                            "label_en": habitat.label_en,
+                        }
+                        for habitat in habitats
+                    ]
+                    for habitat in habitats:
+                        relation_label_cache[field][habitat.id] = {
+                            "id": habitat.id,
+                            "label_pt": habitat.label_pt,
+                            "label_en": habitat.label_en,
+                        }
                 continue
             if field == "growth_form_ids" and species:
                 if characteristics is None:
                     current_data[field] = []
                 else:
                     growth_forms = getattr(characteristics, "growth_forms", None) or []
-                    current_data[field] = [growth_form.id for growth_form in growth_forms]
+                    current_data[field] = [
+                        {
+                            "id": growth_form.id,
+                            "label_pt": growth_form.label_pt,
+                            "label_en": growth_form.label_en,
+                        }
+                        for growth_form in growth_forms
+                    ]
+                    for growth_form in growth_forms:
+                        relation_label_cache[field][growth_form.id] = {
+                            "id": growth_form.id,
+                            "label_pt": growth_form.label_pt,
+                            "label_en": growth_form.label_en,
+                        }
                 continue
             if field == "substrate_ids" and species:
                 if characteristics is None:
                     current_data[field] = []
                 else:
                     substrates = getattr(characteristics, "substrates", None) or []
-                    current_data[field] = [substrate.id for substrate in substrates]
+                    current_data[field] = [
+                        {
+                            "id": substrate.id,
+                            "label_pt": substrate.label_pt,
+                            "label_en": substrate.label_en,
+                        }
+                        for substrate in substrates
+                    ]
+                    for substrate in substrates:
+                        relation_label_cache[field][substrate.id] = {
+                            "id": substrate.id,
+                            "label_pt": substrate.label_pt,
+                            "label_en": substrate.label_en,
+                        }
                 continue
             if field == "nutrition_mode_ids" and species:
                 if characteristics is None:
                     current_data[field] = []
                 else:
                     nutrition_modes = getattr(characteristics, "nutrition_modes", None) or []
-                    current_data[field] = [nutrition_mode.id for nutrition_mode in nutrition_modes]
+                    current_data[field] = [
+                        {
+                            "id": nutrition_mode.id,
+                            "label_pt": nutrition_mode.label_pt,
+                            "label_en": nutrition_mode.label_en,
+                        }
+                        for nutrition_mode in nutrition_modes
+                    ]
+                    for nutrition_mode in nutrition_modes:
+                        relation_label_cache[field][nutrition_mode.id] = {
+                            "id": nutrition_mode.id,
+                            "label_pt": nutrition_mode.label_pt,
+                            "label_en": nutrition_mode.label_en,
+                        }
                 continue
             if field in SpeciesChangeRequestService.CHARACTERISTICS_FIELDS and species:
                 if characteristics is not None:

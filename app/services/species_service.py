@@ -1,6 +1,8 @@
+import time
 from typing import Any, Optional
 
 from app.repositories.species_repository import SpeciesRepository
+from Bio import Entrez
 
 
 class SpeciesService:
@@ -55,8 +57,69 @@ class SpeciesService:
         return SpeciesRepository.family_select(search)
 
     @classmethod
+    def domain_select(cls, domain: str, search: Optional[str] = ""):
+        return SpeciesRepository.domain_select(domain, search)
+
+    @classmethod
     def get(cls, species: Optional[str] = ""):
         found = SpeciesRepository.get(species)
         if not found:
             raise ValueError("Espécie não encontrada.")
         return found
+
+    @classmethod
+    def get_ncbi_data(cls, species: Optional[str] = "") -> dict[str, Any]:
+        species = (species or "").strip()
+        if not species:
+            raise ValueError("Espécie inválida.")
+
+        ncbi_taxonomy_id = SpeciesRepository.get_ncbi_taxon_id(species)
+        if not ncbi_taxonomy_id:
+            raise ValueError("Espécie sem NCBI taxonomy ID cadastrado")
+
+        Entrez.email = "071920502@uneb.br"
+        taxid = ncbi_taxonomy_id
+        term = f"txid{taxid}[Organism:exp]"
+
+        bancos_config = {
+            "nucleotide": ["Nucleotide", "https://www.ncbi.nlm.nih.gov/nuccore/"],
+            "protein": ["Protein", "https://www.ncbi.nlm.nih.gov/protein/"],
+            "structure": ["Structure", "https://www.ncbi.nlm.nih.gov/structure/"],
+            "pmc": ["PubMed Central", "https://pmc.ncbi.nlm.nih.gov/search/"],
+            "sra": ["SRA", "https://www.ncbi.nlm.nih.gov/sra/"],
+            "ipg": ["Identical Protein", "https://www.ncbi.nlm.nih.gov/ipg/"],
+            "genome": ["Genome Datasets", "https://www.ncbi.nlm.nih.gov/datasets/genome/"],
+        }
+
+        resultado = {}
+
+        for db_key, info in bancos_config.items():
+            handle = None
+            try:
+                handle = Entrez.esearch(db=db_key, term=term, retmax=0)
+                record = Entrez.read(handle)
+                count = int(record["Count"])
+
+                if db_key == "genome":
+                    url = f"{info[1]}?taxon={taxid}"
+                elif db_key == "pmc":
+                    url = f"{info[1]}?term={term}&pmfilter_Fulltext=off"
+                else:
+                    url = f"{info[1]}?term={term}"
+
+                if count <= 0:
+                    continue
+
+                resultado[info[0]] = {
+                    "quantity": count,
+                    "link": url,
+                }
+
+                time.sleep(0.3)
+            except Exception as exc:
+                raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
+            finally:
+                if handle:
+                    handle.close()
+
+        return resultado
