@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Optional
 
@@ -77,17 +78,21 @@ class SpeciesService:
         if not ncbi_taxonomy_id:
             raise ValueError("Espécie sem NCBI taxonomy ID cadastrado")
 
-        Entrez.email = "071920502@uneb.br"
+        Entrez.email = os.getenv("NCBI_EMAIL")
+        Entrez.api_key = os.getenv("NCBI_API_KEY")
         taxid = ncbi_taxonomy_id
         term = f"txid{taxid}[Organism:exp]"
 
         bancos_config = {
+            "bioproject": ["BioProject", "https://www.ncbi.nlm.nih.gov/bioproject/"],
+            "biosample": ["BioSample", "https://www.ncbi.nlm.nih.gov/biosample/"],
+            "gds": ["GEO DataSets", "https://www.ncbi.nlm.nih.gov/gds/"],
+            "ipg": ["Identical Protein Groups", "https://www.ncbi.nlm.nih.gov/ipg/"],
             "nucleotide": ["Nucleotide", "https://www.ncbi.nlm.nih.gov/nuccore/"],
             "protein": ["Protein", "https://www.ncbi.nlm.nih.gov/protein/"],
             "structure": ["Structure", "https://www.ncbi.nlm.nih.gov/structure/"],
             "pmc": ["PubMed Central", "https://pmc.ncbi.nlm.nih.gov/search/"],
             "sra": ["SRA", "https://www.ncbi.nlm.nih.gov/sra/"],
-            "ipg": ["Identical Protein", "https://www.ncbi.nlm.nih.gov/ipg/"],
             "genome": ["Genome Datasets", "https://www.ncbi.nlm.nih.gov/datasets/genome/"],
         }
 
@@ -98,10 +103,13 @@ class SpeciesService:
             try:
                 handle = Entrez.esearch(db=db_key, term=term, retmax=0)
                 record = Entrez.read(handle)
+
                 count = int(record["Count"])
 
                 if db_key == "genome":
                     url = f"{info[1]}?taxon={taxid}"
+                elif db_key == "bioproject":
+                    url = f"{info[1]}?term=txid{taxid}[Organism:noexp]"
                 elif db_key == "pmc":
                     url = f"{info[1]}?term={term}&pmfilter_Fulltext=off"
                 else:
@@ -115,7 +123,7 @@ class SpeciesService:
                     "link": url,
                 }
 
-                time.sleep(0.3)
+                time.sleep(0.15)
             except Exception as exc:
                 raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
             finally:
