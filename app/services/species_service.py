@@ -1,6 +1,6 @@
 import os
-import time
 from typing import Any, Optional
+from urllib.parse import quote_plus
 
 from app.repositories.species_repository import SpeciesRepository
 from Bio import Entrez
@@ -74,60 +74,115 @@ class SpeciesService:
         if not species:
             raise ValueError("Espécie inválida.")
 
-        ncbi_taxonomy_id = SpeciesRepository.get_ncbi_taxon_id(species)
-        if not ncbi_taxonomy_id:
+        taxid = SpeciesRepository.get_ncbi_taxon_id(species)
+        if not taxid:
             raise ValueError("Espécie sem NCBI taxonomy ID cadastrado")
 
         Entrez.email = os.getenv("NCBI_EMAIL")
         Entrez.api_key = os.getenv("NCBI_API_KEY")
-        taxid = ncbi_taxonomy_id
-        term = f"txid{taxid}[Organism:exp]"
+
+        direct_term = f"txid{taxid}[Organism:noexp]"
+        subtree_term = f"txid{taxid}[Organism:exp]"
 
         bancos_config = {
-            "bioproject": ["BioProject", "https://www.ncbi.nlm.nih.gov/bioproject/"],
-            "biosample": ["BioSample", "https://www.ncbi.nlm.nih.gov/biosample/"],
-            "gds": ["GEO DataSets", "https://www.ncbi.nlm.nih.gov/gds/"],
-            "ipg": ["Identical Protein Groups", "https://www.ncbi.nlm.nih.gov/ipg/"],
-            "nucleotide": ["Nucleotide", "https://www.ncbi.nlm.nih.gov/nuccore/"],
-            "protein": ["Protein", "https://www.ncbi.nlm.nih.gov/protein/"],
-            "structure": ["Structure", "https://www.ncbi.nlm.nih.gov/structure/"],
-            "pmc": ["PubMed Central", "https://pmc.ncbi.nlm.nih.gov/search/"],
-            "sra": ["SRA", "https://www.ncbi.nlm.nih.gov/sra/"],
-            "genome": ["Genome Datasets", "https://www.ncbi.nlm.nih.gov/datasets/genome/"],
+            "taxonomy": {
+                "label": "Taxonomy",
+                "link": f"https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={taxid}",
+            },
+            "bioproject": {
+                "label": "BioProject",
+                "search_url": "https://www.ncbi.nlm.nih.gov/bioproject/?term=",
+            },
+            "biosample": {
+                "label": "BioSample",
+                "search_url": "https://www.ncbi.nlm.nih.gov/biosample/?term=",
+            },
+            "assembly": {
+                "label": "Assembly",
+                "search_url": "https://www.ncbi.nlm.nih.gov/assembly/?term=",
+            },
+            "nuccore": {
+                "label": "Nucleotide",
+                "search_url": "https://www.ncbi.nlm.nih.gov/nuccore/?term=",
+            },
+            "gene": {
+                "label": "Gene",
+                "search_url": "https://www.ncbi.nlm.nih.gov/gene/?term=",
+            },
+            "gds": {
+                "label": "GEO DataSets",
+                "search_url": "https://www.ncbi.nlm.nih.gov/gds/?term=",
+            },
+            "sra": {
+                "label": "SRA",
+                "search_url": "https://www.ncbi.nlm.nih.gov/sra/?term=",
+            },
+            "protein": {
+                "label": "Protein",
+                "search_url": "https://www.ncbi.nlm.nih.gov/protein/?term=",
+            },
+            "ipg": {
+                "label": "Identical Protein Groups",
+                "search_url": "https://www.ncbi.nlm.nih.gov/ipg/?term=",
+            },
+            "structure": {
+                "label": "Structure",
+                "search_url": "https://www.ncbi.nlm.nih.gov/structure/?term=",
+            },
+            "pmc": {
+                "label": "PubMed Central",
+                "search_url": "https://pmc.ncbi.nlm.nih.gov/?term=",
+            },
         }
+
+        def count_for(db: str, term: str) -> int:
+            with Entrez.esearch(db=db, term=term, retmax=0) as handle:
+                record = Entrez.read(handle)
+                return int(record["Count"])
 
         resultado = {}
 
         for db_key, info in bancos_config.items():
-            handle = None
+            label = info["label"]
+
             try:
-                handle = Entrez.esearch(db=db_key, term=term, retmax=0)
-                record = Entrez.read(handle)
+                if db_key == "taxonomy":
+                    direct_count = count_for("taxonomy", direct_term)
+                    subtree_count = count_for("taxonomy", subtree_term)
 
-                count = int(record["Count"])
+                    if direct_count <= 0 and subtree_count <= 0:
+                        continue
 
-                if db_key == "genome":
-                    url = f"{info[1]}?taxon={taxid}"
-                elif db_key == "bioproject":
-                    url = f"{info[1]}?term=txid{taxid}[Organism:noexp]"
-                elif db_key == "pmc":
-                    url = f"{info[1]}?term={term}&pmfilter_Fulltext=off"
-                else:
-                    url = f"{info[1]}?term={term}"
-
-                if count <= 0:
+                    resultado[label] = {
+                        "direct_links": {
+                            "quantity": direct_count,
+                            "link": info["link"],
+                        },
+                        "subtree_links": {
+                            "quantity": subtree_count,
+                            "link": info["link"],
+                        },
+                    }
                     continue
 
-                resultado[info[0]] = {
-                    "quantity": count,
-                    "link": url,
+                direct_count = count_for(db_key, direct_term)
+                subtree_count = count_for(db_key, subtree_term)
+
+                if direct_count <= 0 and subtree_count <= 0:
+                    continue
+
+                resultado[label] = {
+                    "direct_links": {
+                        "quantity": direct_count,
+                        "link": f'{info["search_url"]}{quote_plus(direct_term)}',
+                    },
+                    "subtree_links": {
+                        "quantity": subtree_count,
+                        "link": f'{info["search_url"]}{quote_plus(subtree_term)}',
+                    },
                 }
 
-                time.sleep(0.15)
             except Exception as exc:
                 raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
-            finally:
-                if handle:
-                    handle.close()
 
         return resultado
