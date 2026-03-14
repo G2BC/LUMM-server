@@ -67,3 +67,8 @@ class Config:
     DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "").strip()
     DEEPL_API_URL = os.getenv("DEEPL_API_URL", "https://api-free.deepl.com/v2/translate").strip()
     DEEPL_TIMEOUT_SECONDS = float(os.getenv("DEEPL_TIMEOUT_SECONDS", "45"))
+    REDIS_URL = os.getenv("REDIS_URL", "").strip()
+    REDIS_SOCKET_TIMEOUT_SECONDS = float(os.getenv("REDIS_SOCKET_TIMEOUT_SECONDS", "1.5"))
+    REDIS_DEFAULT_TTL_SECONDS = int(os.getenv("REDIS_DEFAULT_TTL_SECONDS", "300"))
+    NCBI_CACHE_PREFIX = "ncbi:species"
+    NCBI_CACHE_TTL_SECONDS = 86400
