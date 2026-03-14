@@ -1,7 +1,7 @@
 services:
   redis:
     image: redis:7.4-alpine
-    container_name: lumm-redis
+    container_name: g2bc-redis
     restart: always
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -9,14 +9,14 @@ services:
       [
         "sh",
         "-c",
-        "redis-server --appendonly yes --save 60 1000 --requirepass \"$$REDIS_PASSWORD\" --maxmemory-policy allkeys-lru",
+        'redis-server --appendonly yes --save 60 1000 --requirepass "$$REDIS_PASSWORD" --maxmemory-policy allkeys-lru',
       ]
     volumes:
       - redis_data:/data
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG']
       interval: 10s
       timeout: 3s
       retries: 5
