@@ -71,7 +71,9 @@ class SpeciesService:
         return found
 
     @classmethod
-    def get_ncbi_data(cls, species: Optional[str] = "") -> dict[str, Any]:
+    def get_ncbi_data(
+        cls, species: Optional[str] = "", include_cache_meta: bool = False
+    ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
         species = (species or "").strip()
         if not species:
             raise ValueError("Espécie inválida.")
@@ -88,6 +90,8 @@ class SpeciesService:
 
         cached_result = CacheService.get_json(cache_key)
         if isinstance(cached_result, dict):
+            if include_cache_meta:
+                return cached_result, True
             return cached_result
 
         Entrez.email = os.getenv("NCBI_EMAIL")
@@ -198,4 +202,6 @@ class SpeciesService:
                 raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
 
         CacheService.set_json(cache_key, resultado, ttl_seconds=cache_ttl_seconds)
+        if include_cache_meta:
+            return resultado, False
         return resultado

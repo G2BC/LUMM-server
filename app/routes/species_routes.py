@@ -232,11 +232,12 @@ class GetNCBISpeciesData(MethodView):
     @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
     def get(self, species: str):
         try:
-            data = SpeciesService.get_ncbi_data(species)
+            data, is_cached = SpeciesService.get_ncbi_data(species, include_cache_meta=True)
             return Response(
                 json.dumps(data, ensure_ascii=False, sort_keys=False),
                 status=200,
                 mimetype="application/json",
+                headers={"X-Cache": "HIT" if is_cached else "MISS"},
             )
         except ValueError as exc:
             message = str(exc)
