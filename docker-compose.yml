@@ -11,3 +11,11 @@ services:
       - .env
     volumes:
       - ./logs:/app/logs
+    networks:
+      - default
+      - redis_shared
+
+networks:
+  redis_shared:
+    external: true
+    name: redis-shared
