@@ -2,7 +2,8 @@
 
 ## Requisitos
 
-- Python 3.9
+- Python 3.12
+- uv (https://docs.astral.sh/uv/getting-started/installation/)
 - PostgreSQL rodando localmente ou via Docker
 
 ## Setup do Projeto
@@ -14,18 +15,17 @@ git clone git@github.com:G2BC/LUMM.git
 cd backend
 ```
 
-### 2️⃣ Criar e ativar o ambiente virtual (Recomendado)
+### 2️⃣ Sincronizar dependências com uv
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate       # Linux/macOS
-.venv\Scripts\activate          # Windows
+uv sync --dev
 ```
 
-### 3️⃣ Instalar dependências
+### 3️⃣ Ativar o ambiente virtual (Opcional)
 
 ```bash
-pip install -r requirements.txt
+source .venv/bin/activate       # Linux/macOS
+.venv\Scripts\activate          # Windows
 ```
 
 ### 4️⃣ Configurar variáveis de ambiente
@@ -35,13 +35,13 @@ Crie um arquivo .env baseado no .env.example
 ### 5️⃣ Execute as migrações
 
 ```bash
-flask db upgrade
+uv run flask db upgrade
 ```
 
 ### 6️⃣ Rodar o servidor em desenvolvimento
 
 ```bash
-python wsgi.py
+uv run python wsgi.py
 ```
 
 ## Comandos úteis
@@ -49,13 +49,13 @@ python wsgi.py
 ### Criar nova migration
 
 ```bash
-flask db migrate -m "mensagem"
+uv run flask db migrate -m "mensagem"
 ```
 
 ### Aplicar migrations
 
 ```bash
-flask db upgrade
+uv run flask db upgrade
 ```
 
 ### Desativar o ambiente virtual
@@ -70,7 +70,7 @@ Para garantir a consistência e a qualidade do código neste projeto, **antes de
 
 ### 🛠️ Dicas
 
-Rode `ruff check .` e `ruff format .` antes de commitar.
+Rode `uv run ruff check .` e `uv run ruff format .` antes de commitar.
 
 ## 📄 Licença
 

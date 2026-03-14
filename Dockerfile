@@ -1,15 +1,17 @@
-FROM python:3.9-slim AS base
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
   && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir uv
 
 WORKDIR /app
-COPY requirements.txt .
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 
