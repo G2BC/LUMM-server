@@ -1,4 +1,6 @@
-from flask import request
+import json
+
+from flask import Response, request
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required, verify_jwt_in_request
 from flask_smorest import Blueprint, abort
@@ -230,7 +232,12 @@ class GetNCBISpeciesData(MethodView):
     @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
     def get(self, species: str):
         try:
-            return SpeciesService.get_ncbi_data(species)
+            data = SpeciesService.get_ncbi_data(species)
+            return Response(
+                json.dumps(data, ensure_ascii=False, sort_keys=False),
+                status=200,
+                mimetype="application/json",
+            )
         except ValueError as exc:
             message = str(exc)
             if message == "Espécie não encontrada.":

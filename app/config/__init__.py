@@ -64,3 +64,6 @@ class Config:
     SPECIES_REQUEST_PREVIEW_URL_EXPIRES_SECONDS = int(
         os.getenv("SPECIES_REQUEST_PREVIEW_URL_EXPIRES_SECONDS", "900")
     )
+    DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "").strip()
+    DEEPL_API_URL = os.getenv("DEEPL_API_URL", "https://api-free.deepl.com/v2/translate").strip()
+    DEEPL_TIMEOUT_SECONDS = float(os.getenv("DEEPL_TIMEOUT_SECONDS", "45"))

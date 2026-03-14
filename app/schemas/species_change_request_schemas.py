@@ -1,4 +1,4 @@
-from marshmallow import EXCLUDE, Schema, ValidationError, fields, validates_schema
+from marshmallow import EXCLUDE, Schema, ValidationError, fields, validate, validates_schema
 
 
 class SpeciesPhotoRequestInputSchema(Schema):
@@ -22,6 +22,9 @@ class SpeciesChangeRequestCreateSchema(Schema):
 
     species_id = fields.Integer(required=True)
     proposed_data = fields.Dict(required=False, load_default=dict)
+    source_lang = fields.String(
+        required=False, load_default="pt", validate=validate.OneOf(["pt", "en"])
+    )
     request_note = fields.String(allow_none=True)
     requester_name = fields.String(allow_none=True)
     requester_email = fields.Email(allow_none=True)

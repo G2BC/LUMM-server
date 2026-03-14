@@ -7,6 +7,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
+import requests
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -93,6 +94,18 @@ class SpeciesChangeRequestService:
         "nutrition_mode_ids": NutritionMode,
         "habitat_ids": Habitat,
     }
+    TRANSLATABLE_FIELDS = {
+        "colors": "colors_pt",
+        "cultivation": "cultivation_pt",
+        "finding_tips": "finding_tips_pt",
+        "nearby_trees": "nearby_trees_pt",
+        "curiosities": "curiosities_pt",
+        "general_description": "general_description_pt",
+    }
+    TRANSLATABLE_PAIR_MAP = {
+        **TRANSLATABLE_FIELDS,
+        **{pt_field: en_field for en_field, pt_field in TRANSLATABLE_FIELDS.items()},
+    }
 
     @classmethod
     def create_request(cls, payload: dict[str, Any], requester_user_id: Optional[str] = None):
@@ -102,6 +115,11 @@ class SpeciesChangeRequestService:
             raise ValueError("Espécie não encontrada.")
 
         proposed_data = payload.get("proposed_data") or {}
+        source_lang = (payload.get("source_lang") or "pt").strip().lower()
+        if source_lang not in {"pt", "en"}:
+            raise ValueError("`source_lang` deve ser `pt` ou `en`.")
+
+        proposed_data = cls._normalize_translatable_fields(proposed_data, source_lang)
         invalid_fields = sorted(set(proposed_data.keys()) - cls.ALLOWED_SPECIES_FIELDS)
         if invalid_fields:
             raise ValueError(
@@ -129,6 +147,106 @@ class SpeciesChangeRequestService:
             requested_by_user_id=requested_by_user_id,
             photos_payload=photos_payload,
         )
+
+    @staticmethod
+    def _normalize_optional_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            raise ValueError("Campos textuais traduzíveis devem ser string.")
+        return value.strip()
+
+    @classmethod
+    def _normalize_translatable_fields(
+        cls, proposed_data: dict[str, Any], source_lang: str
+    ) -> dict[str, Any]:
+        normalized = dict(proposed_data or {})
+        queued_texts: list[str] = []
+        queued_fields: list[tuple[str, str, str]] = []
+
+        for en_field, pt_field in cls.TRANSLATABLE_FIELDS.items():
+            source_text = cls._normalize_optional_text(
+                normalized.get(en_field) or normalized.get(pt_field)
+            )
+            normalized.pop(en_field, None)
+            normalized.pop(pt_field, None)
+            if not source_text:
+                continue
+            queued_fields.append((en_field, pt_field, source_text))
+            queued_texts.append(source_text)
+
+        if not queued_fields:
+            return normalized
+
+        translated_texts = cls._translate_texts_with_deepl(queued_texts, source_lang=source_lang)
+        if len(translated_texts) != len(queued_fields):
+            raise ValueError("Falha ao traduzir campos textuais.")
+
+        for index, (en_field, pt_field, source_text) in enumerate(queued_fields):
+            translated_text = (translated_texts[index] or "").strip() or source_text
+            if source_lang == "pt":
+                normalized[pt_field] = source_text
+                normalized[en_field] = translated_text
+            else:
+                normalized[en_field] = source_text
+                normalized[pt_field] = translated_text
+
+        return normalized
+
+    @classmethod
+    def _translate_texts_with_deepl(cls, texts: list[str], source_lang: str) -> list[str]:
+        if not texts:
+            return []
+
+        api_key = (current_app.config.get("DEEPL_API_KEY") or "").strip()
+        if not api_key:
+            raise ValueError("DEEPL_API_KEY não configurada no servidor.")
+
+        api_url = (
+            current_app.config.get("DEEPL_API_URL") or "https://api-free.deepl.com/v2/translate"
+        ).strip()
+        timeout_seconds = float(current_app.config.get("DEEPL_TIMEOUT_SECONDS", 45))
+
+        source = "PT" if source_lang == "pt" else "EN"
+        target = "EN" if source_lang == "pt" else "PT-BR"
+
+        payload: list[tuple[str, str]] = [("source_lang", source), ("target_lang", target)]
+        for text in texts:
+            payload.append(("text", text))
+
+        try:
+            response = requests.post(
+                api_url,
+                data=payload,
+                headers={
+                    "Authorization": f"DeepL-Auth-Key {api_key}",
+                    "Accept": "application/json",
+                },
+                timeout=timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise ValueError(f"Falha ao conectar no serviço de tradução: {exc}") from exc
+
+        if response.status_code >= 400:
+            details = (response.text or "").strip()
+            raise ValueError(
+                f"Erro na tradução automática (DeepL): {details or response.status_code}."
+            )
+
+        data = response.json() if response.content else {}
+        translations = data.get("translations") if isinstance(data, dict) else None
+        if not isinstance(translations, list):
+            raise ValueError("Resposta inválida da tradução automática (DeepL).")
+
+        result: list[str] = []
+        for item in translations:
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if isinstance(text, str):
+                result.append(text)
+
+        return result
 
     @classmethod
     def generate_upload_url(cls, filename: str, mime_type: str, size_bytes: int, species_id=None):
@@ -370,6 +488,9 @@ class SpeciesChangeRequestService:
         proposed_data_decision_map = {
             item["field"]: item["decision"] for item in normalized_proposed_data_fields
         }
+        proposed_data_decision_map = cls._expand_translatable_decision_map(
+            proposed_data_decision_map, req.proposed_data or {}
+        )
         normalized_photo_decisions = cls._normalize_photo_decisions(photo_decisions or [])
         photo_decision_map = {
             item["photo_request_id"]: item["decision"] for item in normalized_photo_decisions
@@ -486,6 +607,29 @@ class SpeciesChangeRequestService:
         if normalized not in {"approve", "reject"}:
             raise ValueError(f"`{field_name}` deve ser `approve` ou `reject`.")
         return normalized
+
+    @classmethod
+    def _expand_translatable_decision_map(
+        cls, decision_map: dict[str, str], proposed_data: dict[str, Any]
+    ) -> dict[str, str]:
+        if not decision_map:
+            return decision_map
+
+        expanded = dict(decision_map)
+        for field, decision in list(decision_map.items()):
+            paired_field = cls.TRANSLATABLE_PAIR_MAP.get(field)
+            if not paired_field or paired_field not in proposed_data:
+                continue
+
+            paired_decision = expanded.get(paired_field)
+            if paired_decision and paired_decision != decision:
+                raise ValueError(
+                    "Campos traduzíveis devem ter a mesma decisão: "
+                    f"`{field}` e `{paired_field}`."
+                )
+            expanded[paired_field] = decision
+
+        return expanded
 
     @classmethod
     def _normalize_proposed_data_field_decisions(
