@@ -3,7 +3,9 @@ from typing import Any, Optional
 from urllib.parse import quote_plus
 
 from app.repositories.species_repository import SpeciesRepository
+from app.services.cache_service import CacheService
 from Bio import Entrez
+from flask import current_app
 
 
 class SpeciesService:
@@ -77,6 +79,16 @@ class SpeciesService:
         taxid = SpeciesRepository.get_ncbi_taxon_id(species)
         if not taxid:
             raise ValueError("Espécie sem NCBI taxonomy ID cadastrado")
+
+        cache_prefix = (
+            current_app.config.get("NCBI_CACHE_PREFIX", "ncbi:species").strip() or "ncbi:species"
+        )
+        cache_ttl_seconds = int(current_app.config.get("NCBI_CACHE_TTL_SECONDS", 86400))
+        cache_key = f"{cache_prefix}:{taxid}:v1"
+
+        cached_result = CacheService.get_json(cache_key)
+        if isinstance(cached_result, dict):
+            return cached_result
 
         Entrez.email = os.getenv("NCBI_EMAIL")
         Entrez.api_key = os.getenv("NCBI_API_KEY")
@@ -185,4 +197,5 @@ class SpeciesService:
             except Exception as exc:
                 raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
 
+        CacheService.set_json(cache_key, resultado, ttl_seconds=cache_ttl_seconds)
         return resultado
