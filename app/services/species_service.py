@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from urllib.parse import quote_plus
 
 from app.repositories.species_repository import SpeciesRepository
@@ -73,7 +73,7 @@ class SpeciesService:
     @classmethod
     def get_ncbi_data(
         cls, species: Optional[str] = "", include_cache_meta: bool = False
-    ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
+    ) -> Union[dict[str, Any], tuple[dict[str, Any], bool]]:
         species = (species or "").strip()
         if not species:
             raise ValueError("Espécie inválida.")
