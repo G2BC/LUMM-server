@@ -14,8 +14,12 @@ services:
     networks:
       - default
       - redis_shared
+      - minio_default
 
 networks:
   redis_shared:
     external: true
     name: redis-shared
+  minio_default:
+    external: true
+    name: minio_default
