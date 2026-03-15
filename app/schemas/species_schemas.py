@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields
+from marshmallow import EXCLUDE, Schema, ValidationError, fields, validates_schema
 
 from app.utils.object_storage import normalize_object_url
 
@@ -26,6 +26,56 @@ class SpeciesPhotoSchema(Schema):
     @staticmethod
     def get_original_url(obj):
         return normalize_object_url(getattr(obj, "original_url", None))
+
+
+class SpeciesPhotoCreateResponseSchema(SpeciesPhotoSchema):
+    pass
+
+
+class SpeciesPhotoCreateRequestSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    object_key = fields.String(required=True)
+    bucket_name = fields.String(required=True)
+    original_filename = fields.String(required=True)
+    mime_type = fields.String(required=True)
+    size_bytes = fields.Integer(required=True)
+    license_code = fields.String(required=True)
+    attribution = fields.String(required=True)
+    rights_holder = fields.String(required=True)
+    source_url = fields.Url(allow_none=True)
+    lumm = fields.Boolean(required=True)
+    featured = fields.Boolean(required=True)
+
+
+class SpeciesPhotoUpdateRequestSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    license_code = fields.String(required=False, allow_none=True)
+    attribution = fields.String(required=False, allow_none=True)
+    rights_holder = fields.String(required=False, allow_none=True)
+    source_url = fields.Url(required=False, allow_none=True)
+    lumm = fields.Boolean(required=False)
+    featured = fields.Boolean(required=False)
+
+    @validates_schema
+    def validate_has_any_field(self, data, **kwargs):
+        if not data:
+            raise ValidationError(
+                "Informe ao menos um campo para atualização da foto.",
+                field_name="license_code",
+            )
+
+
+class SpeciesPhotoUploadUrlPayloadSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    filename = fields.String(required=True)
+    mime_type = fields.String(required=True)
+    size_bytes = fields.Integer(required=True)
 
 
 class SpeciesCharacteristicsSchema(Schema):

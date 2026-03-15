@@ -17,9 +17,14 @@ from app.schemas.species_change_request_schemas import (
 )
 from app.schemas.species_schemas import (
     SpeciesDetailSchema,
+    SpeciesPhotoCreateRequestSchema,
+    SpeciesPhotoCreateResponseSchema,
+    SpeciesPhotoUpdateRequestSchema,
+    SpeciesPhotoUploadUrlPayloadSchema,
     SpeciesWithPhotosPaginationSchema,
 )
 from app.services.species_change_request_service import SpeciesChangeRequestService
+from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_service import SpeciesService
 
 specie_bp = Blueprint(
@@ -105,6 +110,92 @@ class GetSpecies(MethodView):
             return SpeciesService.get(species)
         except ValueError as exc:
             abort(404, message=str(exc))
+
+
+@specie_bp.route("/<int:species_id>/photos/upload-url")
+class SpeciesPhotoUploadUrl(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesPhotoUploadUrlPayloadSchema, location="json")
+    @specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesPhotoService.generate_upload_url(
+                species_id=species_id,
+                filename=payload["filename"],
+                mime_type=payload["mime_type"],
+                size_bytes=payload["size_bytes"],
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
+
+
+@specie_bp.route("/<int:species_id>/photos")
+class SpeciesPhotos(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesPhotoCreateRequestSchema, location="json")
+    @specie_bp.response(201, SpeciesPhotoCreateResponseSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesPhotoService.create_photo(species_id=species_id, payload=payload)
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
+
+
+@specie_bp.route("/<int:species_id>/photos/<string:photo_id>")
+class SpeciesPhotoDetail(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesPhotoUpdateRequestSchema, location="json")
+    @specie_bp.response(200, SpeciesPhotoCreateResponseSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
+    def patch(self, payload, species_id: int, photo_id: str):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesPhotoService.update_photo(
+                species_id=species_id,
+                photo_id=photo_id,
+                payload=payload,
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
+
+    @jwt_required()
+    @specie_bp.response(204)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
+    def delete(self, species_id: int, photo_id: str):
+        _ensure_curator_or_admin()
+
+        try:
+            SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
+            return None
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
 
 
 @specie_bp.route("/requests")
