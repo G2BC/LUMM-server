@@ -59,7 +59,7 @@ class SpeciesChangeRequestService:
     UPLOAD_HEAD_MAX_ATTEMPTS = 4
     UPLOAD_HEAD_RETRY_SECONDS = 0.35
     TMP_PREFIX = "species/pending/"
-    FINAL_PREFIX = "species/approved/"
+    FINAL_PREFIX = "species/"
     CHARACTERISTICS_FIELDS = {
         "lum_mycelium",
         "lum_basidiome",
