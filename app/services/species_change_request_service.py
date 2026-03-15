@@ -3,7 +3,7 @@ import os
 import re
 import time
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
@@ -108,7 +108,7 @@ class SpeciesChangeRequestService:
     }
 
     @classmethod
-    def create_request(cls, payload: dict[str, Any], requester_user_id: Optional[str] = None):
+    def create_request(cls, payload: dict[str, Any], requester_user_id: str | None = None):
         species_id = payload["species_id"]
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
@@ -287,7 +287,7 @@ class SpeciesChangeRequestService:
 
     @staticmethod
     def _validate_proposed_data(
-        proposed_data: dict[str, Any], species_id: Optional[int] = None
+        proposed_data: dict[str, Any], species_id: int | None = None
     ) -> None:
         edible = proposed_data.get("edible")
         if edible is not None and not isinstance(edible, bool):
@@ -295,7 +295,7 @@ class SpeciesChangeRequestService:
 
         size_cm = proposed_data.get("size_cm")
         if size_cm is not None:
-            if isinstance(size_cm, bool) or not isinstance(size_cm, (int, float)):
+            if isinstance(size_cm, bool) or not isinstance(size_cm, int | float):
                 raise ValueError("`size_cm` deve ser numérico.")
             if size_cm < 0:
                 raise ValueError("`size_cm` deve ser >= 0.")
@@ -462,11 +462,11 @@ class SpeciesChangeRequestService:
         cls,
         request_id: str,
         reviewer_user_id: str,
-        decision: Optional[str],
-        review_note: Optional[str],
-        proposed_data_decision: Optional[str] = None,
-        proposed_data_fields: Optional[list[dict[str, Any]]] = None,
-        photo_decisions: Optional[list[dict[str, Any]]] = None,
+        decision: str | None,
+        review_note: str | None,
+        proposed_data_decision: str | None = None,
+        proposed_data_fields: list[dict[str, Any]] | None = None,
+        photo_decisions: list[dict[str, Any]] | None = None,
     ):
         req = SpeciesChangeRequestRepository.get_by_id(cls._parse_id(request_id))
         if not req:
@@ -600,7 +600,7 @@ class SpeciesChangeRequestService:
         return reviewed
 
     @staticmethod
-    def _normalize_review_decision(value: Optional[str], field_name: str) -> Optional[str]:
+    def _normalize_review_decision(value: str | None, field_name: str) -> str | None:
         normalized = (value or "").strip().lower()
         if not normalized:
             return None
@@ -693,7 +693,7 @@ class SpeciesChangeRequestService:
         return value
 
     @classmethod
-    def cleanup_tmp_objects(cls, retention_days: Optional[int] = None, dry_run: bool = True):
+    def cleanup_tmp_objects(cls, retention_days: int | None = None, dry_run: bool = True):
         days = retention_days or int(current_app.config["SPECIES_TMP_RETENTION_DAYS"])
         if days < 1:
             raise ValueError("`retention_days` deve ser >= 1.")
@@ -726,6 +726,14 @@ class SpeciesChangeRequestService:
         max_photos = int(current_app.config["SPECIES_REQUEST_MAX_PHOTOS"])
         if len(photos_payload) > max_photos:
             raise ValueError(f"Máximo de {max_photos} fotos por solicitação.")
+
+        for photo in photos_payload:
+            if "lumm" not in photo or photo.get("lumm") is None:
+                photo["lumm"] = True
+                continue
+
+            if not isinstance(photo.get("lumm"), bool):
+                raise ValueError("`photos.lumm` deve ser booleano.")
 
     @classmethod
     def _validate_uploaded_objects(cls, photos_payload: list[dict[str, Any]]) -> None:
@@ -1019,7 +1027,7 @@ class SpeciesChangeRequestService:
         req.current_data = current_data
 
     @staticmethod
-    def _build_preview_url(photo, expires_in_seconds: int) -> Optional[str]:
+    def _build_preview_url(photo, expires_in_seconds: int) -> str | None:
         source_url = (getattr(photo, "source_url", None) or "").strip()
         if source_url.startswith(("http://", "https://")):
             return source_url

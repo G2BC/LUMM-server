@@ -4,6 +4,10 @@ _FORMATTED_ATTRIBUTION_RE = re.compile(
     r"^\(c\)\s+.+,\s+(?:some|all|no)\s+rights\s+reserved\s+\(.+\),\s+uploaded\s+by\s+.+$",
     re.IGNORECASE,
 )
+_LEGACY_ATTRIBUTION_RE = re.compile(
+    r"^\(c\)\s+.+,\s+(?:some|all|no)\s+rights\s+reserved\s+\(.+\)$",
+    re.IGNORECASE,
+)
 
 
 def normalize_license_display(license_code: str | None) -> str:
@@ -35,7 +39,7 @@ def format_attribution_display(
 ) -> str:
     uploader = (attribution or "").strip() or "unknown uploader"
     # Backward compatibility for rows that already persisted the old full credit line.
-    if _FORMATTED_ATTRIBUTION_RE.match(uploader):
+    if _FORMATTED_ATTRIBUTION_RE.match(uploader) or _LEGACY_ATTRIBUTION_RE.match(uploader):
         return uploader
 
     holder = (rights_holder or "").strip() or uploader

@@ -78,6 +78,7 @@ class SpeciesChangeRequestRepository:
                     attribution=photo.get("attribution"),
                     rights_holder=photo.get("rights_holder"),
                     source_url=photo.get("source_url"),
+                    lumm=photo.get("lumm"),
                     declaration_accepted_at=photo.get("declaration_accepted_at"),
                 )
             )
@@ -254,7 +255,7 @@ class SpeciesChangeRequestRepository:
                 source_url=photo_request.source_url,
                 declaration_accepted_at=photo_request.declaration_accepted_at,
                 source="LUMM-Upload",
-                lumm=True,
+                lumm=True if photo_request.lumm is None else bool(photo_request.lumm),
             )
         )
         return True

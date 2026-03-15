@@ -101,6 +101,12 @@ class SpeciesPhotoRequest(db.Model):
     attribution = db.Column(db.Text, nullable=True)
     rights_holder = db.Column(db.Text, nullable=True)
     source_url = db.Column(db.Text, nullable=True)
+    lumm = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True,
+        server_default=db.text("true"),
+    )
     declaration_accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     status = db.Column(
         db.String(20),
