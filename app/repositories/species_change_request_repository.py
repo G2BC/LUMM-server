@@ -1,5 +1,3 @@
-from typing import Optional
-
 import app.utils.object_storage as object_storage
 from app.extensions import db
 from app.models.growth_form import GrowthForm
@@ -48,11 +46,11 @@ class SpeciesChangeRequestRepository:
         cls,
         species_id: int,
         proposed_data: dict,
-        request_note: Optional[str],
-        requester_name: Optional[str],
-        requester_email: Optional[str],
-        requester_institution: Optional[str],
-        requested_by_user_id: Optional[int],
+        request_note: str | None,
+        requester_name: str | None,
+        requester_email: str | None,
+        requester_institution: str | None,
+        requested_by_user_id: int | None,
         photos_payload: list[dict],
     ) -> SpeciesChangeRequest:
         req = SpeciesChangeRequest(
@@ -91,9 +89,9 @@ class SpeciesChangeRequestRepository:
     @classmethod
     def list(
         cls,
-        status: Optional[str] = None,
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
+        status: str | None = None,
+        page: int | None = None,
+        per_page: int | None = None,
     ):
         query = SpeciesChangeRequest.query.options(
             selectinload(SpeciesChangeRequest.photos)
@@ -108,7 +106,7 @@ class SpeciesChangeRequestRepository:
         return query.all()
 
     @classmethod
-    def get_by_id(cls, request_id: int) -> Optional[SpeciesChangeRequest]:
+    def get_by_id(cls, request_id: int) -> SpeciesChangeRequest | None:
         return (
             SpeciesChangeRequest.query.options(selectinload(SpeciesChangeRequest.photos))
             .filter(SpeciesChangeRequest.id == request_id)
@@ -116,7 +114,7 @@ class SpeciesChangeRequestRepository:
         )
 
     @classmethod
-    def get_species_by_id(cls, species_id: int) -> Optional[Species]:
+    def get_species_by_id(cls, species_id: int) -> Species | None:
         return (
             Species.query.options(
                 selectinload(Species.characteristics).selectinload(
@@ -234,7 +232,6 @@ class SpeciesChangeRequestRepository:
         cls, species_id: int, photo_request: SpeciesPhotoRequest
     ) -> bool:
         url = cls._build_object_url(photo_request)
-        formatted_attribution = cls._format_attribution(photo_request)
         already_exists = (
             SpeciesPhoto.query.filter(
                 SpeciesPhoto.species_id == species_id,
@@ -252,8 +249,8 @@ class SpeciesChangeRequestRepository:
                 medium_url=url,
                 original_url=url,
                 license_code=photo_request.license_code,
-                attribution=formatted_attribution,
-                rights_holder=photo_request.rights_holder,
+                attribution=(photo_request.attribution or "").strip() or None,
+                rights_holder=(photo_request.rights_holder or "").strip() or None,
                 source_url=photo_request.source_url,
                 declaration_accepted_at=photo_request.declaration_accepted_at,
                 source="LUMM-Upload",
@@ -270,47 +267,13 @@ class SpeciesChangeRequestRepository:
             )
         return f"minio://{photo_request.object_key}"
 
-    @staticmethod
-    def _normalize_license_display(license_code: Optional[str]) -> str:
-        raw = (license_code or "").strip().upper()
-        if not raw:
-            return "LICENSE NOT PROVIDED"
-        if raw == "ALL-RIGHTS-RESERVED":
-            return "ALL RIGHTS RESERVED"
-
-        normalized = raw
-        if normalized.startswith("CC-"):
-            normalized = "CC " + normalized[3:]
-        normalized = normalized.replace("-4.0", "").replace("-3.0", "").replace("-2.0", "")
-        normalized = normalized.replace("-1.0", "")
-        return normalized
-
-    @staticmethod
-    def _rights_clause(license_code: Optional[str]) -> str:
-        raw = (license_code or "").strip().upper()
-        if raw == "ALL-RIGHTS-RESERVED":
-            return "all rights reserved"
-        if raw.startswith("CC0"):
-            return "no rights reserved"
-        return "some rights reserved"
-
-    @classmethod
-    def _format_attribution(cls, photo_request: SpeciesPhotoRequest) -> str:
-        uploader = (photo_request.attribution or "").strip() or "unknown uploader"
-        rights_holder = (photo_request.rights_holder or "").strip() or uploader
-        rights_clause = cls._rights_clause(photo_request.license_code)
-        license_display = cls._normalize_license_display(photo_request.license_code)
-        return (
-            f"(c) {rights_holder}, {rights_clause} ({license_display}), " f"uploaded by {uploader}"
-        )
-
     @classmethod
     def save_review(
         cls,
         req: SpeciesChangeRequest,
         status: str,
         reviewed_by_user_id: int,
-        review_note: Optional[str],
+        review_note: str | None,
     ) -> SpeciesChangeRequest:
         req.status = status
         req.reviewed_by_user_id = reviewed_by_user_id

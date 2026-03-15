@@ -1,6 +1,7 @@
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, validates_schema
 
 from app.utils.object_storage import normalize_object_url
+from app.utils.photo_attribution import format_attribution_display
 
 from .taxon_schemas import TaxonSchema
 
@@ -11,6 +12,7 @@ class SpeciesPhotoSchema(Schema):
     original_url = fields.Method("get_original_url", dump_only=True)
     license_code = fields.String(allow_none=True, dump_only=True)
     attribution = fields.String(allow_none=True, dump_only=True)
+    attribution_display = fields.Method("get_attribution_display", dump_only=True)
     rights_holder = fields.String(allow_none=True, dump_only=True)
     source_url = fields.String(allow_none=True, dump_only=True)
     declaration_accepted_at = fields.DateTime(allow_none=True, dump_only=True)
@@ -26,6 +28,14 @@ class SpeciesPhotoSchema(Schema):
     @staticmethod
     def get_original_url(obj):
         return normalize_object_url(getattr(obj, "original_url", None))
+
+    @staticmethod
+    def get_attribution_display(obj):
+        return format_attribution_display(
+            attribution=getattr(obj, "attribution", None),
+            rights_holder=getattr(obj, "rights_holder", None),
+            license_code=getattr(obj, "license_code", None),
+        )
 
 
 class SpeciesPhotoCreateResponseSchema(SpeciesPhotoSchema):
@@ -200,6 +210,7 @@ class SpeciesWithPhotosSchema(Schema):
                     "original_url",
                     "license_code",
                     "attribution",
+                    "attribution_display",
                     "rights_holder",
                     "source_url",
                     "declaration_accepted_at",
@@ -348,6 +359,7 @@ class SpeciesDetailSchema(Schema):
                     "original_url",
                     "license_code",
                     "attribution",
+                    "attribution_display",
                     "rights_holder",
                     "source_url",
                     "declaration_accepted_at",
