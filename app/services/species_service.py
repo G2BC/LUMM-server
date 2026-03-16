@@ -1,6 +1,8 @@
 import os
-from typing import Any, Optional, Union
+from functools import partial
+from typing import Any
 from urllib.parse import quote_plus
+from urllib.request import urlopen as urllib_urlopen
 
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
@@ -14,11 +16,11 @@ class SpeciesService:
     @classmethod
     def search(
         cls,
-        search: Optional[str] = "",
-        lineage: Optional[str] = "",
-        country: Optional[str] = "",
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
+        search: str | None = "",
+        lineage: str | None = "",
+        country: str | None = "",
+        page: int | None = None,
+        per_page: int | None = None,
     ) -> dict[str, Any]:
         search = (search or "").strip()
         lineage = (lineage or "").strip()
@@ -48,23 +50,23 @@ class SpeciesService:
         }
 
     @classmethod
-    def select_lineage(cls, search: Optional[str] = ""):
+    def select_lineage(cls, search: str | None = ""):
         return SpeciesRepository.lineage_select(search)
 
     @classmethod
-    def country_select(cls, search: Optional[str] = ""):
+    def country_select(cls, search: str | None = ""):
         return SpeciesRepository.country_select(search)
 
     @classmethod
-    def family_select(cls, search: Optional[str] = ""):
+    def family_select(cls, search: str | None = ""):
         return SpeciesRepository.family_select(search)
 
     @classmethod
-    def domain_select(cls, domain: str, search: Optional[str] = ""):
+    def domain_select(cls, domain: str, search: str | None = ""):
         return SpeciesRepository.domain_select(domain, search)
 
     @classmethod
-    def get(cls, species: Optional[str] = ""):
+    def get(cls, species: str | None = ""):
         found = SpeciesRepository.get(species)
         if not found:
             raise ValueError("Espécie não encontrada.")
@@ -72,8 +74,8 @@ class SpeciesService:
 
     @classmethod
     def get_ncbi_data(
-        cls, species: Optional[str] = "", include_cache_meta: bool = False
-    ) -> Union[dict[str, Any], tuple[dict[str, Any], bool]]:
+        cls, species: str | None = "", include_cache_meta: bool = False
+    ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
         species = (species or "").strip()
         if not species:
             raise ValueError("Espécie inválida.")
@@ -96,6 +98,12 @@ class SpeciesService:
 
         Entrez.email = os.getenv("NCBI_EMAIL")
         Entrez.api_key = os.getenv("NCBI_API_KEY")
+        Entrez.max_tries = int(current_app.config.get("NCBI_MAX_TRIES", 1))
+        Entrez.sleep_between_tries = float(
+            current_app.config.get("NCBI_SLEEP_BETWEEN_TRIES_SECONDS", 0.25)
+        )
+        ncbi_timeout_seconds = float(current_app.config.get("NCBI_REQUEST_TIMEOUT_SECONDS", 8))
+        Entrez.urlopen = partial(urllib_urlopen, timeout=ncbi_timeout_seconds)
 
         direct_term = f"txid{taxid}[Organism:noexp]"
         subtree_term = f"txid{taxid}[Organism:exp]"
