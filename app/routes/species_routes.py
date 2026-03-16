@@ -1,5 +1,6 @@
 import json
 
+import sentry_sdk
 from flask import Response, request
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required, verify_jwt_in_request
@@ -336,4 +337,8 @@ class GetNCBISpeciesData(MethodView):
                 abort(404, message=message)
             abort(400, message=message)
         except RuntimeError as exc:
+            sentry_sdk.capture_exception(exc)
             abort(502, message=str(exc))
+        except Exception as exc:
+            sentry_sdk.capture_exception(exc)
+            abort(500, message="Erro interno.")

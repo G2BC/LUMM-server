@@ -1,3 +1,6 @@
+import os
+
+import sentry_sdk
 from dotenv import load_dotenv
 from flask import Flask, request
 from flask_cors import CORS
@@ -13,6 +16,11 @@ load_dotenv()
 
 
 def create_app():
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        send_default_pii=True,
+    )
+
     app = Flask(__name__)
     app.config.from_object("app.config.Config")
 
