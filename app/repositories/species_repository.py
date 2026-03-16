@@ -1,5 +1,3 @@
-from typing import Optional
-
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -21,11 +19,11 @@ class SpeciesRepository:
     @classmethod
     def list(
         cls,
-        search: Optional[str] = "",
-        lineage: Optional[str] = "",
-        country: Optional[str] = "",
-        page: Optional[int] = None,
-        per_page: Optional[int] = None,
+        search: str | None = "",
+        lineage: str | None = "",
+        country: str | None = "",
+        page: int | None = None,
+        per_page: int | None = None,
     ):
         base = Species.query.options(
             selectinload(Species.photos),
@@ -58,7 +56,7 @@ class SpeciesRepository:
         return base.all()
 
     @classmethod
-    def get(cls, species: Optional[str] = ""):
+    def get(cls, species: str | None = ""):
         if not species:
             return None
 
@@ -86,7 +84,7 @@ class SpeciesRepository:
         return base.first()
 
     @classmethod
-    def lineage_select(cls, search: Optional[str] = ""):
+    def lineage_select(cls, search: str | None = ""):
         search = (search or "").strip()
 
         query = Species.query.with_entities(Species.lineage).distinct()
@@ -105,7 +103,7 @@ class SpeciesRepository:
     @classmethod
     def country_select(
         cls,
-        search: Optional[str] = "",
+        search: str | None = "",
     ):
         search = (search or "").strip()
 
@@ -125,7 +123,7 @@ class SpeciesRepository:
     @classmethod
     def family_select(
         cls,
-        search: Optional[str] = "",
+        search: str | None = "",
     ):
         search = (search or "").strip()
 
@@ -146,7 +144,7 @@ class SpeciesRepository:
     def domain_select(
         cls,
         domain: str,
-        search: Optional[str] = "",
+        search: str | None = "",
     ):
         model = cls.DOMAIN_MODELS.get((domain or "").strip().lower())
         if not model:
@@ -175,12 +173,13 @@ class SpeciesRepository:
         ]
 
     @classmethod
-    def get_ncbi_taxon_id(cls, species_id: Optional[str] = ""):
-        if not species_id:
+    def get_ncbi_taxon_id(cls, species_id: str | None = ""):
+        species_id = (species_id or "").strip()
+        if not species_id or not species_id.isdigit():
             return None
 
         species = (
-            Species.query.filter(Species.id == species_id)
+            Species.query.filter(Species.id == int(species_id))
             .where(Species.ncbi_taxonomy_id.is_not(None))
             .first()
         )
@@ -191,7 +190,7 @@ class SpeciesRepository:
         return species.ncbi_taxonomy_id
 
     @classmethod
-    def exists_by_id(cls, species_id: Optional[str] = "") -> bool:
+    def exists_by_id(cls, species_id: str | None = "") -> bool:
         if not species_id:
             return False
 
