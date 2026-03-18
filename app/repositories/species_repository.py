@@ -5,6 +5,7 @@ from app.models.species import Species
 from app.models.species_characteristics import SpeciesCharacteristics
 from app.models.species_similarity import SpeciesSimilarity
 from app.models.substrate import Substrate
+from app.utils.object_storage import normalize_object_url
 from sqlalchemy.orm import selectinload
 
 
@@ -139,6 +140,41 @@ class SpeciesRepository:
         options = [{"label": family, "value": family} for (family,) in families if family]
 
         return options
+
+    @classmethod
+    def species_select(
+        cls,
+        search: str | None = "",
+    ):
+        search = (search or "").strip()
+        query = Species.query.options(selectinload(Species.photos))
+
+        if search:
+            query = query.filter(Species.scientific_name.ilike(f"%{search}%"))
+
+        species_list = query.order_by(Species.scientific_name.asc()).all()
+
+        def pick_photo(species: Species) -> str | None:
+            photos = getattr(species, "photos", None) or []
+            if not photos:
+                return None
+
+            ordered = sorted(photos, key=lambda photo: getattr(photo, "photo_id", 0))
+            featured = next(
+                (photo for photo in ordered if bool(getattr(photo, "featured", False))),
+                None,
+            )
+            chosen = featured or ordered[0]
+            return normalize_object_url(getattr(chosen, "medium_url", None))
+
+        return [
+            {
+                "id": item.id,
+                "label": item.scientific_name,
+                "photo": pick_photo(item),
+            }
+            for item in species_list
+        ]
 
     @classmethod
     def domain_select(

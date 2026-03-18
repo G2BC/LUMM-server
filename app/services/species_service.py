@@ -62,6 +62,10 @@ class SpeciesService:
         return SpeciesRepository.family_select(search)
 
     @classmethod
+    def species_select(cls, search: str | None = ""):
+        return SpeciesRepository.species_select(search)
+
+    @classmethod
     def domain_select(cls, domain: str, search: str | None = ""):
         return SpeciesRepository.domain_select(domain, search)
 

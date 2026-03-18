@@ -21,6 +21,7 @@ from app.schemas.species_schemas import (
     SpeciesPhotoCreateResponseSchema,
     SpeciesPhotoUpdateRequestSchema,
     SpeciesPhotoUploadUrlPayloadSchema,
+    SpeciesSelectSchema,
     SpeciesWithPhotosPaginationSchema,
 )
 from app.services.species_change_request_service import SpeciesChangeRequestService
@@ -85,6 +86,15 @@ class SpeciesFamilySelect(MethodView):
         search = request.args.get("search", type=str)
 
         return SpeciesService.family_select(search)
+
+
+@specie_bp.route("/select")
+class SpeciesSelect(MethodView):
+    @specie_bp.response(200, SpeciesSelectSchema(many=True))
+    def get(self):
+        search = request.args.get("search", type=str)
+
+        return SpeciesService.species_select(search)
 
 
 @specie_bp.route("/domains/select")

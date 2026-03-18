@@ -88,6 +88,12 @@ class SpeciesPhotoUploadUrlPayloadSchema(Schema):
     size_bytes = fields.Integer(required=True)
 
 
+class SpeciesSelectSchema(Schema):
+    id = fields.Integer(required=True)
+    label = fields.String(required=True)
+    photo = fields.String(allow_none=True)
+
+
 class SpeciesCharacteristicsSchema(Schema):
     species_id = fields.Integer(allow_none=True)
     lum_mycelium = fields.Boolean(allow_none=True)
