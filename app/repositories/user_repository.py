@@ -17,7 +17,12 @@ class UserRepository:
         return normalized
 
     @classmethod
-    def _build_users_query(cls, search: str | None = None, is_active: bool | None = None):
+    def _build_users_query(
+        cls,
+        search: str | None = None,
+        is_active: bool | None = None,
+        exclude_user_id: int | None = None,
+    ):
         query = User.query.order_by(User.id.asc())
 
         if search := (search or "").strip():
@@ -33,12 +38,19 @@ class UserRepository:
 
         if is_active is not None:
             query = query.filter(User.is_active == is_active)
+        if exclude_user_id is not None:
+            query = query.filter(User.id != exclude_user_id)
 
         return query
 
     @classmethod
-    def get_users(cls, search: str | None = None, is_active: bool | None = None):
-        return cls._build_users_query(search, is_active).all()
+    def get_users(
+        cls,
+        search: str | None = None,
+        is_active: bool | None = None,
+        exclude_user_id: int | None = None,
+    ):
+        return cls._build_users_query(search, is_active, exclude_user_id).all()
 
     @classmethod
     def get_users_pagination(
@@ -47,8 +59,9 @@ class UserRepository:
         per_page,
         search: str | None = None,
         is_active: bool | None = None,
+        exclude_user_id: int | None = None,
     ):
-        return cls._build_users_query(search, is_active).paginate(
+        return cls._build_users_query(search, is_active, exclude_user_id).paginate(
             page=page, per_page=per_page, error_out=False
         )
 

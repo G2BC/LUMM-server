@@ -10,6 +10,16 @@ class UserService:
     MAX_PER_PAGE = 100
 
     @staticmethod
+    def _parse_positive_user_id(value) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            raise ValueError("`current_user_id` inválido.")
+        if parsed < 1:
+            raise ValueError("`current_user_id` inválido.")
+        return parsed
+
+    @staticmethod
     def _generate_temporary_password(length: int = 12) -> str:
         alphabet = string.ascii_letters + string.digits
         while True:
@@ -22,9 +32,18 @@ class UserService:
                 return password
 
     @classmethod
-    def list_users(self, page=None, per_page=None, search=None, is_active=None):
+    def list_users(
+        self,
+        current_user_id=None,
+        page=None,
+        per_page=None,
+        search=None,
+        is_active=None,
+    ):
+        exclude_user_id = self._parse_positive_user_id(current_user_id)
+
         if page is None and per_page is None:
-            users = UserRepository.get_users(search, is_active)
+            users = UserRepository.get_users(search, is_active, exclude_user_id=exclude_user_id)
             return {
                 "items": users,
                 "total": len(users),
@@ -45,7 +64,13 @@ class UserService:
         if per_page > self.MAX_PER_PAGE:
             raise ValueError(f"`per_page` deve ser <= {self.MAX_PER_PAGE}.")
 
-        pagination = UserRepository.get_users_pagination(page, per_page, search, is_active)
+        pagination = UserRepository.get_users_pagination(
+            page,
+            per_page,
+            search,
+            is_active,
+            exclude_user_id=exclude_user_id,
+        )
         return {
             "items": pagination.items,
             "total": pagination.total,

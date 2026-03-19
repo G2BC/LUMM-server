@@ -29,8 +29,10 @@ class UsersList(MethodView):
         if not claims.get("is_admin", False):
             abort(403, message="Acesso permitido apenas para administradores.")
 
+        identity = get_jwt_identity()
         try:
             return UserService.list_users(
+                current_user_id=str(identity),
                 page=query_params.get("page"),
                 per_page=query_params.get("per_page"),
                 search=query_params.get("search"),
