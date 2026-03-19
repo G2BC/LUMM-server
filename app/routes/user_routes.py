@@ -101,20 +101,20 @@ class ApproveUser(MethodView):
                                     border-radius:8px;
                                     padding:12px 18px;
                                 "
-                            >Acessar plataforma</a>
+                            >Access platform</a>
                         </td>
                     </tr>
                 """
             send_email(
-                subject="[LUMM] Cadastro aprovado",
+                subject="[LUMM] Registration Approved",
                 content=f"""
                     <!DOCTYPE html>
-                    <html lang="pt-BR">
+                    <html lang="en">
                         <head>
                             <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
                             <meta name="x-apple-disable-message-reformatting" />
                             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                            <title>Cadastro aprovado</title>
+                            <title>Registration approved</title>
                         </head>
                         <body style="margin:0;padding:0;background-color:#f6f8fb;">
                             <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f6f8fb;">
@@ -126,9 +126,9 @@ class ApproveUser(MethodView):
                                                     {logo_html}
                                                     <tr>
                                                         <td style="padding:28px 28px 12px 28px;font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;color:#111827;">
-                                                            <h1 style="margin:0 0 12px 0;font-size:24px;line-height:1.2;font-weight:700;">Cadastro aprovado</h1>
-                                                            <p style="margin:0 0 12px 0;font-size:16px;line-height:1.6;">Olá, <strong>{name}</strong>.</p>
-                                                            <p style="margin:0;font-size:16px;line-height:1.6;">Seu cadastro na plataforma LUMM foi aprovado com sucesso.</p>
+                                                            <h1 style="margin:0 0 12px 0;font-size:24px;line-height:1.2;font-weight:700;">Registration approved</h1>
+                                                            <p style="margin:0 0 12px 0;font-size:16px;line-height:1.6;">Hi, <strong>{name}</strong>.</p>
+                                                            <p style="margin:0;font-size:16px;line-height:1.6;">Your registration on the LUMM platform has been approved.</p>
                                                         </td>
                                                     </tr>
                                                     {cta_html}
