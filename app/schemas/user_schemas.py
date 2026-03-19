@@ -84,6 +84,20 @@ class UserAdminUpdateSchema(Schema):
     )
 
 
+class UserRoleUpdateSchema(Schema):
+    role = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            ["researcher", "curator", "admin"],
+            error="`role` deve ser um de: researcher, curator, admin.",
+        ),
+        error_messages={
+            "required": "O campo role é obrigatório.",
+            "null": "O campo role não pode ser nulo.",
+        },
+    )
+
+
 class UserListQuerySchema(Schema):
     class Meta:
         unknown = EXCLUDE

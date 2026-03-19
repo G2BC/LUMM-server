@@ -1,6 +1,7 @@
 import secrets
 import string
 
+from app.models.user import User
 from app.repositories.user_repository import UserRepository
 
 
@@ -140,3 +141,25 @@ class UserService:
             return target_user
 
         return UserRepository.update_admin_status(target_user, is_admin)
+
+    @classmethod
+    def update_role(cls, actor_id: str, target_user_id: str, role: str):
+        actor = UserRepository.get_by_id(actor_id)
+        if not actor:
+            raise ValueError("Usuário autenticado não encontrado.")
+
+        target_user = UserRepository.get_by_id(target_user_id)
+        if not target_user:
+            raise ValueError("Usuário não encontrado.")
+
+        normalized_role = (role or "").strip().lower()
+        if normalized_role not in User.ROLES:
+            raise ValueError("Role inválida.")
+
+        if actor.id == target_user.id and normalized_role != User.ROLE_ADMIN:
+            raise ValueError("Você não pode revogar o próprio perfil de administrador.")
+
+        if target_user.role == normalized_role:
+            return target_user
+
+        return UserRepository.update_role(target_user, normalized_role)
