@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
@@ -11,6 +13,7 @@ from app.schemas.user_schemas import (
     UserSchema,
 )
 from app.services.user_service import UserService
+from app.utils.send_email import send_email
 
 user_bp = Blueprint(
     "users",
@@ -52,7 +55,6 @@ class UsersList(MethodView):
 
 
 @user_bp.route("/<string:user_id>/approve")
-@user_bp.route("/<string:user_id>/activate")
 class ApproveUser(MethodView):
     @jwt_required()
     @user_bp.response(200, UserSchema)
@@ -64,9 +66,94 @@ class ApproveUser(MethodView):
             abort(403, message="Acesso permitido apenas para administradores.")
 
         try:
-            return UserService.approve_user(user_id)
+            user = UserService.approve_user(user_id)
+            name = (user.name or "").strip()
+            email = (user.email or "").strip()
+            current_year = datetime.now().year
+
+            logo_html = """
+                    <tr>
+                        <td align="center" style="padding: 28px 28px 0 28px;">
+                            <img
+                                src="https://lumm.uneb.br/lumm512_rounded.png"
+                                alt="LUMM"
+                                width="140"
+                                style="display:block;border:0;outline:none;text-decoration:none;max-width:140px;height:auto;"
+                            >
+                        </td>
+                    </tr>
+                """
+            cta_html = """
+                    <tr>
+                        <td align="center" style="padding: 8px 28px 0 28px;">
+                            <a
+                                href="https://lumm.uneb.br/login"
+                                target="_blank"
+                                style="
+                                    display:inline-block;
+                                    background-color:#00C000;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    font-family:'Inter', Arial, sans-serif;
+                                    font-size:15px;
+                                    line-height:20px;
+                                    font-weight:600;
+                                    border-radius:8px;
+                                    padding:12px 18px;
+                                "
+                            >Acessar plataforma</a>
+                        </td>
+                    </tr>
+                """
+            send_email(
+                subject="[LUMM] Cadastro aprovado",
+                content=f"""
+                    <!DOCTYPE html>
+                    <html lang="pt-BR">
+                        <head>
+                            <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+                            <meta name="x-apple-disable-message-reformatting" />
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                            <title>Cadastro aprovado</title>
+                        </head>
+                        <body style="margin:0;padding:0;background-color:#f6f8fb;">
+                            <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f6f8fb;">
+                                <tbody>
+                                    <tr>
+                                        <td align="center" style="padding:24px 12px;">
+                                            <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:12px;">
+                                                <tbody>
+                                                    {logo_html}
+                                                    <tr>
+                                                        <td style="padding:28px 28px 12px 28px;font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;color:#111827;">
+                                                            <h1 style="margin:0 0 12px 0;font-size:24px;line-height:1.2;font-weight:700;">Cadastro aprovado</h1>
+                                                            <p style="margin:0 0 12px 0;font-size:16px;line-height:1.6;">Olá, <strong>{name}</strong>.</p>
+                                                            <p style="margin:0;font-size:16px;line-height:1.6;">Seu cadastro na plataforma LUMM foi aprovado com sucesso.</p>
+                                                        </td>
+                                                    </tr>
+                                                    {cta_html}
+                                                    <tr>
+                                                        <td style="padding:20px 28px 28px 28px;font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;color:#374151;">
+                                                            <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px 0;">
+                                                            <p style="margin:0;font-size:14px;line-height:1.5;text-align:center;">&copy; {current_year} Luminescent Mushrooms</p>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </body>
+                    </html>
+                """,  # noqa: E501
+                to=email,
+            )
+            return user
         except ValueError as exc:
             abort(404, message=str(exc))
+        except Exception:
+            abort(500, message="Usuário aprovado, mas falha ao enviar email.")
 
 
 @user_bp.route("/<string:user_id>/deactivate")
