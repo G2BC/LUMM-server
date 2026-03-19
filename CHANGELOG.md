@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/G2BC/LUMM-server/compare/v1.11.0...v1.11.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* update email content and language for user approval notifications ([9f581ed](https://github.com/G2BC/LUMM-server/commit/9f581eda7d7ca6822652e83cabf200c72402df25))
+
 ## [1.11.0](https://github.com/G2BC/LUMM-server/compare/v1.10.1...v1.11.0) (2026-03-19)
 
 
