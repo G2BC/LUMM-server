@@ -91,10 +91,15 @@ class SpeciesFamilySelect(MethodView):
 @specie_bp.route("/select")
 class SpeciesSelect(MethodView):
     @specie_bp.response(200, SpeciesSelectSchema(many=True))
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
     def get(self):
         search = request.args.get("search", type=str)
+        exclude_species_id = request.args.get("exclude_species_id", type=int)
 
-        return SpeciesService.species_select(search)
+        try:
+            return SpeciesService.species_select(search, exclude_species_id)
+        except ValueError as exc:
+            abort(400, message=str(exc))
 
 
 @specie_bp.route("/domains/select")

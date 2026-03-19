@@ -34,7 +34,9 @@ class SpeciesRepository:
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.habitats),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.growth_forms),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.substrates),
-            selectinload(Species.similar_species_links),
+            selectinload(Species.similar_species_links).selectinload(
+                SpeciesSimilarity.similar_species
+            ),
         ).order_by(Species.scientific_name.asc())
 
         filters = []
@@ -145,12 +147,15 @@ class SpeciesRepository:
     def species_select(
         cls,
         search: str | None = "",
+        exclude_species_id: int | None = None,
     ):
         search = (search or "").strip()
         query = Species.query.options(selectinload(Species.photos))
 
         if search:
             query = query.filter(Species.scientific_name.ilike(f"%{search}%"))
+        if exclude_species_id is not None:
+            query = query.filter(Species.id != exclude_species_id)
 
         species_list = query.order_by(Species.scientific_name.asc()).all()
 

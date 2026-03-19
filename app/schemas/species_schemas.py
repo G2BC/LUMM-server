@@ -123,6 +123,7 @@ class SpeciesCharacteristicsSchema(Schema):
     season_start_month = fields.Integer(allow_none=True)
     season_end_month = fields.Integer(allow_none=True)
     habitats = fields.Method("get_habitats", allow_none=True)
+    similar_species = fields.Method("get_similar_species", allow_none=True)
 
     @staticmethod
     def get_habitats(obj):
@@ -171,6 +172,17 @@ class SpeciesCharacteristicsSchema(Schema):
             }
             for nutrition_mode in nutrition_modes
         ]
+
+    @staticmethod
+    def get_similar_species(obj):
+        species = getattr(obj, "species", None)
+        links = getattr(species, "similar_species_links", None) or []
+        items = []
+        for link in links:
+            related = getattr(link, "similar_species", None)
+            label = getattr(related, "scientific_name", None)
+            items.append({"id": link.similar_species_id, "label": label})
+        return sorted(items, key=lambda item: item["id"])
 
 
 class SpeciesWithPhotosSchema(Schema):
@@ -357,7 +369,6 @@ class SpeciesDetailSchema(Schema):
         allow_none=True,
     )
     taxonomy = fields.Nested(TaxonSchema, dump_only=True)
-    similar_species = fields.Method("get_similar_species", allow_none=True)
     photos = fields.List(
         fields.Nested(
             SpeciesPhotoSchema(
@@ -378,12 +389,3 @@ class SpeciesDetailSchema(Schema):
             dump_only=True,
         )
     )
-
-    def get_similar_species(self, obj):
-        links = getattr(obj, "similar_species_links", None) or []
-        items = []
-        for link in links:
-            related = getattr(link, "similar_species", None)
-            name = getattr(related, "scientific_name", None)
-            items.append({"id": link.similar_species_id, "name": name})
-        return sorted(items, key=lambda item: item["id"])

@@ -62,8 +62,15 @@ class SpeciesService:
         return SpeciesRepository.family_select(search)
 
     @classmethod
-    def species_select(cls, search: str | None = ""):
-        return SpeciesRepository.species_select(search)
+    def species_select(
+        cls,
+        search: str | None = "",
+        exclude_species_id: int | None = None,
+    ):
+        if exclude_species_id is not None and exclude_species_id < 1:
+            raise ValueError("`exclude_species_id` deve ser um inteiro >= 1.")
+
+        return SpeciesRepository.species_select(search, exclude_species_id)
 
     @classmethod
     def domain_select(cls, domain: str, search: str | None = ""):
