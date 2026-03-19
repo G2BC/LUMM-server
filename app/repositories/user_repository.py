@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 from app.extensions import db
 from app.models.user import User
@@ -11,14 +10,14 @@ EXACT_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 class UserRepository:
     @staticmethod
-    def _normalize_role(role: Optional[str]) -> str:
+    def _normalize_role(role: str | None) -> str:
         normalized = (role or User.ROLE_RESEARCHER).strip().lower()
         if normalized not in User.ROLES:
             raise ValueError("Role inválida.")
         return normalized
 
     @classmethod
-    def _build_users_query(cls, search: Optional[str] = None, is_active: Optional[bool] = None):
+    def _build_users_query(cls, search: str | None = None, is_active: bool | None = None):
         query = User.query.order_by(User.id.asc())
 
         if search := (search or "").strip():
@@ -38,7 +37,7 @@ class UserRepository:
         return query
 
     @classmethod
-    def get_users(cls, search: Optional[str] = None, is_active: Optional[bool] = None):
+    def get_users(cls, search: str | None = None, is_active: bool | None = None):
         return cls._build_users_query(search, is_active).all()
 
     @classmethod
@@ -46,8 +45,8 @@ class UserRepository:
         cls,
         page,
         per_page,
-        search: Optional[str] = None,
-        is_active: Optional[bool] = None,
+        search: str | None = None,
+        is_active: bool | None = None,
     ):
         return cls._build_users_query(search, is_active).paginate(
             page=page, per_page=per_page, error_out=False
@@ -70,10 +69,10 @@ class UserRepository:
     def create_user(
         cls,
         name: str,
-        institution: Optional[str],
+        institution: str | None,
         email: str,
         password: str,
-        role: Optional[str] = None,
+        role: str | None = None,
     ) -> User:
         normalized_role = cls._normalize_role(role)
         user = User(
@@ -110,14 +109,6 @@ class UserRepository:
     def update_password(cls, user: User, new_password: str, must_change_password: bool) -> User:
         user.set_password(new_password)
         user.must_change_password = must_change_password
-        db.session.add(user)
-        db.session.commit()
-        return user
-
-    @classmethod
-    def update_admin_status(cls, user: User, is_admin: bool) -> User:
-        user.is_admin = is_admin
-        user.role = User.ROLE_ADMIN if is_admin else User.ROLE_RESEARCHER
         db.session.add(user)
         db.session.commit()
         return user
