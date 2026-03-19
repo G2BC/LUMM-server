@@ -79,6 +79,65 @@ class SpeciesPhotoUpdateRequestSchema(Schema):
             )
 
 
+class SpeciesPatchRequestSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
+    scientific_name = fields.String(required=False, allow_none=True)
+    lineage = fields.String(required=False, allow_none=True)
+    family = fields.String(required=False, allow_none=True)
+    group_name = fields.String(required=False, allow_none=True)
+    section = fields.String(required=False, allow_none=True)
+    type_country = fields.String(required=False, allow_none=True)
+    mycobank_index_fungorum_id = fields.Raw(required=False, allow_none=True)
+    mycobank_type = fields.String(required=False, allow_none=True)
+    ncbi_taxonomy_id = fields.Raw(required=False, allow_none=True)
+    inaturalist_taxon_id = fields.Raw(required=False, allow_none=True)
+    unite_taxon_id = fields.Raw(required=False, allow_none=True)
+    iucn_redlist = fields.String(required=False, allow_none=True)
+    references_raw = fields.String(required=False, allow_none=True)
+    distribution_regions = fields.List(fields.String(), required=False, allow_none=True)
+
+    lum_mycelium = fields.Boolean(required=False, allow_none=True)
+    lum_basidiome = fields.Boolean(required=False, allow_none=True)
+    lum_stipe = fields.Boolean(required=False, allow_none=True)
+    lum_pileus = fields.Boolean(required=False, allow_none=True)
+    lum_lamellae = fields.Boolean(required=False, allow_none=True)
+    lum_spores = fields.Boolean(required=False, allow_none=True)
+    edible = fields.Boolean(required=False, allow_none=True)
+
+    colors = fields.String(required=False, allow_none=True)
+    colors_pt = fields.String(required=False, allow_none=True)
+    cultivation = fields.String(required=False, allow_none=True)
+    cultivation_pt = fields.String(required=False, allow_none=True)
+    finding_tips = fields.String(required=False, allow_none=True)
+    finding_tips_pt = fields.String(required=False, allow_none=True)
+    nearby_trees = fields.String(required=False, allow_none=True)
+    nearby_trees_pt = fields.String(required=False, allow_none=True)
+    curiosities = fields.String(required=False, allow_none=True)
+    curiosities_pt = fields.String(required=False, allow_none=True)
+    general_description = fields.String(required=False, allow_none=True)
+    general_description_pt = fields.String(required=False, allow_none=True)
+
+    size_cm = fields.Float(required=False, allow_none=True)
+    season_start_month = fields.Integer(required=False, allow_none=True)
+    season_end_month = fields.Integer(required=False, allow_none=True)
+
+    growth_forms = fields.List(fields.Integer(strict=True), required=False)
+    nutrition_modes = fields.List(fields.Integer(strict=True), required=False)
+    substrates = fields.List(fields.Integer(strict=True), required=False)
+    habitats = fields.List(fields.Integer(strict=True), required=False)
+    similar_species_ids = fields.List(fields.Integer(strict=True), required=False)
+
+    @validates_schema
+    def validate_has_any_field(self, data, **kwargs):
+        if not data:
+            raise ValidationError(
+                "Informe ao menos um campo para atualização da espécie.",
+                field_name="scientific_name",
+            )
+
+
 class SpeciesPhotoUploadUrlPayloadSchema(Schema):
     class Meta:
         unknown = EXCLUDE

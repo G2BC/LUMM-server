@@ -17,6 +17,7 @@ from app.schemas.species_change_request_schemas import (
 )
 from app.schemas.species_schemas import (
     SpeciesDetailSchema,
+    SpeciesPatchRequestSchema,
     SpeciesPhotoCreateRequestSchema,
     SpeciesPhotoCreateResponseSchema,
     SpeciesPhotoUpdateRequestSchema,
@@ -114,6 +115,26 @@ class SpeciesDomainsSelect(MethodView):
             return SpeciesService.domain_select(domain, search)
         except ValueError as exc:
             abort(400, message=str(exc))
+
+
+@specie_bp.route("/<int:species_id>")
+class UpdateSpecies(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesPatchRequestSchema, location="json")
+    @specie_bp.response(200, SpeciesDetailSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def patch(self, payload, species_id: int):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesService.update(species_id, payload)
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
 
 
 @specie_bp.route("/<string:species>")

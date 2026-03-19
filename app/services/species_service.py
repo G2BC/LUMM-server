@@ -4,14 +4,31 @@ from typing import Any
 from urllib.parse import quote_plus
 from urllib.request import urlopen as urllib_urlopen
 
+from app.extensions import db
+from app.models.species import Species
+from app.models.species_similarity import SpeciesSimilarity
+from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
+from app.services.species_change_request_service import SpeciesChangeRequestService
 from Bio import Entrez
 from flask import current_app
 
 
 class SpeciesService:
     DEFAULT_PER_PAGE = 30
+    PATCH_RELATION_FIELD_MAP = {
+        "growth_forms": "growth_form_ids",
+        "substrates": "substrate_ids",
+        "nutrition_modes": "nutrition_mode_ids",
+        "habitats": "habitat_ids",
+    }
+    PATCH_BIGINT_FIELDS = {
+        "mycobank_index_fungorum_id",
+        "ncbi_taxonomy_id",
+        "inaturalist_taxon_id",
+        "unite_taxon_id",
+    }
 
     @classmethod
     def search(
@@ -82,6 +99,133 @@ class SpeciesService:
         if not found:
             raise ValueError("Espécie não encontrada.")
         return found
+
+    @classmethod
+    def update(cls, species_id: int, payload: dict[str, Any]):
+        if not isinstance(species_id, int) or species_id < 1:
+            raise ValueError("`species_id` inválido.")
+
+        species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
+        if not species:
+            raise ValueError("Espécie não encontrada.")
+
+        normalized_payload = cls._normalize_patch_payload(payload or {})
+        similar_species_ids = normalized_payload.pop("similar_species_ids", None)
+
+        normalized_payload = cls._enrich_season_payload_with_current(species, normalized_payload)
+        SpeciesChangeRequestService._validate_proposed_data(
+            normalized_payload,
+            species_id=species_id,
+        )
+        cls._validate_similar_species_ids(species_id, similar_species_ids)
+
+        SpeciesChangeRequestRepository.apply_species_updates(species, normalized_payload)
+        if similar_species_ids is not None:
+            species.similar_species_links = [
+                SpeciesSimilarity(similar_species_id=similar_species_id)
+                for similar_species_id in similar_species_ids
+            ]
+
+        db.session.add(species)
+        db.session.commit()
+
+        return SpeciesRepository.get(str(species_id))
+
+    @classmethod
+    def _normalize_patch_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        normalized = {}
+        for field, value in payload.items():
+            mapped_field = cls.PATCH_RELATION_FIELD_MAP.get(field, field)
+            if mapped_field in cls.PATCH_BIGINT_FIELDS:
+                normalized[mapped_field] = cls._parse_nullable_bigint(mapped_field, value)
+                continue
+            normalized[mapped_field] = value
+        return normalized
+
+    @staticmethod
+    def _parse_nullable_bigint(field_name: str, value: Any) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null.")
+        if isinstance(value, int):
+            if value < 1:
+                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null.")
+            return value
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            if not raw.isdigit():
+                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null.")
+            parsed = int(raw)
+            if parsed < 1:
+                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null.")
+            return parsed
+
+        raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null.")
+
+    @staticmethod
+    def _enrich_season_payload_with_current(
+        species: Species, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        has_start = "season_start_month" in payload
+        has_end = "season_end_month" in payload
+        if not (has_start ^ has_end):
+            return payload
+
+        characteristics = getattr(species, "characteristics", None)
+        current_start = (
+            getattr(characteristics, "season_start_month", None) if characteristics else None
+        )
+        current_end = (
+            getattr(characteristics, "season_end_month", None) if characteristics else None
+        )
+
+        normalized = dict(payload)
+        if not has_start:
+            normalized["season_start_month"] = current_start
+        if not has_end:
+            normalized["season_end_month"] = current_end
+        return normalized
+
+    @staticmethod
+    def _validate_similar_species_ids(
+        species_id: int,
+        similar_species_ids: list[int] | None,
+    ) -> None:
+        if similar_species_ids is None:
+            return
+
+        if not isinstance(similar_species_ids, list):
+            raise ValueError("`similar_species_ids` deve ser uma lista de inteiros.")
+
+        normalized: list[int] = []
+        for value in similar_species_ids:
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError("`similar_species_ids` deve conter apenas inteiros.")
+            if value < 1:
+                raise ValueError("`similar_species_ids` deve conter apenas inteiros >= 1.")
+            if value == species_id:
+                raise ValueError("`similar_species_ids` não pode conter a própria espécie.")
+            normalized.append(value)
+
+        unique_ids = sorted(set(normalized))
+        if len(unique_ids) != len(normalized):
+            raise ValueError("`similar_species_ids` contém IDs duplicados.")
+
+        if not unique_ids:
+            return
+
+        existing_ids = {
+            found_id
+            for (found_id,) in Species.query.with_entities(Species.id)
+            .filter(Species.id.in_(unique_ids))
+            .all()
+        }
+        missing_ids = [candidate for candidate in unique_ids if candidate not in existing_ids]
+        if missing_ids:
+            raise ValueError("`similar_species_ids` contém IDs de espécies inexistentes.")
 
     @classmethod
     def get_ncbi_data(
