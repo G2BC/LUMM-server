@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.12.0](https://github.com/G2BC/LUMM-server/compare/v1.11.1...v1.12.0) (2026-03-28)
+
+
+### Features
+
+* add is_visible field to Species model for visibility control ([3d43217](https://github.com/G2BC/LUMM-server/commit/3d432177d6fa541c12d4ba8e748d668e0dd9a6fd))
+* add is_visible field to species schemas for enhanced visibility control ([397fcea](https://github.com/G2BC/LUMM-server/commit/397fceafb19efc5dc3fa660750c0924a1b4816ef))
+* add migration to include is_visible column in species table ([c3b8ebb](https://github.com/G2BC/LUMM-server/commit/c3b8ebbaeddf91b3649c1b166fbfa9d69a4f2946))
+* enhance SpeciesRepository with is_visible filter for querying ([581ebd1](https://github.com/G2BC/LUMM-server/commit/581ebd1fc45735510a4bd69d9fd0df86153c82d6))
+* implement species creation endpoint and enhance search functionality with is_visible filter ([9ba578b](https://github.com/G2BC/LUMM-server/commit/9ba578b15e7b9282bdac20b58b0319e112a0e86d))
+
 ## [1.11.1](https://github.com/G2BC/LUMM-server/compare/v1.11.0...v1.11.1) (2026-03-19)
 
 
