@@ -23,6 +23,7 @@ class SpeciesRepository:
         search: str | None = "",
         lineage: str | None = "",
         country: str | None = "",
+        is_visible: bool | None = None,
         page: int | None = None,
         per_page: int | None = None,
     ):
@@ -49,6 +50,8 @@ class SpeciesRepository:
 
         if country:
             filters.append(Species.type_country.ilike(f"%{country}%"))
+        if is_visible is not None:
+            filters.append(Species.is_visible.is_(is_visible))
 
         if filters:
             base = base.filter(*filters)
@@ -59,7 +62,7 @@ class SpeciesRepository:
         return base.all()
 
     @classmethod
-    def get(cls, species: str | None = ""):
+    def get(cls, species: str | None = "", is_visible: bool | None = None):
         if not species:
             return None
 
@@ -76,6 +79,9 @@ class SpeciesRepository:
                 SpeciesSimilarity.similar_species
             ),
         ).order_by(Species.scientific_name.asc())
+
+        if is_visible is not None:
+            base = base.filter(Species.is_visible.is_(is_visible))
 
         if species.isdigit():
             id = int(species)
