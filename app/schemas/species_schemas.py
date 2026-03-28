@@ -97,6 +97,7 @@ class SpeciesPatchRequestSchema(Schema):
     iucn_redlist = fields.String(required=False, allow_none=True)
     references_raw = fields.String(required=False, allow_none=True)
     distribution_regions = fields.List(fields.String(), required=False, allow_none=True)
+    is_visible = fields.Boolean(required=False)
 
     lum_mycelium = fields.Boolean(required=False, allow_none=True)
     lum_basidiome = fields.Boolean(required=False, allow_none=True)
@@ -247,6 +248,7 @@ class SpeciesCharacteristicsSchema(Schema):
 class SpeciesWithPhotosSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
+    is_visible = fields.Boolean()
     lineage = fields.String(allow_none=True)
     lum_mycelium = fields.Method("get_lum_mycelium", allow_none=True)
     lum_basidiome = fields.Method("get_lum_basidiome", allow_none=True)
@@ -415,6 +417,7 @@ class SpeciesWithPhotosPaginationSchema(Schema):
 class SpeciesDetailSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(required=True)
+    is_visible = fields.Boolean()
     ncbi_taxonomy_id = fields.Integer(allow_none=True)
     lineage = fields.String(allow_none=True)
     family = fields.String(allow_none=True)
