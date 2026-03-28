@@ -42,6 +42,7 @@ class Species(db.Model):
 
     # Referências (texto bruto por ora)
     references_raw = db.Column(db.Text)
+    is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
     # Timestamps
     created_at = db.Column(
