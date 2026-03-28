@@ -16,6 +16,7 @@ from app.schemas.species_change_request_schemas import (
     SpeciesTmpCleanupResponseSchema,
 )
 from app.schemas.species_schemas import (
+    SpeciesCreateRequestSchema,
     SpeciesDetailSchema,
     SpeciesPatchRequestSchema,
     SpeciesPhotoCreateRequestSchema,
@@ -45,6 +46,22 @@ def _ensure_curator_or_admin():
         abort(403, message="Acesso permitido apenas para curadores ou administradores.")
 
 
+def _parse_optional_bool_query(name: str) -> bool | None:
+    raw = request.args.get(name, type=str)
+    if raw is None:
+        return None
+
+    normalized = raw.strip().lower()
+    if not normalized:
+        return None
+    if normalized in {"true", "1", "t", "yes", "y"}:
+        return True
+    if normalized in {"false", "0", "f", "no", "n"}:
+        return False
+
+    raise ValueError(f"`{name}` deve ser booleano (`true` ou `false`).")
+
+
 @specie_bp.route("/list")
 class SpeciesSearchList(MethodView):
     @specie_bp.response(200, SpeciesWithPhotosPaginationSchema)
@@ -57,7 +74,31 @@ class SpeciesSearchList(MethodView):
         per_page = request.args.get("per_page", type=int)
 
         try:
-            return SpeciesService.search(search, lineage, country, page, per_page)
+            is_visible = _parse_optional_bool_query("is_visible")
+            return SpeciesService.search(
+                search,
+                lineage,
+                country,
+                is_visible,
+                page,
+                per_page,
+            )
+        except ValueError as exc:
+            abort(400, message=str(exc))
+
+
+@specie_bp.route("")
+class SpeciesCreate(MethodView):
+    @jwt_required()
+    @specie_bp.arguments(SpeciesCreateRequestSchema, location="json")
+    @specie_bp.response(201, SpeciesDetailSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def post(self, payload):
+        _ensure_curator_or_admin()
+
+        try:
+            return SpeciesService.create(payload)
         except ValueError as exc:
             abort(400, message=str(exc))
 
@@ -140,12 +181,17 @@ class UpdateSpecies(MethodView):
 @specie_bp.route("/<string:species>")
 class GetSpecies(MethodView):
     @specie_bp.response(200, SpeciesDetailSchema)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def get(self, species: str):
         try:
-            return SpeciesService.get(species)
+            is_visible = _parse_optional_bool_query("is_visible")
+            return SpeciesService.get(species, is_visible=is_visible)
         except ValueError as exc:
-            abort(404, message=str(exc))
+            message = str(exc)
+            if "booleano" in message.lower():
+                abort(400, message=message)
+            abort(404, message=message)
 
 
 @specie_bp.route("/<int:species_id>/photos/upload-url")

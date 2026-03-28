@@ -13,6 +13,7 @@ from app.services.cache_service import CacheService
 from app.services.species_change_request_service import SpeciesChangeRequestService
 from Bio import Entrez
 from flask import current_app
+from sqlalchemy.exc import IntegrityError
 
 
 class SpeciesService:
@@ -36,6 +37,7 @@ class SpeciesService:
         search: str | None = "",
         lineage: str | None = "",
         country: str | None = "",
+        is_visible: bool | None = None,
         page: int | None = None,
         per_page: int | None = None,
     ) -> dict[str, Any]:
@@ -43,12 +45,22 @@ class SpeciesService:
         lineage = (lineage or "").strip()
         country = (country or "").strip()
 
+        if is_visible is not None and not isinstance(is_visible, bool):
+            raise ValueError("`is_visible` deve ser booleano.")
+
         if page is not None:
             if not isinstance(page, int) or page < 1:
                 raise ValueError("`page` deve ser um inteiro >= 1.")
 
             per_page = per_page or cls.DEFAULT_PER_PAGE
-            pagination = SpeciesRepository.list(search, lineage, country, page, per_page)
+            pagination = SpeciesRepository.list(
+                search,
+                lineage,
+                country,
+                is_visible,
+                page,
+                per_page,
+            )
             return {
                 "items": pagination.items,
                 "total": pagination.total,
@@ -57,7 +69,14 @@ class SpeciesService:
                 "pages": pagination.pages,
             }
 
-        spacies = SpeciesRepository.list(search, lineage, country, None, None)
+        spacies = SpeciesRepository.list(
+            search,
+            lineage,
+            country,
+            is_visible,
+            None,
+            None,
+        )
         return {
             "items": spacies,
             "total": len(spacies),
@@ -94,11 +113,61 @@ class SpeciesService:
         return SpeciesRepository.domain_select(domain, search)
 
     @classmethod
-    def get(cls, species: str | None = ""):
-        found = SpeciesRepository.get(species)
+    def get(cls, species: str | None = "", is_visible: bool | None = None):
+        if is_visible is not None and not isinstance(is_visible, bool):
+            raise ValueError("`is_visible` deve ser booleano.")
+
+        found = SpeciesRepository.get(species, is_visible=is_visible)
         if not found:
             raise ValueError("Espécie não encontrada.")
         return found
+
+    @classmethod
+    def create(cls, payload: dict[str, Any]):
+        normalized_payload = cls._normalize_patch_payload(payload or {})
+
+        scientific_name = normalized_payload.get("scientific_name")
+        if not isinstance(scientific_name, str) or not scientific_name.strip():
+            raise ValueError("`scientific_name` é obrigatório.")
+
+        normalized_payload["scientific_name"] = scientific_name.strip()
+        similar_species_ids = normalized_payload.pop("similar_species_ids", None)
+
+        species = Species(scientific_name=normalized_payload["scientific_name"])
+
+        try:
+            db.session.add(species)
+            db.session.flush()
+
+            normalized_payload = cls._enrich_season_payload_with_current(
+                species,
+                normalized_payload,
+            )
+            SpeciesChangeRequestService._validate_proposed_data(
+                normalized_payload,
+                species_id=species.id,
+            )
+            cls._validate_similar_species_ids(species.id, similar_species_ids)
+
+            SpeciesChangeRequestRepository.apply_species_updates(species, normalized_payload)
+            if similar_species_ids is not None:
+                species.similar_species_links = [
+                    SpeciesSimilarity(similar_species_id=similar_species_id)
+                    for similar_species_id in similar_species_ids
+                ]
+
+            db.session.add(species)
+            db.session.commit()
+        except ValueError:
+            db.session.rollback()
+            raise
+        except IntegrityError as exc:
+            db.session.rollback()
+            raise ValueError(
+                "Já existe espécie com `scientific_name` ou identificadores únicos informados."
+            ) from exc
+
+        return SpeciesRepository.get(str(species.id))
 
     @classmethod
     def update(cls, species_id: int, payload: dict[str, Any]):

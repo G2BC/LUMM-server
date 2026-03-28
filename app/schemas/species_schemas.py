@@ -139,6 +139,10 @@ class SpeciesPatchRequestSchema(Schema):
             )
 
 
+class SpeciesCreateRequestSchema(SpeciesPatchRequestSchema):
+    scientific_name = fields.String(required=True, allow_none=False)
+
+
 class SpeciesPhotoUploadUrlPayloadSchema(Schema):
     class Meta:
         unknown = EXCLUDE
