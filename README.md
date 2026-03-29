@@ -52,6 +52,12 @@ Para subir ambiente completo com restore de banco e bootstrap de MinIO, siga:
 
 - [docker/dev/README.md](docker/dev/README.md)
 
+## Dev Container (VS Code/Cursor)
+
+1. Siga primeiro o setup de Docker em [docker/dev/README.md](docker/dev/README.md) (incluindo `app-policy.json` e `backup.dump`).
+2. Abra o projeto no editor e execute: `Dev Containers: Reopen in Container`.
+3. Na primeira criação do container, o comando `uv sync --dev` roda automaticamente.
+
 ## Comandos úteis (local)
 
 ### Criar nova migration
