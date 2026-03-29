@@ -140,7 +140,9 @@ class SpeciesPatchRequestSchema(Schema):
 
 
 class SpeciesCreateRequestSchema(SpeciesPatchRequestSchema):
-    scientific_name = fields.String(required=True, allow_none=False)
+    scientific_name = fields.String(required=False, allow_none=True)
+    lineage = fields.String(required=True, allow_none=False)
+    mycobank_index_fungorum_id = fields.Raw(required=True, allow_none=False)
 
 
 class SpeciesPhotoUploadUrlPayloadSchema(Schema):
@@ -251,7 +253,7 @@ class SpeciesCharacteristicsSchema(Schema):
 
 class SpeciesWithPhotosSchema(Schema):
     id = fields.Integer(dump_only=True)
-    scientific_name = fields.String(required=True)
+    scientific_name = fields.String(allow_none=True)
     is_visible = fields.Boolean()
     lineage = fields.String(allow_none=True)
     lum_mycelium = fields.Method("get_lum_mycelium", allow_none=True)
@@ -420,7 +422,7 @@ class SpeciesWithPhotosPaginationSchema(Schema):
 
 class SpeciesDetailSchema(Schema):
     id = fields.Integer(dump_only=True)
-    scientific_name = fields.String(required=True)
+    scientific_name = fields.String(allow_none=True)
     is_visible = fields.Boolean()
     ncbi_taxonomy_id = fields.Integer(allow_none=True)
     lineage = fields.String(allow_none=True)

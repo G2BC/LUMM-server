@@ -126,15 +126,30 @@ class SpeciesService:
     @classmethod
     def create(cls, payload: dict[str, Any]):
         normalized_payload = cls._normalize_patch_payload(payload or {})
+        lineage = normalized_payload.get("lineage")
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("`lineage` é obrigatório.")
+        normalized_payload["lineage"] = lineage.strip()
+
+        mycobank_index_fungorum_id = normalized_payload.get("mycobank_index_fungorum_id")
+        if mycobank_index_fungorum_id is None:
+            raise ValueError("`mycobank_index_fungorum_id` é obrigatório.")
 
         scientific_name = normalized_payload.get("scientific_name")
-        if not isinstance(scientific_name, str) or not scientific_name.strip():
-            raise ValueError("`scientific_name` é obrigatório.")
+        if scientific_name is None:
+            normalized_payload.pop("scientific_name", None)
+        elif not isinstance(scientific_name, str):
+            raise ValueError("`scientific_name` deve ser string ou null.")
+        else:
+            normalized_name = scientific_name.strip()
+            normalized_payload["scientific_name"] = normalized_name or None
 
-        normalized_payload["scientific_name"] = scientific_name.strip()
         similar_species_ids = normalized_payload.pop("similar_species_ids", None)
-
-        species = Species(scientific_name=normalized_payload["scientific_name"])
+        species = Species(
+            scientific_name=normalized_payload.get("scientific_name"),
+            lineage=normalized_payload["lineage"],
+            mycobank_index_fungorum_id=mycobank_index_fungorum_id,
+        )
 
         try:
             db.session.add(species)

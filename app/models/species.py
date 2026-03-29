@@ -16,7 +16,7 @@ class Species(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
 
     # Identidade científica
-    scientific_name = db.Column(db.Text, nullable=False)
+    scientific_name = db.Column(db.Text, nullable=True)
 
     # Taxonomia (simples)
     lineage = db.Column(db.Text)
