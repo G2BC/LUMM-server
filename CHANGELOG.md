@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.13.0](https://github.com/G2BC/LUMM-server/compare/v1.12.0...v1.13.0) (2026-03-29)
+
+
+### Features
+
+* add devcontainer configuration for LUMM Server with Docker Compose setup and VSCode customizations ([7612ce6](https://github.com/G2BC/LUMM-server/commit/7612ce65c67e696da64878096f843d161ce5a958))
+* enhance Docker development environment with PostgreSQL, Redis, and MinIO services, including initialization scripts and backup restoration ([5efb76d](https://github.com/G2BC/LUMM-server/commit/5efb76dc53a7bd7c4ee144622f5e0863daf3f004))
+
+
+### Bug Fixes
+
+* ensure DEEPL_API_KEY is checked in development environment for species change requests ([9ec5418](https://github.com/G2BC/LUMM-server/commit/9ec54181359e42a94c0518872be836fb923cf75e))
+
 ## [1.12.0](https://github.com/G2BC/LUMM-server/compare/v1.11.1...v1.12.0) (2026-03-28)
 
 
