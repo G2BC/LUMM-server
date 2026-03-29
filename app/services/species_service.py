@@ -300,8 +300,10 @@ class SpeciesService:
     def get_ncbi_data(
         cls, species: str | None = "", include_cache_meta: bool = False
     ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
-        env = current_app.config.get("APP_ENV")
-        if env == "development":
+        NCBI_EMAIL = os.getenv("NCBI_EMAIL")
+        NCBI_API_KEY = os.getenv("NCBI_API_KEY")
+
+        if not NCBI_EMAIL or not NCBI_API_KEY:
             return {}
 
         species = (species or "").strip()
@@ -324,8 +326,8 @@ class SpeciesService:
                 return cached_result, True
             return cached_result
 
-        Entrez.email = os.getenv("NCBI_EMAIL")
-        Entrez.api_key = os.getenv("NCBI_API_KEY")
+        Entrez.email = NCBI_EMAIL
+        Entrez.api_key = NCBI_API_KEY
         Entrez.max_tries = int(current_app.config.get("NCBI_MAX_TRIES", 1))
         Entrez.sleep_between_tries = float(
             current_app.config.get("NCBI_SLEEP_BETWEEN_TRIES_SECONDS", 0.25)
