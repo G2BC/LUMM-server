@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 
 class SpeciesService:
     DEFAULT_PER_PAGE = 30
+    DELETE_AUTO_REVIEW_NOTE = "Solicitação reprovada automaticamente porque a espécie foi excluída."
     PATCH_RELATION_FIELD_MAP = {
         "growth_forms": "growth_form_ids",
         "substrates": "substrate_ids",
@@ -199,6 +200,46 @@ class SpeciesService:
         db.session.commit()
 
         return SpeciesRepository.get(str(species_id))
+
+    @classmethod
+    def delete(cls, species_id: int):
+        if not isinstance(species_id, int) or species_id < 1:
+            raise ValueError("`species_id` inválido.")
+
+        species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
+        if not species:
+            raise ValueError("Espécie não encontrada.")
+
+        try:
+            db.session.delete(species)
+            db.session.commit()
+            return
+        except IntegrityError:
+            db.session.rollback()
+
+        species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
+        if not species:
+            return
+
+        try:
+            SpeciesChangeRequestRepository.reject_pending_by_species_id(
+                species_id=species_id,
+                review_note=cls.DELETE_AUTO_REVIEW_NOTE,
+            )
+            SpeciesChangeRequestRepository.delete_all_by_species_id(species_id)
+            (
+                SpeciesSimilarity.query.filter(
+                    (SpeciesSimilarity.species_id == species_id)
+                    | (SpeciesSimilarity.similar_species_id == species_id)
+                ).delete(synchronize_session=False)
+            )
+            db.session.delete(species)
+            db.session.commit()
+        except IntegrityError as exc:
+            db.session.rollback()
+            raise ValueError(
+                "Não foi possível excluir a espécie por vínculos relacionados no banco."
+            ) from exc
 
     @classmethod
     def _normalize_patch_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:

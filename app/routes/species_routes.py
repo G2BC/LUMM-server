@@ -177,6 +177,23 @@ class UpdateSpecies(MethodView):
                 abort(404, message=message)
             abort(400, message=message)
 
+    @jwt_required()
+    @specie_bp.response(204)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def delete(self, species_id: int):
+        _ensure_curator_or_admin()
+
+        try:
+            SpeciesService.delete(species_id)
+            return None
+        except ValueError as exc:
+            message = str(exc)
+            if "não encontrada" in message.lower():
+                abort(404, message=message)
+            abort(400, message=message)
+
 
 @specie_bp.route("/<string:species>")
 class GetSpecies(MethodView):

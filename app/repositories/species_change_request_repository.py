@@ -284,3 +284,62 @@ class SpeciesChangeRequestRepository:
         db.session.add(req)
         db.session.commit()
         return cls.get_by_id(req.id)
+
+    @classmethod
+    def reject_pending_by_species_id(
+        cls,
+        species_id: int,
+        review_note: str | None = None,
+        reviewed_by_user_id: int | None = None,
+    ) -> int:
+        pending_requests = (
+            SpeciesChangeRequest.query.options(selectinload(SpeciesChangeRequest.photos))
+            .filter(
+                SpeciesChangeRequest.species_id == species_id,
+                SpeciesChangeRequest.status == SpeciesChangeRequest.STATUS_PENDING,
+            )
+            .all()
+        )
+
+        if not pending_requests:
+            return 0
+
+        normalized_note = (review_note or "").strip() or None
+        for req in pending_requests:
+            req.status = SpeciesChangeRequest.STATUS_REJECTED
+            req.review_note = normalized_note
+            req.reviewed_at = db.func.now()
+            if reviewed_by_user_id is not None:
+                req.reviewed_by_user_id = reviewed_by_user_id
+
+            for photo in req.photos:
+                if photo.status == SpeciesChangeRequest.STATUS_PENDING:
+                    photo.status = SpeciesChangeRequest.STATUS_REJECTED
+
+            db.session.add(req)
+
+        db.session.flush()
+        return len(pending_requests)
+
+    @classmethod
+    def delete_all_by_species_id(cls, species_id: int) -> int:
+        request_ids = [
+            request_id
+            for (request_id,) in db.session.query(SpeciesChangeRequest.id)
+            .filter(SpeciesChangeRequest.species_id == species_id)
+            .all()
+        ]
+
+        if not request_ids:
+            return 0
+
+        (
+            SpeciesPhotoRequest.query.filter(
+                SpeciesPhotoRequest.request_id.in_(request_ids)
+            ).delete(synchronize_session=False)
+        )
+        deleted_requests = SpeciesChangeRequest.query.filter(
+            SpeciesChangeRequest.id.in_(request_ids)
+        ).delete(synchronize_session=False)
+        db.session.flush()
+        return int(deleted_requests or 0)
