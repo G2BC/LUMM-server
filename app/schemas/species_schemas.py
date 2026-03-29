@@ -431,6 +431,7 @@ class SpeciesDetailSchema(Schema):
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
     iucn_redlist = fields.String(allow_none=True)
+    inaturalist_taxon_id = fields.String(allow_none=True)
     species_characteristics = fields.Nested(
         SpeciesCharacteristicsSchema,
         attribute="characteristics",
