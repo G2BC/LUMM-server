@@ -300,6 +300,10 @@ class SpeciesService:
     def get_ncbi_data(
         cls, species: str | None = "", include_cache_meta: bool = False
     ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
+        env = current_app.config.get("APP_ENV")
+        if env == "development":
+            return {}
+
         species = (species or "").strip()
         if not species:
             raise ValueError("Espécie inválida.")

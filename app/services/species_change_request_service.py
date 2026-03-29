@@ -198,6 +198,10 @@ class SpeciesChangeRequestService:
         if not texts:
             return []
 
+        env = current_app.config.get("APP_ENV")
+        if env == "development":
+            return texts
+
         api_key = (current_app.config.get("DEEPL_API_KEY") or "").strip()
         if not api_key:
             raise ValueError("DEEPL_API_KEY não configurada no servidor.")
