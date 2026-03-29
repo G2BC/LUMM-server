@@ -5,3 +5,7 @@ __pycache__/
 
 .DS_Store
 .ruff_cache/
+docker/dev/db-backup/*
+!docker/dev/db-backup/.gitkeep
+docker/dev/minio/policies/*
+!docker/dev/minio/policies/.gitkeep

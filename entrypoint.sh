@@ -2,6 +2,8 @@
 set -e
 
 if [ "$ENV" = "development" ]; then
+  echo "Running database migrations..."
+  uv run flask db upgrade
   echo "🚀 Starting in development mode..."
   exec uv run flask run --host=0.0.0.0 --port=4000
 else

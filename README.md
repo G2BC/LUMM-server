@@ -4,47 +4,55 @@
 
 - Python 3.12
 - uv (https://docs.astral.sh/uv/getting-started/installation/)
-- PostgreSQL rodando localmente ou via Docker
+- Docker + Docker Compose (para ambiente completo com API, DB, Redis e MinIO)
 
-## Setup do Projeto
+## Setup local (sem Docker)
 
-### 1️⃣ Clonar o repositório
+### 1. Clonar o repositório
 
 ```bash
-git clone git@github.com:G2BC/LUMM.git
-cd backend
+git clone git@github.com:G2BC/LUMM-server.git
+cd LUMM-server
 ```
 
-### 2️⃣ Sincronizar dependências com uv
+### 2. Sincronizar dependências
 
 ```bash
 uv sync --dev
 ```
 
-### 3️⃣ Ativar o ambiente virtual (Opcional)
+### 3. Ativar ambiente virtual (opcional)
 
 ```bash
 source .venv/bin/activate       # Linux/macOS
 .venv\Scripts\activate          # Windows
 ```
 
-### 4️⃣ Configurar variáveis de ambiente
+### 4. Configurar variáveis de ambiente
 
-Crie um arquivo .env baseado no .env.example
+```bash
+cp .env.example .env
+```
 
-### 5️⃣ Execute as migrações
+### 5. Executar migrações
 
 ```bash
 uv run flask db upgrade
 ```
 
-### 6️⃣ Rodar o servidor em desenvolvimento
+### 6. Rodar servidor em desenvolvimento
 
 ```bash
-uv run python wsgi.py
+uv run flask run --host=0.0.0.0 --port=4000
 ```
 
-## Comandos úteis
+## Setup com Docker (recomendado para desenvolvimento)
+
+Para subir ambiente completo com restore de banco e bootstrap de MinIO, siga:
+
+- [docker/dev/README.md](docker/dev/README.md)
+
+## Comandos úteis (local)
 
 ### Criar nova migration
 
