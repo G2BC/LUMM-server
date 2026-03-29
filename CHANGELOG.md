@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.14.0](https://github.com/G2BC/LUMM-server/compare/v1.13.0...v1.14.0) (2026-03-29)
+
+
+### Features
+
+* add inaturalist_taxon_id field to SpeciesDetailSchema for enhanced species data ([524e6ac](https://github.com/G2BC/LUMM-server/commit/524e6ac838345f1a3b96ea2fc4628f370c84082d))
+* implement species deletion functionality with automatic rejection of pending change requests ([3c9af9f](https://github.com/G2BC/LUMM-server/commit/3c9af9feb93c8d952b7f7265cb061e353efa7f54))
+* make scientific_name nullable and enforce lineage and mycobank_index_fungorum_id requirements in species creation ([256f2c6](https://github.com/G2BC/LUMM-server/commit/256f2c63d862428ff8fd6229cc4737d6b33d6a48))
+
 ## [1.13.0](https://github.com/G2BC/LUMM-server/compare/v1.12.0...v1.13.0) (2026-03-29)
 
 
