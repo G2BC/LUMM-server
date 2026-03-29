@@ -15,6 +15,7 @@ services:
       - default
       - redis_shared
       - minio_default
+      - g2bc_db
 
 networks:
   redis_shared:
@@ -23,3 +24,6 @@ networks:
   minio_default:
     external: true
     name: minio_default
+  g2bc_db:
+    external: true
+    name: g2bc_db
