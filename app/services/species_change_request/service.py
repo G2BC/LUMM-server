@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.exceptions import AppError
 from app.models.species_change_request import SpeciesChangeRequest
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.user_repository import UserRepository
@@ -51,20 +52,24 @@ class SpeciesChangeRequestService:
         species_id = payload["species_id"]
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
-            raise ValueError("Espécie não encontrada")
+            raise AppError(pt="Espécie não encontrada.", en="Species not found.", status=404)
 
         proposed_data = payload.get("proposed_data") or {}
         source_lang = (payload.get("source_lang") or "pt").strip().lower()
         if source_lang not in {"pt", "en"}:
-            raise ValueError("`source_lang` deve ser `pt` ou `en`")
+            raise AppError(
+                pt="`source_lang` deve ser `pt` ou `en`",
+                en="`source_lang` must be `pt` or `en`",
+            )
 
         proposed_data = SpeciesChangeRequestValidation.normalize_translatable_fields(
             proposed_data, source_lang
         )
         invalid_fields = sorted(set(proposed_data.keys()) - cls.ALLOWED_SPECIES_FIELDS)
         if invalid_fields:
-            raise ValueError(
-                f"Campos não permitidos em `proposed_data`: {', '.join(invalid_fields)}"
+            raise AppError(
+                pt=f"Campos não permitidos em `proposed_data`: {', '.join(invalid_fields)}",
+                en=f"Fields not allowed in `proposed_data`: {', '.join(invalid_fields)}",
             )
         SpeciesChangeRequestValidation.validate_proposed_data(proposed_data, species_id=species_id)
 
@@ -93,8 +98,9 @@ class SpeciesChangeRequestService:
     def list_requests(cls, status=None, page=None, per_page=None):
         normalized_status = (status or "").strip().lower() or None
         if normalized_status and normalized_status not in SpeciesChangeRequest.STATUSES:
-            raise ValueError(
-                "`status` inválido. Use: pending, approved, partial_approved, rejected"
+            raise AppError(
+                pt="`status` inválido. Use: pending, approved, partial_approved, rejected",
+                en="Invalid `status`. Use: pending, approved, partial_approved, rejected",
             )
 
         if page is None and per_page is None:
@@ -114,11 +120,18 @@ class SpeciesChangeRequestService:
             per_page = cls.DEFAULT_PER_PAGE
 
         if not isinstance(page, int) or page < 1:
-            raise ValueError("`page` deve ser um inteiro >= 1")
+            raise AppError(
+                pt="`page` deve ser um inteiro >= 1", en="`page` must be an integer >= 1"
+            )
         if not isinstance(per_page, int) or per_page < 1:
-            raise ValueError("`per_page` deve ser um inteiro >= 1")
+            raise AppError(
+                pt="`per_page` deve ser um inteiro >= 1", en="`per_page` must be an integer >= 1"
+            )
         if per_page > cls.MAX_PER_PAGE:
-            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}")
+            raise AppError(
+                pt=f"`per_page` deve ser <= {cls.MAX_PER_PAGE}",
+                en=f"`per_page` must be <= {cls.MAX_PER_PAGE}",
+            )
 
         pagination = SpeciesChangeRequestRepository.list(normalized_status, page, per_page)
         SpeciesChangeRequestEnrichment.enrich_requests(pagination.items)
@@ -136,7 +149,7 @@ class SpeciesChangeRequestService:
             SpeciesChangeRequestValidation.parse_id(request_id)
         )
         if not req:
-            raise ValueError("Solicitação não encontrada")
+            raise AppError(pt="Solicitação não encontrada.", en="Request not found.", status=404)
         SpeciesChangeRequestEnrichment.enrich_requests([req])
         return req
 
@@ -154,13 +167,17 @@ class SpeciesChangeRequestService:
             SpeciesChangeRequestValidation.parse_id(request_id)
         )
         if not req:
-            raise ValueError("Solicitação não encontrada")
+            raise AppError(pt="Solicitação não encontrada.", en="Request not found.", status=404)
         if req.status != SpeciesChangeRequest.STATUS_PENDING:
-            raise ValueError("Solicitação já revisada")
+            raise AppError(pt="Solicitação já revisada.", en="Request already reviewed.")
 
         reviewer = UserRepository.get_by_id(reviewer_user_id)
         if not reviewer:
-            raise ValueError("Usuário autenticado não encontrado")
+            raise AppError(
+                pt="Usuário autenticado não encontrado.",
+                en="Authenticated user not found.",
+                status=404,
+            )
 
         normalized_decision = SpeciesChangeRequestValidation.normalize_review_decision(
             decision, "decision"
@@ -198,8 +215,15 @@ class SpeciesChangeRequestService:
                 and len(proposed_data_decision_map) < proposed_fields_count
                 and not normalized_proposed_data_decision
             ) or (len(req.photos) > 0 and len(photo_decision_map) < len(req.photos)):
-                raise ValueError(
-                    "Forneça `decision` global ou decisões individuais para todos os campos/fotos"
+                raise AppError(
+                    pt=(
+                        "Forneça `decision` global ou decisões individuais"
+                        " para todos os campos/fotos"
+                    ),
+                    en=(
+                        "Provide a global `decision` or individual decisions"
+                        " for all fields/photos"
+                    ),
                 )
 
         if (
@@ -208,9 +232,15 @@ class SpeciesChangeRequestService:
             and not proposed_data_decision_map
         ):
             if has_proposed_data:
-                raise ValueError(
-                    "Forneça `decision`, `proposed_data_decision` ou `proposed_data_fields`"
-                    " se a solicitação tiver `proposed_data`"
+                raise AppError(
+                    pt=(
+                        "Forneça `decision`, `proposed_data_decision` ou"
+                        " `proposed_data_fields` se a solicitação tiver `proposed_data`"
+                    ),
+                    en=(
+                        "Provide `decision`, `proposed_data_decision` or"
+                        " `proposed_data_fields` if the request has `proposed_data`"
+                    ),
                 )
 
         approved_proposed_data = {}
@@ -223,9 +253,10 @@ class SpeciesChangeRequestService:
                 set(proposed_data_decision_map.keys()) - set(proposed_data_keys)
             )
             if unknown_proposed_fields:
-                raise ValueError(
-                    "Campos inválidos em `proposed_data_fields`: "
-                    + ", ".join(unknown_proposed_fields)
+                joined = ", ".join(unknown_proposed_fields)
+                raise AppError(
+                    pt=f"Campos inválidos em `proposed_data_fields`: {joined}",
+                    en=f"Invalid fields in `proposed_data_fields`: {joined}",
                 )
 
             for field in proposed_data_keys:
@@ -235,7 +266,10 @@ class SpeciesChangeRequestService:
                     or normalized_decision
                 )
                 if not field_final_decision:
-                    raise ValueError(f"Decisão ausente para o campo `{field}`")
+                    raise AppError(
+                        pt=f"Decisão ausente para o campo `{field}`",
+                        en=f"Missing decision for field `{field}`",
+                    )
 
                 if field_final_decision == "approve":
                     approved_proposed_data[field] = req.proposed_data[field]
@@ -246,7 +280,9 @@ class SpeciesChangeRequestService:
             if approved_proposed_data:
                 species = SpeciesChangeRequestRepository.get_species_by_id(req.species_id)
                 if not species:
-                    raise ValueError("Espécie não encontrada")
+                    raise AppError(
+                        pt="Espécie não encontrada.", en="Species not found.", status=404
+                    )
                 SpeciesChangeRequestRepository.apply_species_updates(
                     species, approved_proposed_data
                 )
@@ -254,15 +290,19 @@ class SpeciesChangeRequestService:
         photo_ids = {photo.id for photo in req.photos}
         unknown_photo_ids = sorted(set(photo_decision_map.keys()) - photo_ids)
         if unknown_photo_ids:
-            raise ValueError(
-                "IDs de foto inválidos em `photos`: "
-                + ", ".join(str(photo_id) for photo_id in unknown_photo_ids)
+            joined = ", ".join(str(pid) for pid in unknown_photo_ids)
+            raise AppError(
+                pt=f"IDs de foto inválidos em `photos`: {joined}",
+                en=f"Invalid photo IDs in `photos`: {joined}",
             )
 
         for photo in req.photos:
             photo_final_decision = photo_decision_map.get(photo.id) or normalized_decision
             if not photo_final_decision:
-                raise ValueError(f"Decisão ausente para foto {photo.id}")
+                raise AppError(
+                    pt=f"Decisão ausente para foto {photo.id}",
+                    en=f"Missing decision for photo {photo.id}",
+                )
 
             if photo_final_decision == "approve":
                 promoted_bucket, promoted_key = SpeciesChangeRequestStorage.promote_object_to_final(

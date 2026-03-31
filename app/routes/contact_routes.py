@@ -3,8 +3,9 @@ import os
 
 from flask import request
 from flask.views import MethodView
-from flask_smorest import Blueprint, abort
+from flask_smorest import Blueprint
 
+from app.utils.bilingual import bilingual_response
 from app.utils.send_email import send_email
 
 contact_bp = Blueprint(
@@ -30,7 +31,7 @@ class Contact(MethodView):
         to = (data.get("to") or "").strip()
 
         if not name or not email or not message or not subject:
-            abort(400, message="Preencha todos os campos")
+            return bilingual_response(400, "Preencha todos os campos", "Please fill in all fields")
 
         try:
             send_email(
@@ -52,4 +53,4 @@ class Contact(MethodView):
             )
             return {"ok": True}
         except Exception:
-            abort(500, message="Falha ao enviar email")
+            return bilingual_response(500, "Falha ao enviar email", "Failed to send email")

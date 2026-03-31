@@ -3,8 +3,9 @@ import json
 from flask import Response, request
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
-from flask_smorest import Blueprint, abort
+from flask_smorest import Blueprint
 
+from app.exceptions import AppError, AppRuntimeError
 from app.schemas import DomainSelectSchema, SelectSchema
 from app.schemas.species_change_request_schemas import (
     SpeciesChangeRequestCreateSchema,
@@ -29,6 +30,7 @@ from app.schemas.species_schemas import (
 from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_service import SpeciesService
+from app.utils.bilingual import bilingual_response
 from app.utils.permissions import require_curator_or_admin
 
 specie_bp = Blueprint(
@@ -51,7 +53,10 @@ def _parse_optional_bool_query(name: str) -> bool | None:
     if normalized in {"false", "0", "f", "no", "n"}:
         return False
 
-    raise ValueError(f"`{name}` deve ser booleano (`true` ou `false`)")
+    raise AppError(
+        pt=f"`{name}` deve ser booleano (`true` ou `false`)",
+        en=f"`{name}` must be boolean (`true` or `false`)",
+    )
 
 
 @specie_bp.route("/list")
@@ -67,16 +72,9 @@ class SpeciesSearchList(MethodView):
 
         try:
             is_visible = _parse_optional_bool_query("is_visible")
-            return SpeciesService.search(
-                search,
-                lineage,
-                country,
-                is_visible,
-                page,
-                per_page,
-            )
-        except ValueError as exc:
-            abort(400, message=str(exc))
+            return SpeciesService.search(search, lineage, country, is_visible, page, per_page)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("")
@@ -89,8 +87,8 @@ class SpeciesCreate(MethodView):
     def post(self, payload):
         try:
             return SpeciesService.create(payload)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/lineage/select")
@@ -98,7 +96,6 @@ class LineageSelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
         search = request.args.get("search", type=str)
-
         return SpeciesService.select_lineage(search)
 
 
@@ -107,7 +104,6 @@ class SpeciesCountrySelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
         search = request.args.get("search", type=str)
-
         return SpeciesService.country_select(search)
 
 
@@ -116,7 +112,6 @@ class SpeciesFamilySelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
         search = request.args.get("search", type=str)
-
         return SpeciesService.family_select(search)
 
 
@@ -130,8 +125,8 @@ class SpeciesSelect(MethodView):
 
         try:
             return SpeciesService.species_select(search, exclude_species_id)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/domains/select")
@@ -144,8 +139,8 @@ class SpeciesDomainsSelect(MethodView):
 
         try:
             return SpeciesService.domain_select(domain, search)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<int:species_id>")
@@ -159,11 +154,8 @@ class UpdateSpecies(MethodView):
     def patch(self, payload, species_id: int):
         try:
             return SpeciesService.update(species_id, payload)
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
     @require_curator_or_admin
     @specie_bp.response(204)
@@ -174,11 +166,8 @@ class UpdateSpecies(MethodView):
         try:
             SpeciesService.delete(species_id)
             return None
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<string:species>")
@@ -190,11 +179,8 @@ class GetSpecies(MethodView):
         try:
             is_visible = _parse_optional_bool_query("is_visible")
             return SpeciesService.get(species, is_visible=is_visible)
-        except ValueError as exc:
-            message = str(exc)
-            if "booleano" in message.lower():
-                abort(400, message=message)
-            abort(404, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<int:species_id>/photos/upload-url")
@@ -213,11 +199,8 @@ class SpeciesPhotoUploadUrl(MethodView):
                 mime_type=payload["mime_type"],
                 size_bytes=payload["size_bytes"],
             )
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<int:species_id>/photos")
@@ -231,11 +214,8 @@ class SpeciesPhotos(MethodView):
     def post(self, payload, species_id: int):
         try:
             return SpeciesPhotoService.create_photo(species_id=species_id, payload=payload)
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<int:species_id>/photos/<string:photo_id>")
@@ -253,11 +233,8 @@ class SpeciesPhotoDetail(MethodView):
                 photo_id=photo_id,
                 payload=payload,
             )
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
     @require_curator_or_admin
     @specie_bp.response(204)
@@ -268,11 +245,8 @@ class SpeciesPhotoDetail(MethodView):
         try:
             SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
             return None
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/requests")
@@ -288,8 +262,8 @@ class SpeciesChangeRequests(MethodView):
 
         try:
             return SpeciesChangeRequestService.create_request(payload, identity)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
     @require_curator_or_admin
     @specie_bp.response(200, SpeciesChangeRequestPaginationSchema)
@@ -302,8 +276,8 @@ class SpeciesChangeRequests(MethodView):
 
         try:
             return SpeciesChangeRequestService.list_requests(status, page, per_page)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/requests/<string:request_id>")
@@ -315,11 +289,8 @@ class GetSpeciesChangeRequest(MethodView):
     def get(self, request_id: str):
         try:
             return SpeciesChangeRequestService.get_request(request_id)
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/requests/upload-url")
@@ -335,8 +306,8 @@ class SpeciesChangeRequestUploadUrl(MethodView):
                 size_bytes=payload["size_bytes"],
                 species_id=payload.get("species_id"),
             )
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/requests/cleanup-tmp")
@@ -354,8 +325,8 @@ class CleanupSpeciesTmpUploads(MethodView):
                 retention_days=retention_days,
                 dry_run=dry_run,
             )
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/requests/<string:request_id>/review")
@@ -379,11 +350,8 @@ class ReviewSpeciesChangeRequest(MethodView):
                 proposed_data_fields=payload.get("proposed_data_fields") or [],
                 photo_decisions=payload.get("photos") or [],
             )
-        except ValueError as exc:
-            message = str(exc)
-            if "não encontrada" in message.lower():
-                abort(404, message=message)
-            abort(400, message=message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<string:species>/ncbi")
@@ -401,10 +369,7 @@ class GetNCBISpeciesData(MethodView):
                 mimetype="application/json",
                 headers={"X-Cache": "HIT" if is_cached else "MISS"},
             )
-        except ValueError as exc:
-            message = str(exc)
-            if message == "Espécie não encontrada.":
-                abort(404, message=message)
-            abort(400, message=message)
-        except RuntimeError as exc:
-            abort(502, message=str(exc))
+        except AppRuntimeError as exc:
+            return bilingual_response(502, exc.pt, exc.en)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)

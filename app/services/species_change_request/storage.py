@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
+from app.exceptions import AppError
 from botocore.exceptions import BotoCoreError, ClientError
 from flask import current_app
 
@@ -25,11 +26,14 @@ class SpeciesChangeRequestStorage:
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
 
         if normalized_mime not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido")
+            raise AppError(pt="Tipo de arquivo não permitido", en="File type not allowed")
         if not isinstance(size_bytes, int) or size_bytes < 1:
-            raise ValueError("`size_bytes` deve ser > 0")
+            raise AppError(pt="`size_bytes` deve ser > 0", en="`size_bytes` must be > 0")
         if size_bytes > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
+            raise AppError(
+                pt=f"Arquivo excede o limite de {max_size} bytes",
+                en=f"File exceeds the limit of {max_size} bytes",
+            )
 
         ext = cls.safe_extension(filename, normalized_mime)
         sid = f"{species_id}" if species_id is not None else "unknown"
@@ -45,7 +49,10 @@ class SpeciesChangeRequestStorage:
                 expires_in_seconds=cls.UPLOAD_EXPIRES_SECONDS,
             )
         except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
-            raise ValueError(f"Falha ao gerar URL de upload: {exc}")
+            raise AppError(
+                pt=f"Falha ao gerar URL de upload: {exc}",
+                en=f"Failed to generate upload URL: {exc}",
+            )
 
         return {
             "upload_url": signed["url"],
@@ -66,25 +73,40 @@ class SpeciesChangeRequestStorage:
         for photo in photos_payload:
             key = (photo.get("object_key") or "").strip()
             if not key.startswith(cls.TMP_PREFIX):
-                raise ValueError("`object_key` inválido para bucket temporário")
+                raise AppError(
+                    pt="`object_key` inválido para bucket temporário",
+                    en="`object_key` is invalid for the temporary bucket",
+                )
 
             declared_bucket = (photo.get("bucket_name") or tmp_bucket).strip()
             if declared_bucket != tmp_bucket:
-                raise ValueError("Fotos devem vir do bucket temporário")
+                raise AppError(
+                    pt="Fotos devem vir do bucket temporário",
+                    en="Photos must come from the temporary bucket",
+                )
 
             try:
                 meta = cls.head_object_with_retry(tmp_bucket, key)
-            except ValueError:
+            except AppError:
                 raise
             except (object_storage.ObjectStorageError, BotoCoreError, ClientError):
-                raise ValueError("Falha ao validar arquivo no bucket temporário")
+                raise AppError(
+                    pt="Falha ao validar arquivo no bucket temporário",
+                    en="Failed to validate file in temporary bucket",
+                )
 
             content_length = int(meta.get("ContentLength") or 0)
             content_type = (meta.get("ContentType") or "").lower()
             if content_length < 1 or content_length > max_size:
-                raise ValueError("Arquivo com tamanho fora do limite permitido")
+                raise AppError(
+                    pt="Arquivo com tamanho fora do limite permitido",
+                    en="File size exceeds the allowed limit",
+                )
             if content_type not in allowed_mimes:
-                raise ValueError("Arquivo com tipo MIME não permitido")
+                raise AppError(
+                    pt="Arquivo com tipo MIME não permitido",
+                    en="File MIME type not allowed",
+                )
 
             photo["bucket_name"] = tmp_bucket
             photo["size_bytes"] = content_length
@@ -104,7 +126,11 @@ class SpeciesChangeRequestStorage:
                 if attempt < attempts:
                     time.sleep(cls.UPLOAD_HEAD_RETRY_SECONDS)
 
-        raise ValueError("Arquivo não encontrado no bucket temporário")
+        raise AppError(
+            pt="Arquivo não encontrado no bucket temporário",
+            en="File not found in temporary bucket",
+            status=404,
+        )
 
     @staticmethod
     def is_not_found_error(exc: Exception) -> bool:
@@ -125,7 +151,10 @@ class SpeciesChangeRequestStorage:
         if src_bucket == final_bucket:
             return final_bucket, src_key
         if src_bucket != tmp_bucket:
-            raise ValueError("Bucket de origem inválido para promoção")
+            raise AppError(
+                pt="Bucket de origem inválido para promoção",
+                en="Invalid source bucket for promotion",
+            )
 
         basename = os.path.basename(src_key)
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", basename)
@@ -134,7 +163,10 @@ class SpeciesChangeRequestStorage:
             object_storage.copy_object(src_bucket, src_key, final_bucket, dest_key)
             object_storage.delete_object(src_bucket, src_key)
         except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
-            raise ValueError(f"Falha ao promover foto para bucket final: {exc}")
+            raise AppError(
+                pt=f"Falha ao promover foto para bucket final: {exc}",
+                en=f"Failed to promote photo to final bucket: {exc}",
+            )
 
         return final_bucket, dest_key
 
@@ -167,7 +199,7 @@ class SpeciesChangeRequestStorage:
     def cleanup_tmp_objects(cls, retention_days: int | None = None, dry_run: bool = True):
         days = retention_days or int(current_app.config["SPECIES_TMP_RETENTION_DAYS"])
         if days < 1:
-            raise ValueError("`retention_days` deve ser >= 1")
+            raise AppError(pt="`retention_days` deve ser >= 1", en="`retention_days` must be >= 1")
 
         threshold = object_storage.utc_now() - timedelta(days=days)
         tmp_bucket = current_app.config["MINIO_TMP_BUCKET"]

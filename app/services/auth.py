@@ -1,3 +1,4 @@
+from app.exceptions import AppError, AppPermissionError
 from app.repositories.user_repository import UserRepository
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity
 
@@ -18,9 +19,12 @@ class AuthService:
         user = UserRepository.get_by_email(email)
 
         if not user or not user.check_password(password):
-            raise ValueError("Credenciais inválidas")
+            raise AppError(pt="Credenciais inválidas", en="Invalid credentials", status=401)
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
+            raise AppPermissionError(
+                pt="Conta inativa. Aguarde aprovação do administrador",
+                en="Inactive account. Awaiting administrator approval.",
+            )
 
         identity = str(user.id)
         additional_claims = cls._build_claims(user)
@@ -41,9 +45,12 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado")
+            raise AppError(pt="Usuário não encontrado.", en="User not found.", status=404)
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
+            raise AppPermissionError(
+                pt="Conta inativa. Aguarde aprovação do administrador",
+                en="Inactive account. Awaiting administrator approval.",
+            )
 
         return {
             "access_token": create_access_token(
@@ -58,7 +65,7 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado")
+            raise AppError(pt="Usuário não encontrado.", en="User not found.", status=404)
 
         return user
 
@@ -68,11 +75,14 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado")
+            raise AppError(pt="Usuário não encontrado.", en="User not found.", status=404)
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
+            raise AppPermissionError(
+                pt="Conta inativa. Aguarde aprovação do administrador",
+                en="Inactive account. Awaiting administrator approval.",
+            )
         if not user.check_password(current_password):
-            raise ValueError("Senha atual inválida")
+            raise AppError(pt="Senha atual inválida", en="Current password is invalid")
 
         UserRepository.update_password(
             user=user,

@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
+from app.exceptions import AppError
 from app.models.species_photo import SpeciesPhoto
 from app.repositories.species_photo_repository import SpeciesPhotoRepository
 from app.repositories.species_repository import SpeciesRepository
@@ -30,11 +31,14 @@ class SpeciesPhotoService:
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
 
         if normalized_mime not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido")
+            raise AppError(pt="Tipo de arquivo não permitido", en="File type not allowed")
         if not isinstance(size_bytes, int) or size_bytes < 1:
-            raise ValueError("`size_bytes` deve ser > 0")
+            raise AppError(pt="`size_bytes` deve ser > 0", en="`size_bytes` must be > 0")
         if size_bytes > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
+            raise AppError(
+                pt=f"Arquivo excede o limite de {max_size} bytes",
+                en=f"File exceeds the limit of {max_size} bytes",
+            )
 
         ext = cls._safe_extension(filename, normalized_mime)
         object_key = f"{cls.OBJECT_PREFIX}/{species_id}/{uuid4().hex}{ext}"
@@ -49,7 +53,10 @@ class SpeciesPhotoService:
                 expires_in_seconds=cls.UPLOAD_EXPIRES_SECONDS,
             )
         except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
-            raise ValueError(f"Falha ao gerar URL de upload: {exc}") from exc
+            raise AppError(
+                pt=f"Falha ao gerar URL de upload: {exc}",
+                en=f"Failed to generate upload URL: {exc}",
+            ) from exc
 
         return {
             "upload_url": signed["url"],
@@ -76,45 +83,70 @@ class SpeciesPhotoService:
         featured = bool(payload.get("featured", False))
 
         if bucket_name != expected_bucket:
-            raise ValueError("`bucket_name` inválido para o fluxo de fotos oficiais")
+            raise AppError(
+                pt="`bucket_name` inválido para o fluxo de fotos oficiais",
+                en="`bucket_name` is invalid for the official photos flow",
+            )
         if not object_key.startswith(f"{cls.OBJECT_PREFIX}/{species_id}/"):
-            raise ValueError("`object_key` inválido para a espécie informada")
+            raise AppError(
+                pt="`object_key` inválido para a espécie informada",
+                en="`object_key` is invalid for the given species",
+            )
         if not original_filename:
-            raise ValueError("`original_filename` é obrigatório")
+            raise AppError(
+                pt="`original_filename` é obrigatório", en="`original_filename` is required"
+            )
         if not license_code:
-            raise ValueError("`license_code` é obrigatório")
+            raise AppError(pt="`license_code` é obrigatório", en="`license_code` is required")
         if not attribution:
-            raise ValueError("`attribution` é obrigatório")
+            raise AppError(pt="`attribution` é obrigatório", en="`attribution` is required")
         if not rights_holder:
-            raise ValueError("`rights_holder` é obrigatório")
+            raise AppError(pt="`rights_holder` é obrigatório", en="`rights_holder` is required")
 
         allowed_mimes = set(current_app.config.get("SPECIES_PHOTO_ALLOWED_MIME_TYPES", []))
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
         declared_size = payload.get("size_bytes")
         if not isinstance(declared_size, int) or declared_size < 1:
-            raise ValueError("`size_bytes` deve ser > 0")
+            raise AppError(pt="`size_bytes` deve ser > 0", en="`size_bytes` must be > 0")
         if declared_size > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
+            raise AppError(
+                pt=f"Arquivo excede o limite de {max_size} bytes",
+                en=f"File exceeds the limit of {max_size} bytes",
+            )
         if mime_type not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido")
+            raise AppError(pt="Tipo de arquivo não permitido", en="File type not allowed")
 
         try:
             meta = cls._head_object_with_retry(bucket_name, object_key)
-        except ValueError:
+        except AppError:
             raise
         except (object_storage.ObjectStorageError, BotoCoreError, ClientError) as exc:
-            raise ValueError(f"Falha ao validar arquivo no storage: {exc}") from exc
+            raise AppError(
+                pt=f"Falha ao validar arquivo no storage: {exc}",
+                en=f"Failed to validate file in storage: {exc}",
+            ) from exc
 
         content_length = int(meta.get("ContentLength") or 0)
         content_type = (meta.get("ContentType") or "").split(";", 1)[0].strip().lower()
         if content_length < 1 or content_length > max_size:
-            raise ValueError("Arquivo com tamanho fora do limite permitido")
+            raise AppError(
+                pt="Arquivo com tamanho fora do limite permitido",
+                en="File size exceeds the allowed limit",
+            )
         if content_type not in allowed_mimes:
-            raise ValueError("Arquivo com tipo MIME não permitido")
+            raise AppError(
+                pt="Arquivo com tipo MIME não permitido", en="File MIME type not allowed"
+            )
         if declared_size != content_length:
-            raise ValueError("`size_bytes` não confere com o arquivo enviado")
+            raise AppError(
+                pt="`size_bytes` não confere com o arquivo enviado",
+                en="`size_bytes` does not match the uploaded file",
+            )
         if mime_type != content_type:
-            raise ValueError("`mime_type` não confere com o arquivo enviado")
+            raise AppError(
+                pt="`mime_type` não confere com o arquivo enviado",
+                en="`mime_type` does not match the uploaded file",
+            )
 
         object_url = object_storage.build_public_object_url(bucket_name, object_key)
         already_exists = (
@@ -125,7 +157,10 @@ class SpeciesPhotoService:
             is not None
         )
         if already_exists:
-            raise ValueError("Foto já cadastrada para esta espécie")
+            raise AppError(
+                pt="Foto já cadastrada para esta espécie",
+                en="Photo already registered for this species",
+            )
 
         if featured:
             (
@@ -200,7 +235,10 @@ class SpeciesPhotoService:
                     if cls._is_not_found_error(exc):
                         pass
                     else:
-                        raise ValueError(f"Falha ao remover arquivo no storage: {exc}") from exc
+                        raise AppError(
+                            pt=f"Falha ao remover arquivo no storage: {exc}",
+                            en=f"Failed to remove file from storage: {exc}",
+                        ) from exc
 
         SpeciesPhotoRepository.delete(photo)
 
@@ -214,24 +252,28 @@ class SpeciesPhotoService:
             SpeciesPhoto.photo_id == parsed_photo_id,
         ).first()
         if not photo:
-            raise ValueError("Foto não encontrada para esta espécie")
+            raise AppError(
+                pt="Foto não encontrada para esta espécie",
+                en="Photo not found for this species",
+                status=404,
+            )
         return photo
 
     @staticmethod
     def _ensure_species_exists(species_id: int) -> None:
         if not isinstance(species_id, int) or species_id < 1:
-            raise ValueError("`species_id` inválido")
+            raise AppError(pt="`species_id` inválido", en="Invalid `species_id`")
         if not SpeciesRepository.exists_by_id(species_id):
-            raise ValueError("Espécie não encontrada")
+            raise AppError(pt="Espécie não encontrada.", en="Species not found.", status=404)
 
     @staticmethod
     def _parse_photo_id(photo_id: int | str) -> int:
         if isinstance(photo_id, bool):
-            raise ValueError("`photo_id` inválido")
+            raise AppError(pt="`photo_id` inválido", en="Invalid `photo_id`")
         try:
             return int(str(photo_id).strip())
         except (TypeError, ValueError) as exc:
-            raise ValueError("`photo_id` inválido") from exc
+            raise AppError(pt="`photo_id` inválido", en="Invalid `photo_id`") from exc
 
     @staticmethod
     def _safe_extension(filename: str, mime_type: str) -> str:
@@ -258,7 +300,11 @@ class SpeciesPhotoService:
                 if attempt < attempts:
                     time.sleep(cls.UPLOAD_HEAD_RETRY_SECONDS)
 
-        raise ValueError("Arquivo não encontrado no storage")
+        raise AppError(
+            pt="Arquivo não encontrado no storage",
+            en="File not found in storage",
+            status=404,
+        )
 
     @classmethod
     def _extract_storage_location(cls, photo: SpeciesPhoto) -> tuple[str | None, str | None]:
@@ -330,5 +376,8 @@ class SpeciesPhotoService:
     def _species_bucket() -> str:
         bucket = (current_app.config.get("MINIO_FINAL_BUCKET") or "").strip()
         if not bucket:
-            raise ValueError("Bucket de fotos de espécie não configurado")
+            raise AppError(
+                pt="Bucket de fotos de espécie não configurado",
+                en="Species photo bucket not configured",
+            )
         return bucket

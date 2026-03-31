@@ -2,8 +2,9 @@ from datetime import datetime
 
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt_identity
-from flask_smorest import Blueprint, abort
+from flask_smorest import Blueprint
 
+from app.exceptions import AppError
 from app.schemas.login import AdminResetPasswordSchema
 from app.schemas.user_schemas import (
     UserCreateSchema,
@@ -13,6 +14,7 @@ from app.schemas.user_schemas import (
     UserSchema,
 )
 from app.services.user_service import UserService
+from app.utils.bilingual import bilingual_response
 from app.utils.permissions import require_admin
 from app.utils.send_email import send_email
 
@@ -38,8 +40,8 @@ class UsersList(MethodView):
                 search=query_params.get("search"),
                 is_active=query_params.get("is_active"),
             )
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
     @user_bp.arguments(UserCreateSchema)
     @user_bp.response(201, UserSchema)
@@ -47,8 +49,8 @@ class UsersList(MethodView):
     def post(self, payload):
         try:
             return UserService.create_user(payload)
-        except ValueError as exc:
-            abort(400, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @user_bp.route("/<string:user_id>/approve")
@@ -143,10 +145,14 @@ class ApproveUser(MethodView):
                 to=email,
             )
             return user
-        except ValueError as exc:
-            abort(404, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
         except Exception:
-            abort(500, message="Usuário aprovado, mas falha ao enviar email")
+            return bilingual_response(
+                500,
+                "Usuário aprovado, mas falha ao enviar email",
+                "User approved, but failed to send email",
+            )
 
 
 @user_bp.route("/<string:user_id>/deactivate")
@@ -158,8 +164,8 @@ class DeactivateUser(MethodView):
     def patch(self, user_id):
         try:
             return UserService.deactivate_user(user_id)
-        except ValueError as exc:
-            abort(404, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @user_bp.route("/<string:user_id>/reset-password")
@@ -171,8 +177,8 @@ class ResetUserPassword(MethodView):
     def post(self, user_id):
         try:
             return UserService.admin_reset_password(user_id)
-        except ValueError as exc:
-            abort(404, message=str(exc))
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @user_bp.route("/<string:user_id>/role")
@@ -191,8 +197,5 @@ class UpdateUserRole(MethodView):
                 target_user_id=user_id,
                 role=payload["role"],
             )
-        except ValueError as exc:
-            error_message = str(exc)
-            if error_message == "Usuário não encontrado.":
-                abort(404, message=error_message)
-            abort(400, message=error_message)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)

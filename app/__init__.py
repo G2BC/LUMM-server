@@ -39,15 +39,30 @@ def create_app():
 
     @jwt.unauthorized_loader
     def handle_missing_token(_reason):
-        return {"code": 401, "status": "Unauthorized", "message": "Token de acesso ausente."}, 401
+        return {
+            "code": 401,
+            "status": "Unauthorized",
+            "message_pt": "Token de acesso ausente.",
+            "message_en": "Missing access token.",
+        }, 401
 
     @jwt.invalid_token_loader
     def handle_invalid_token(_reason):
-        return {"code": 401, "status": "Unauthorized", "message": "Token inválido."}, 401
+        return {
+            "code": 401,
+            "status": "Unauthorized",
+            "message_pt": "Token inválido.",
+            "message_en": "Invalid token.",
+        }, 401
 
     @jwt.expired_token_loader
     def handle_expired_token(_jwt_header, _jwt_payload):
-        return {"code": 401, "status": "Unauthorized", "message": "Token expirado."}, 401
+        return {
+            "code": 401,
+            "status": "Unauthorized",
+            "message_pt": "Token expirado.",
+            "message_en": "Token expired.",
+        }, 401
 
     @app.before_request
     def require_api_key_for_api_routes():
@@ -58,7 +73,9 @@ def create_app():
         protected_prefixes = ("/auth", "/users", "/species", "/contact")
 
         if any(path == prefix or path.startswith(f"{prefix}/") for prefix in protected_prefixes):
-            enforce_api_key()
+            result = enforce_api_key()
+            if result is not None:
+                return result
 
         return None
 
@@ -85,7 +102,8 @@ def create_app():
             return {
                 "code": 403,
                 "status": "Forbidden",
-                "message": "Troca de senha obrigatória antes de continuar.",
+                "message_pt": "Troca de senha obrigatória antes de continuar.",
+                "message_en": "Password change required before continuing.",
             }, 403
 
         return None

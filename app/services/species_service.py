@@ -4,6 +4,7 @@ from typing import Any
 from urllib.parse import quote_plus
 from urllib.request import urlopen as urllib_urlopen
 
+from app.exceptions import AppError, AppRuntimeError
 from app.models.species import Species
 from app.models.species_similarity import SpeciesSimilarity
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
@@ -46,11 +47,13 @@ class SpeciesService:
         country = (country or "").strip()
 
         if is_visible is not None and not isinstance(is_visible, bool):
-            raise ValueError("`is_visible` deve ser booleano")
+            raise AppError(pt="`is_visible` deve ser booleano", en="`is_visible` must be boolean")
 
         if page is not None:
             if not isinstance(page, int) or page < 1:
-                raise ValueError("`page` deve ser um inteiro >= 1")
+                raise AppError(
+                    pt="`page` deve ser um inteiro >= 1", en="`page` must be an integer >= 1"
+                )
 
             per_page = per_page or cls.DEFAULT_PER_PAGE
             pagination = SpeciesRepository.list(
@@ -103,7 +106,10 @@ class SpeciesService:
         exclude_species_id: int | None = None,
     ):
         if exclude_species_id is not None and exclude_species_id < 1:
-            raise ValueError("`exclude_species_id` deve ser um inteiro >= 1")
+            raise AppError(
+                pt="`exclude_species_id` deve ser um inteiro >= 1",
+                en="`exclude_species_id` must be an integer >= 1",
+            )
 
         return SpeciesRepository.species_select(search, exclude_species_id)
 
@@ -114,11 +120,11 @@ class SpeciesService:
     @staticmethod
     def get(species: str | None = "", is_visible: bool | None = None):
         if is_visible is not None and not isinstance(is_visible, bool):
-            raise ValueError("`is_visible` deve ser booleano")
+            raise AppError(pt="`is_visible` deve ser booleano", en="`is_visible` must be boolean")
 
         found = SpeciesRepository.get(species, is_visible=is_visible)
         if not found:
-            raise ValueError("Espécie não encontrada")
+            raise AppError(pt="Espécie não encontrada.", en="Species not found.", status=404)
         return found
 
     @classmethod
@@ -126,18 +132,24 @@ class SpeciesService:
         normalized_payload = cls._normalize_patch_payload(payload or {})
         lineage = normalized_payload.get("lineage")
         if not isinstance(lineage, str) or not lineage.strip():
-            raise ValueError("`lineage` é obrigatório")
+            raise AppError(pt="`lineage` é obrigatório", en="`lineage` is required")
         normalized_payload["lineage"] = lineage.strip()
 
         mycobank_index_fungorum_id = normalized_payload.get("mycobank_index_fungorum_id")
         if mycobank_index_fungorum_id is None:
-            raise ValueError("`mycobank_index_fungorum_id` é obrigatório")
+            raise AppError(
+                pt="`mycobank_index_fungorum_id` é obrigatório",
+                en="`mycobank_index_fungorum_id` is required",
+            )
 
         scientific_name = normalized_payload.get("scientific_name")
         if scientific_name is None:
             normalized_payload.pop("scientific_name", None)
         elif not isinstance(scientific_name, str):
-            raise ValueError("`scientific_name` deve ser string ou null")
+            raise AppError(
+                pt="`scientific_name` deve ser string ou null",
+                en="`scientific_name` must be a string or null",
+            )
         else:
             normalized_name = scientific_name.strip()
             normalized_payload["scientific_name"] = normalized_name or None
@@ -170,13 +182,20 @@ class SpeciesService:
                 ]
 
             SpeciesRepository.save(species)
-        except ValueError:
+        except AppError:
             SpeciesRepository.rollback()
             raise
         except IntegrityError as exc:
             SpeciesRepository.rollback()
-            raise ValueError(
-                "Já existe espécie com `scientific_name` ou identificadores únicos informados"
+            raise AppError(
+                pt=(
+                    "Já existe espécie com `scientific_name`"
+                    " ou identificadores únicos informados"
+                ),
+                en=(
+                    "A species with the given `scientific_name`"
+                    " or unique identifiers already exists"
+                ),
             ) from exc
 
         return SpeciesRepository.get(str(species.id))
@@ -184,11 +203,11 @@ class SpeciesService:
     @classmethod
     def update(cls, species_id: int, payload: dict[str, Any]):
         if not isinstance(species_id, int) or species_id < 1:
-            raise ValueError("`species_id` inválido")
+            raise AppError(pt="`species_id` inválido", en="Invalid `species_id`")
 
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
-            raise ValueError("Espécie não encontrada")
+            raise AppError(pt="Espécie não encontrada.", en="Species not found.", status=404)
 
         normalized_payload = cls._normalize_patch_payload(payload or {})
         similar_species_ids = normalized_payload.pop("similar_species_ids", None)
@@ -214,11 +233,11 @@ class SpeciesService:
     @classmethod
     def delete(cls, species_id: int):
         if not isinstance(species_id, int) or species_id < 1:
-            raise ValueError("`species_id` inválido")
+            raise AppError(pt="`species_id` inválido", en="Invalid `species_id`")
 
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
-            raise ValueError("Espécie não encontrada")
+            raise AppError(pt="Espécie não encontrada.", en="Species not found.", status=404)
 
         try:
             SpeciesRepository.delete(species)
@@ -245,8 +264,9 @@ class SpeciesService:
             SpeciesRepository.delete(species)
         except IntegrityError as exc:
             SpeciesRepository.rollback()
-            raise ValueError(
-                "Não foi possível excluir a espécie por vínculos relacionados no banco"
+            raise AppError(
+                pt="Não foi possível excluir a espécie por vínculos relacionados no banco",
+                en="Unable to delete the species due to related database constraints",
             ) from exc
 
     @classmethod
@@ -265,23 +285,38 @@ class SpeciesService:
         if value is None:
             return None
         if isinstance(value, bool):
-            raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null")
+            raise AppError(
+                pt=f"`{field_name}` deve ser inteiro >= 1 ou null",
+                en=f"`{field_name}` must be an integer >= 1 or null",
+            )
         if isinstance(value, int):
             if value < 1:
-                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null")
+                raise AppError(
+                    pt=f"`{field_name}` deve ser inteiro >= 1 ou null",
+                    en=f"`{field_name}` must be an integer >= 1 or null",
+                )
             return value
         if isinstance(value, str):
             raw = value.strip()
             if not raw:
                 return None
             if not raw.isdigit():
-                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null")
+                raise AppError(
+                    pt=f"`{field_name}` deve ser inteiro >= 1 ou null",
+                    en=f"`{field_name}` must be an integer >= 1 or null",
+                )
             parsed = int(raw)
             if parsed < 1:
-                raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null")
+                raise AppError(
+                    pt=f"`{field_name}` deve ser inteiro >= 1 ou null",
+                    en=f"`{field_name}` must be an integer >= 1 or null",
+                )
             return parsed
 
-        raise ValueError(f"`{field_name}` deve ser inteiro >= 1 ou null")
+        raise AppError(
+            pt=f"`{field_name}` deve ser inteiro >= 1 ou null",
+            en=f"`{field_name}` must be an integer >= 1 or null",
+        )
 
     @staticmethod
     def _enrich_season_payload_with_current(
@@ -316,21 +351,36 @@ class SpeciesService:
             return
 
         if not isinstance(similar_species_ids, list):
-            raise ValueError("`similar_species_ids` deve ser uma lista de inteiros")
+            raise AppError(
+                pt="`similar_species_ids` deve ser uma lista de inteiros",
+                en="`similar_species_ids` must be a list of integers",
+            )
 
         normalized: list[int] = []
         for value in similar_species_ids:
             if isinstance(value, bool) or not isinstance(value, int):
-                raise ValueError("`similar_species_ids` deve conter apenas inteiros")
+                raise AppError(
+                    pt="`similar_species_ids` deve conter apenas inteiros",
+                    en="`similar_species_ids` must contain only integers",
+                )
             if value < 1:
-                raise ValueError("`similar_species_ids` deve conter apenas inteiros >= 1")
+                raise AppError(
+                    pt="`similar_species_ids` deve conter apenas inteiros >= 1",
+                    en="`similar_species_ids` must contain only integers >= 1",
+                )
             if value == species_id:
-                raise ValueError("`similar_species_ids` não pode conter a própria espécie")
+                raise AppError(
+                    pt="`similar_species_ids` não pode conter a própria espécie",
+                    en="`similar_species_ids` cannot contain the species itself",
+                )
             normalized.append(value)
 
         unique_ids = sorted(set(normalized))
         if len(unique_ids) != len(normalized):
-            raise ValueError("`similar_species_ids` contém IDs duplicados")
+            raise AppError(
+                pt="`similar_species_ids` contém IDs duplicados",
+                en="`similar_species_ids` contains duplicate IDs",
+            )
 
         if not unique_ids:
             return
@@ -343,7 +393,10 @@ class SpeciesService:
         }
         missing_ids = [candidate for candidate in unique_ids if candidate not in existing_ids]
         if missing_ids:
-            raise ValueError("`similar_species_ids` contém IDs de espécies inexistentes")
+            raise AppError(
+                pt="`similar_species_ids` contém IDs de espécies inexistentes",
+                en="`similar_species_ids` contains non-existent species IDs",
+            )
 
     @staticmethod
     def get_ncbi_data(
@@ -357,11 +410,15 @@ class SpeciesService:
 
         species = (species or "").strip()
         if not species:
-            raise ValueError("Espécie inválida")
+            raise AppError(pt="Espécie inválida.", en="Invalid species.")
 
         taxid = SpeciesRepository.get_ncbi_taxon_id(species)
         if not taxid:
-            raise ValueError("Espécie sem NCBI taxonomy ID cadastrado")
+            raise AppError(
+                pt="Espécie sem NCBI taxonomy ID cadastrado.",
+                en="Species has no NCBI taxonomy ID registered.",
+                status=404,
+            )
 
         cache_prefix = (
             current_app.config.get("NCBI_CACHE_PREFIX", "ncbi:species").strip() or "ncbi:species"
@@ -486,7 +543,10 @@ class SpeciesService:
                 }
 
             except Exception as exc:
-                raise RuntimeError(f"Falha ao consultar dados do NCBI na base '{db_key}'") from exc
+                raise AppRuntimeError(
+                    pt=f"Falha ao consultar dados do NCBI na base '{db_key}'",
+                    en=f"Failed to query NCBI data in database '{db_key}'",
+                ) from exc
 
         CacheService.set_json(cache_key, resultado, ttl_seconds=cache_ttl_seconds)
         if include_cache_meta:
