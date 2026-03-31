@@ -1,3 +1,4 @@
+from app.extensions import db
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -243,3 +244,25 @@ class SpeciesRepository:
 
         species = Species.query.with_entities(Species.id).filter(Species.id == species_id).first()
         return species is not None
+
+    @staticmethod
+    def stage(species) -> None:
+        """add + flush to generate the species.id without committing."""
+        db.session.add(species)
+        db.session.flush()
+
+    @staticmethod
+    def save(species) -> None:
+        """add + commit."""
+        db.session.add(species)
+        db.session.commit()
+
+    @staticmethod
+    def rollback() -> None:
+        db.session.rollback()
+
+    @staticmethod
+    def delete(species) -> None:
+        """delete + commit. IntegrityError propagates to the caller."""
+        db.session.delete(species)
+        db.session.commit()

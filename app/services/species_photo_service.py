@@ -7,12 +7,11 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import app.utils.object_storage as object_storage
-from app.extensions import db
 from app.models.species_photo import SpeciesPhoto
+from app.repositories.species_photo_repository import SpeciesPhotoRepository
 from app.repositories.species_repository import SpeciesRepository
 from botocore.exceptions import BotoCoreError, ClientError
 from flask import current_app
-from sqlalchemy import func
 
 
 class SpeciesPhotoService:
@@ -137,7 +136,7 @@ class SpeciesPhotoService:
 
         photo = SpeciesPhoto(
             species_id=species_id,
-            photo_id=cls._next_manual_photo_id(species_id),
+            photo_id=SpeciesPhotoRepository.next_manual_photo_id(species_id),
             medium_url=object_url,
             original_url=object_url,
             license_code=license_code,
@@ -148,8 +147,7 @@ class SpeciesPhotoService:
             lumm=lumm,
             featured=featured,
         )
-        db.session.add(photo)
-        db.session.commit()
+        SpeciesPhotoRepository.save(photo)
         return photo
 
     @classmethod
@@ -186,7 +184,7 @@ class SpeciesPhotoService:
                     ).update({SpeciesPhoto.featured: False}, synchronize_session=False)
                 )
 
-        db.session.commit()
+        SpeciesPhotoRepository.commit()
         return photo
 
     @classmethod
@@ -204,19 +202,7 @@ class SpeciesPhotoService:
                     else:
                         raise ValueError(f"Falha ao remover arquivo no storage: {exc}") from exc
 
-        db.session.delete(photo)
-        db.session.commit()
-
-    @staticmethod
-    def _next_manual_photo_id(species_id: int) -> int:
-        min_photo_id = (
-            db.session.query(func.min(SpeciesPhoto.photo_id))
-            .filter(SpeciesPhoto.species_id == species_id)
-            .scalar()
-        )
-        if min_photo_id is None or min_photo_id >= 0:
-            return -1
-        return int(min_photo_id) - 1
+        SpeciesPhotoRepository.delete(photo)
 
     @classmethod
     def _find_photo(cls, species_id: int, photo_id: int | str) -> SpeciesPhoto:

@@ -4,7 +4,6 @@ from typing import Any
 from urllib.parse import quote_plus
 from urllib.request import urlopen as urllib_urlopen
 
-from app.extensions import db
 from app.models.species import Species
 from app.models.species_similarity import SpeciesSimilarity
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
@@ -151,8 +150,7 @@ class SpeciesService:
         )
 
         try:
-            db.session.add(species)
-            db.session.flush()
+            SpeciesRepository.stage(species)
 
             normalized_payload = cls._enrich_season_payload_with_current(
                 species,
@@ -171,13 +169,12 @@ class SpeciesService:
                     for similar_species_id in similar_species_ids
                 ]
 
-            db.session.add(species)
-            db.session.commit()
+            SpeciesRepository.save(species)
         except ValueError:
-            db.session.rollback()
+            SpeciesRepository.rollback()
             raise
         except IntegrityError as exc:
-            db.session.rollback()
+            SpeciesRepository.rollback()
             raise ValueError(
                 "Já existe espécie com `scientific_name` ou identificadores únicos informados"
             ) from exc
@@ -210,8 +207,7 @@ class SpeciesService:
                 for similar_species_id in similar_species_ids
             ]
 
-        db.session.add(species)
-        db.session.commit()
+        SpeciesRepository.save(species)
 
         return SpeciesRepository.get(str(species_id))
 
@@ -225,11 +221,10 @@ class SpeciesService:
             raise ValueError("Espécie não encontrada")
 
         try:
-            db.session.delete(species)
-            db.session.commit()
+            SpeciesRepository.delete(species)
             return
         except IntegrityError:
-            db.session.rollback()
+            SpeciesRepository.rollback()
 
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
@@ -247,10 +242,9 @@ class SpeciesService:
                     | (SpeciesSimilarity.similar_species_id == species_id)
                 ).delete(synchronize_session=False)
             )
-            db.session.delete(species)
-            db.session.commit()
+            SpeciesRepository.delete(species)
         except IntegrityError as exc:
-            db.session.rollback()
+            SpeciesRepository.rollback()
             raise ValueError(
                 "Não foi possível excluir a espécie por vínculos relacionados no banco"
             ) from exc
