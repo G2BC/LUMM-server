@@ -86,21 +86,20 @@ class SpeciesService:
             "pages": None,
         }
 
-    @classmethod
-    def select_lineage(cls, search: str | None = ""):
+    @staticmethod
+    def select_lineage(search: str | None = ""):
         return SpeciesRepository.lineage_select(search)
 
-    @classmethod
-    def country_select(cls, search: str | None = ""):
+    @staticmethod
+    def country_select(search: str | None = ""):
         return SpeciesRepository.country_select(search)
 
-    @classmethod
-    def family_select(cls, search: str | None = ""):
+    @staticmethod
+    def family_select(search: str | None = ""):
         return SpeciesRepository.family_select(search)
 
-    @classmethod
+    @staticmethod
     def species_select(
-        cls,
         search: str | None = "",
         exclude_species_id: int | None = None,
     ):
@@ -109,12 +108,12 @@ class SpeciesService:
 
         return SpeciesRepository.species_select(search, exclude_species_id)
 
-    @classmethod
-    def domain_select(cls, domain: str, search: str | None = ""):
+    @staticmethod
+    def domain_select(domain: str, search: str | None = ""):
         return SpeciesRepository.domain_select(domain, search)
 
-    @classmethod
-    def get(cls, species: str | None = "", is_visible: bool | None = None):
+    @staticmethod
+    def get(species: str | None = "", is_visible: bool | None = None):
         if is_visible is not None and not isinstance(is_visible, bool):
             raise ValueError("`is_visible` deve ser booleano.")
 
@@ -352,9 +351,9 @@ class SpeciesService:
         if missing_ids:
             raise ValueError("`similar_species_ids` contém IDs de espécies inexistentes.")
 
-    @classmethod
+    @staticmethod
     def get_ncbi_data(
-        cls, species: str | None = "", include_cache_meta: bool = False
+        species: str | None = "", include_cache_meta: bool = False
     ) -> dict[str, Any] | tuple[dict[str, Any], bool]:
         NCBI_EMAIL = os.getenv("NCBI_EMAIL")
         NCBI_API_KEY = os.getenv("NCBI_API_KEY")

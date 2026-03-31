@@ -52,8 +52,8 @@ class AuthService:
             )
         }
 
-    @classmethod
-    def get_current_user(cls):
+    @staticmethod
+    def get_current_user():
         identity = get_jwt_identity()
         user = UserRepository.get_by_id(identity)
 

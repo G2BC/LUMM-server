@@ -33,14 +33,14 @@ class UserService:
 
     @classmethod
     def list_users(
-        self,
+        cls,
         current_user_id=None,
         page=None,
         per_page=None,
         search=None,
         is_active=None,
     ):
-        exclude_user_id = self._parse_positive_user_id(current_user_id)
+        exclude_user_id = cls._parse_positive_user_id(current_user_id)
 
         if page is None and per_page is None:
             users = UserRepository.get_users(search, is_active, exclude_user_id=exclude_user_id)
@@ -55,14 +55,14 @@ class UserService:
         if page is None:
             page = 1
         if per_page is None:
-            per_page = self.DEFAULT_PER_PAGE
+            per_page = cls.DEFAULT_PER_PAGE
 
         if not isinstance(page, int) or page < 1:
             raise ValueError("`page` deve ser um inteiro >= 1.")
         if not isinstance(per_page, int) or per_page < 1:
             raise ValueError("`per_page` deve ser um inteiro >= 1.")
-        if per_page > self.MAX_PER_PAGE:
-            raise ValueError(f"`per_page` deve ser <= {self.MAX_PER_PAGE}.")
+        if per_page > cls.MAX_PER_PAGE:
+            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}.")
 
         pagination = UserRepository.get_users_pagination(
             page,
@@ -79,8 +79,8 @@ class UserService:
             "pages": pagination.pages,
         }
 
-    @classmethod
-    def create_user(cls, data):
+    @staticmethod
+    def create_user(data):
         email = data["email"].strip().lower()
         name = data["name"].strip()
         institution = data.get("institution")
@@ -96,8 +96,8 @@ class UserService:
             password=data["password"],
         )
 
-    @classmethod
-    def get_user_by_id(cls, id: str):
+    @staticmethod
+    def get_user_by_id(id: str):
         user = UserRepository.get_by_id(id)
 
         if not user:
@@ -105,8 +105,8 @@ class UserService:
 
         return user
 
-    @classmethod
-    def approve_user(cls, id: str):
+    @staticmethod
+    def approve_user(id: str):
         user = UserRepository.get_by_id(id)
 
         if not user:
@@ -117,8 +117,8 @@ class UserService:
 
         return UserRepository.activate_user(user)
 
-    @classmethod
-    def deactivate_user(cls, id: str):
+    @staticmethod
+    def deactivate_user(id: str):
         user = UserRepository.get_by_id(id)
 
         if not user:
@@ -149,8 +149,8 @@ class UserService:
             "must_change_password": True,
         }
 
-    @classmethod
-    def update_role(cls, actor_id: str, target_user_id: str, role: str):
+    @staticmethod
+    def update_role(actor_id: str, target_user_id: str, role: str):
         actor = UserRepository.get_by_id(actor_id)
         if not actor:
             raise ValueError("Usuário autenticado não encontrado.")

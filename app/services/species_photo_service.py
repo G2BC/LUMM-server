@@ -207,8 +207,8 @@ class SpeciesPhotoService:
         db.session.delete(photo)
         db.session.commit()
 
-    @classmethod
-    def _next_manual_photo_id(cls, species_id: int) -> int:
+    @staticmethod
+    def _next_manual_photo_id(species_id: int) -> int:
         min_photo_id = (
             db.session.query(func.min(SpeciesPhoto.photo_id))
             .filter(SpeciesPhoto.species_id == species_id)
@@ -231,8 +231,8 @@ class SpeciesPhotoService:
             raise ValueError("Foto não encontrada para esta espécie.")
         return photo
 
-    @classmethod
-    def _ensure_species_exists(cls, species_id: int) -> None:
+    @staticmethod
+    def _ensure_species_exists(species_id: int) -> None:
         if not isinstance(species_id, int) or species_id < 1:
             raise ValueError("`species_id` inválido.")
         if not SpeciesRepository.exists_by_id(species_id):
