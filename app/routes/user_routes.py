@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity
 from flask_smorest import Blueprint, abort
 
 from app.schemas.login import AdminResetPasswordSchema
@@ -13,6 +13,7 @@ from app.schemas.user_schemas import (
     UserSchema,
 )
 from app.services.user_service import UserService
+from app.utils.permissions import require_admin
 from app.utils.send_email import send_email
 
 user_bp = Blueprint(
@@ -23,15 +24,11 @@ user_bp = Blueprint(
 
 @user_bp.route("")
 class UsersList(MethodView):
-    @jwt_required()
+    @require_admin
     @user_bp.arguments(UserListQuerySchema, location="query")
     @user_bp.response(200, UserPaginationSchema)
     @user_bp.alt_response(400, description="Parâmetros inválidos")
     def get(self, query_params):
-        claims = get_jwt()
-        if not claims.get("is_admin", False):
-            abort(403, message="Acesso permitido apenas para administradores.")
-
         identity = get_jwt_identity()
         try:
             return UserService.list_users(
@@ -56,15 +53,11 @@ class UsersList(MethodView):
 
 @user_bp.route("/<string:user_id>/approve")
 class ApproveUser(MethodView):
-    @jwt_required()
+    @require_admin
     @user_bp.response(200, UserSchema)
     @user_bp.alt_response(403, description="Acesso permitido apenas para administradores")
     @user_bp.alt_response(404, description="Usuário não encontrado")
     def patch(self, user_id):
-        claims = get_jwt()
-        if not claims.get("is_admin", False):
-            abort(403, message="Acesso permitido apenas para administradores.")
-
         try:
             user = UserService.approve_user(user_id)
             name = (user.name or "").strip()
@@ -158,15 +151,11 @@ class ApproveUser(MethodView):
 
 @user_bp.route("/<string:user_id>/deactivate")
 class DeactivateUser(MethodView):
-    @jwt_required()
+    @require_admin
     @user_bp.response(200, UserSchema)
     @user_bp.alt_response(403, description="Acesso permitido apenas para administradores")
     @user_bp.alt_response(404, description="Usuário não encontrado")
     def patch(self, user_id):
-        claims = get_jwt()
-        if not claims.get("is_admin", False):
-            abort(403, message="Acesso permitido apenas para administradores.")
-
         try:
             return UserService.deactivate_user(user_id)
         except ValueError as exc:
@@ -175,15 +164,11 @@ class DeactivateUser(MethodView):
 
 @user_bp.route("/<string:user_id>/reset-password")
 class ResetUserPassword(MethodView):
-    @jwt_required()
+    @require_admin
     @user_bp.response(200, AdminResetPasswordSchema)
     @user_bp.alt_response(403, description="Acesso permitido apenas para administradores")
     @user_bp.alt_response(404, description="Usuário não encontrado")
     def post(self, user_id):
-        claims = get_jwt()
-        if not claims.get("is_admin", False):
-            abort(403, message="Acesso permitido apenas para administradores.")
-
         try:
             return UserService.admin_reset_password(user_id)
         except ValueError as exc:
@@ -192,17 +177,13 @@ class ResetUserPassword(MethodView):
 
 @user_bp.route("/<string:user_id>/role")
 class UpdateUserRole(MethodView):
-    @jwt_required()
+    @require_admin
     @user_bp.arguments(UserRoleUpdateSchema)
     @user_bp.response(200, UserSchema)
     @user_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @user_bp.alt_response(403, description="Acesso permitido apenas para administradores")
     @user_bp.alt_response(404, description="Usuário não encontrado")
     def patch(self, payload, user_id):
-        claims = get_jwt()
-        if not claims.get("is_admin", False):
-            abort(403, message="Acesso permitido apenas para administradores.")
-
         identity = get_jwt_identity()
         try:
             return UserService.update_role(

@@ -2,7 +2,7 @@ import json
 
 from flask import Response, request
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required, verify_jwt_in_request
+from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from flask_smorest import Blueprint, abort
 
 from app.schemas import DomainSelectSchema, SelectSchema
@@ -29,21 +29,13 @@ from app.schemas.species_schemas import (
 from app.services.species_change_request_service import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_service import SpeciesService
+from app.utils.permissions import require_curator_or_admin
 
 specie_bp = Blueprint(
     "species",
     "species",
     url_prefix="/species",
 )
-
-
-def _ensure_curator_or_admin():
-    claims = get_jwt()
-    is_admin = bool(claims.get("is_admin", False))
-    role = (claims.get("role") or "").lower()
-    is_curator = bool(claims.get("is_curator", False))
-    if not (is_admin or is_curator or role in {"curator", "admin"}):
-        abort(403, message="Acesso permitido apenas para curadores ou administradores.")
 
 
 def _parse_optional_bool_query(name: str) -> bool | None:
@@ -89,14 +81,12 @@ class SpeciesSearchList(MethodView):
 
 @specie_bp.route("")
 class SpeciesCreate(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesCreateRequestSchema, location="json")
     @specie_bp.response(201, SpeciesDetailSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     def post(self, payload):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesService.create(payload)
         except ValueError as exc:
@@ -160,15 +150,13 @@ class SpeciesDomainsSelect(MethodView):
 
 @specie_bp.route("/<int:species_id>")
 class UpdateSpecies(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesPatchRequestSchema, location="json")
     @specie_bp.response(200, SpeciesDetailSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def patch(self, payload, species_id: int):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesService.update(species_id, payload)
         except ValueError as exc:
@@ -177,14 +165,12 @@ class UpdateSpecies(MethodView):
                 abort(404, message=message)
             abort(400, message=message)
 
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.response(204)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def delete(self, species_id: int):
-        _ensure_curator_or_admin()
-
         try:
             SpeciesService.delete(species_id)
             return None
@@ -213,15 +199,13 @@ class GetSpecies(MethodView):
 
 @specie_bp.route("/<int:species_id>/photos/upload-url")
 class SpeciesPhotoUploadUrl(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesPhotoUploadUrlPayloadSchema, location="json")
     @specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def post(self, payload, species_id: int):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesPhotoService.generate_upload_url(
                 species_id=species_id,
@@ -238,15 +222,13 @@ class SpeciesPhotoUploadUrl(MethodView):
 
 @specie_bp.route("/<int:species_id>/photos")
 class SpeciesPhotos(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesPhotoCreateRequestSchema, location="json")
     @specie_bp.response(201, SpeciesPhotoCreateResponseSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def post(self, payload, species_id: int):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesPhotoService.create_photo(species_id=species_id, payload=payload)
         except ValueError as exc:
@@ -258,15 +240,13 @@ class SpeciesPhotos(MethodView):
 
 @specie_bp.route("/<int:species_id>/photos/<string:photo_id>")
 class SpeciesPhotoDetail(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesPhotoUpdateRequestSchema, location="json")
     @specie_bp.response(200, SpeciesPhotoCreateResponseSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
     def patch(self, payload, species_id: int, photo_id: str):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesPhotoService.update_photo(
                 species_id=species_id,
@@ -279,14 +259,12 @@ class SpeciesPhotoDetail(MethodView):
                 abort(404, message=message)
             abort(400, message=message)
 
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.response(204)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
     def delete(self, species_id: int, photo_id: str):
-        _ensure_curator_or_admin()
-
         try:
             SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
             return None
@@ -313,13 +291,11 @@ class SpeciesChangeRequests(MethodView):
         except ValueError as exc:
             abort(400, message=str(exc))
 
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.response(200, SpeciesChangeRequestPaginationSchema)
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     def get(self):
-        _ensure_curator_or_admin()
-
         status = request.args.get("status", type=str)
         page = request.args.get("page", type=int)
         per_page = request.args.get("per_page", type=int)
@@ -332,13 +308,11 @@ class SpeciesChangeRequests(MethodView):
 
 @specie_bp.route("/requests/<string:request_id>")
 class GetSpeciesChangeRequest(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.response(200, SpeciesChangeRequestSchema)
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Solicitação não encontrada")
     def get(self, request_id: str):
-        _ensure_curator_or_admin()
-
         try:
             return SpeciesChangeRequestService.get_request(request_id)
         except ValueError as exc:
@@ -367,12 +341,11 @@ class SpeciesChangeRequestUploadUrl(MethodView):
 
 @specie_bp.route("/requests/cleanup-tmp")
 class CleanupSpeciesTmpUploads(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.response(200, SpeciesTmpCleanupResponseSchema)
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     def post(self):
-        _ensure_curator_or_admin()
         retention_days = request.args.get("retention_days", type=int)
         dry_run = request.args.get("dry_run", default="true", type=str).lower() != "false"
 
@@ -387,14 +360,13 @@ class CleanupSpeciesTmpUploads(MethodView):
 
 @specie_bp.route("/requests/<string:request_id>/review")
 class ReviewSpeciesChangeRequest(MethodView):
-    @jwt_required()
+    @require_curator_or_admin
     @specie_bp.arguments(SpeciesChangeRequestReviewSchema)
     @specie_bp.response(200, SpeciesChangeRequestSchema)
     @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
     @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
     @specie_bp.alt_response(404, description="Solicitação não encontrada")
     def patch(self, payload, request_id: str):
-        _ensure_curator_or_admin()
         identity = get_jwt_identity()
 
         try:
