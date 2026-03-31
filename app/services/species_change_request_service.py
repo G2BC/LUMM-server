@@ -60,34 +60,6 @@ class SpeciesChangeRequestService:
     UPLOAD_HEAD_RETRY_SECONDS = 0.35
     TMP_PREFIX = "species/pending/"
     FINAL_PREFIX = "species/"
-    CHARACTERISTICS_FIELDS = {
-        "lum_mycelium",
-        "lum_basidiome",
-        "lum_stipe",
-        "lum_pileus",
-        "lum_lamellae",
-        "lum_spores",
-        "edible",
-        "cultivation",
-        "cultivation_pt",
-        "finding_tips",
-        "finding_tips_pt",
-        "nearby_trees",
-        "nearby_trees_pt",
-        "curiosities",
-        "curiosities_pt",
-        "general_description",
-        "general_description_pt",
-        "colors",
-        "colors_pt",
-        "size_cm",
-        "growth_form_ids",
-        "substrate_ids",
-        "nutrition_mode_ids",
-        "habitat_ids",
-        "season_start_month",
-        "season_end_month",
-    }
     RELATION_FIELD_MODELS = {
         "growth_form_ids": GrowthForm,
         "substrate_ids": Substrate,
@@ -629,8 +601,7 @@ class SpeciesChangeRequestService:
             paired_decision = expanded.get(paired_field)
             if paired_decision and paired_decision != decision:
                 raise ValueError(
-                    "Campos traduzíveis devem ter a mesma decisão: "
-                    f"`{field}` e `{paired_field}`."
+                    f"Campos traduzíveis devem ter a mesma decisão: `{field}` e `{paired_field}`."
                 )
             expanded[paired_field] = decision
 
@@ -1021,7 +992,7 @@ class SpeciesChangeRequestService:
                             "label_en": nutrition_mode.label_en,
                         }
                 continue
-            if field in SpeciesChangeRequestService.CHARACTERISTICS_FIELDS and species:
+            if field in SpeciesChangeRequestRepository.CHARACTERISTICS_FIELDS and species:
                 if characteristics is not None:
                     current_data[field] = getattr(characteristics, field, None)
                 else:

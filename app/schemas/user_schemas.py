@@ -2,6 +2,8 @@ import re
 
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, pre_load, validate, validates
 
+from app.models.user import User
+
 
 class UserSchema(Schema):
     id = fields.String(dump_only=True)
@@ -78,8 +80,8 @@ class UserRoleUpdateSchema(Schema):
     role = fields.String(
         required=True,
         validate=validate.OneOf(
-            ["researcher", "curator", "admin"],
-            error="`role` deve ser um de: researcher, curator, admin.",
+            User.ROLES,
+            error=f"`role` deve ser um de: {', '.join(User.ROLES)}.",
         ),
         error_messages={
             "required": "O campo role é obrigatório.",
