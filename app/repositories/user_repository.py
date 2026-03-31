@@ -13,7 +13,7 @@ class UserRepository:
     def _normalize_role(role: str | None) -> str:
         normalized = (role or User.ROLE_RESEARCHER).strip().lower()
         if normalized not in User.ROLES:
-            raise ValueError("Role inválida.")
+            raise ValueError("Role inválida")
         return normalized
 
     @classmethod
@@ -101,7 +101,7 @@ class UserRepository:
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            raise ValueError("Email já cadastrado.")
+            raise ValueError("Email já cadastrado")
         return user
 
     @classmethod

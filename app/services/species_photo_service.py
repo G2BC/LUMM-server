@@ -31,11 +31,11 @@ class SpeciesPhotoService:
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
 
         if normalized_mime not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido.")
+            raise ValueError("Tipo de arquivo não permitido")
         if not isinstance(size_bytes, int) or size_bytes < 1:
-            raise ValueError("`size_bytes` deve ser > 0.")
+            raise ValueError("`size_bytes` deve ser > 0")
         if size_bytes > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes.")
+            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
 
         ext = cls._safe_extension(filename, normalized_mime)
         object_key = f"{cls.OBJECT_PREFIX}/{species_id}/{uuid4().hex}{ext}"
@@ -77,27 +77,27 @@ class SpeciesPhotoService:
         featured = bool(payload.get("featured", False))
 
         if bucket_name != expected_bucket:
-            raise ValueError("`bucket_name` inválido para o fluxo de fotos oficiais.")
+            raise ValueError("`bucket_name` inválido para o fluxo de fotos oficiais")
         if not object_key.startswith(f"{cls.OBJECT_PREFIX}/{species_id}/"):
-            raise ValueError("`object_key` inválido para a espécie informada.")
+            raise ValueError("`object_key` inválido para a espécie informada")
         if not original_filename:
-            raise ValueError("`original_filename` é obrigatório.")
+            raise ValueError("`original_filename` é obrigatório")
         if not license_code:
-            raise ValueError("`license_code` é obrigatório.")
+            raise ValueError("`license_code` é obrigatório")
         if not attribution:
-            raise ValueError("`attribution` é obrigatório.")
+            raise ValueError("`attribution` é obrigatório")
         if not rights_holder:
-            raise ValueError("`rights_holder` é obrigatório.")
+            raise ValueError("`rights_holder` é obrigatório")
 
         allowed_mimes = set(current_app.config.get("SPECIES_PHOTO_ALLOWED_MIME_TYPES", []))
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
         declared_size = payload.get("size_bytes")
         if not isinstance(declared_size, int) or declared_size < 1:
-            raise ValueError("`size_bytes` deve ser > 0.")
+            raise ValueError("`size_bytes` deve ser > 0")
         if declared_size > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes.")
+            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
         if mime_type not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido.")
+            raise ValueError("Tipo de arquivo não permitido")
 
         try:
             meta = cls._head_object_with_retry(bucket_name, object_key)
@@ -109,13 +109,13 @@ class SpeciesPhotoService:
         content_length = int(meta.get("ContentLength") or 0)
         content_type = (meta.get("ContentType") or "").split(";", 1)[0].strip().lower()
         if content_length < 1 or content_length > max_size:
-            raise ValueError("Arquivo com tamanho fora do limite permitido.")
+            raise ValueError("Arquivo com tamanho fora do limite permitido")
         if content_type not in allowed_mimes:
-            raise ValueError("Arquivo com tipo MIME não permitido.")
+            raise ValueError("Arquivo com tipo MIME não permitido")
         if declared_size != content_length:
-            raise ValueError("`size_bytes` não confere com o arquivo enviado.")
+            raise ValueError("`size_bytes` não confere com o arquivo enviado")
         if mime_type != content_type:
-            raise ValueError("`mime_type` não confere com o arquivo enviado.")
+            raise ValueError("`mime_type` não confere com o arquivo enviado")
 
         object_url = object_storage.build_public_object_url(bucket_name, object_key)
         already_exists = (
@@ -126,7 +126,7 @@ class SpeciesPhotoService:
             is not None
         )
         if already_exists:
-            raise ValueError("Foto já cadastrada para esta espécie.")
+            raise ValueError("Foto já cadastrada para esta espécie")
 
         if featured:
             (
@@ -228,24 +228,24 @@ class SpeciesPhotoService:
             SpeciesPhoto.photo_id == parsed_photo_id,
         ).first()
         if not photo:
-            raise ValueError("Foto não encontrada para esta espécie.")
+            raise ValueError("Foto não encontrada para esta espécie")
         return photo
 
     @staticmethod
     def _ensure_species_exists(species_id: int) -> None:
         if not isinstance(species_id, int) or species_id < 1:
-            raise ValueError("`species_id` inválido.")
+            raise ValueError("`species_id` inválido")
         if not SpeciesRepository.exists_by_id(species_id):
-            raise ValueError("Espécie não encontrada.")
+            raise ValueError("Espécie não encontrada")
 
     @staticmethod
     def _parse_photo_id(photo_id: int | str) -> int:
         if isinstance(photo_id, bool):
-            raise ValueError("`photo_id` inválido.")
+            raise ValueError("`photo_id` inválido")
         try:
             return int(str(photo_id).strip())
         except (TypeError, ValueError) as exc:
-            raise ValueError("`photo_id` inválido.") from exc
+            raise ValueError("`photo_id` inválido") from exc
 
     @staticmethod
     def _safe_extension(filename: str, mime_type: str) -> str:
@@ -272,7 +272,7 @@ class SpeciesPhotoService:
                 if attempt < attempts:
                     time.sleep(cls.UPLOAD_HEAD_RETRY_SECONDS)
 
-        raise ValueError("Arquivo não encontrado no storage.")
+        raise ValueError("Arquivo não encontrado no storage")
 
     @classmethod
     def _extract_storage_location(cls, photo: SpeciesPhoto) -> tuple[str | None, str | None]:
@@ -344,5 +344,5 @@ class SpeciesPhotoService:
     def _species_bucket() -> str:
         bucket = (current_app.config.get("MINIO_FINAL_BUCKET") or "").strip()
         if not bucket:
-            raise ValueError("Bucket de fotos de espécie não configurado.")
+            raise ValueError("Bucket de fotos de espécie não configurado")
         return bucket

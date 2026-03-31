@@ -18,9 +18,9 @@ class AuthService:
         user = UserRepository.get_by_email(email)
 
         if not user or not user.check_password(password):
-            raise ValueError("Credenciais inválidas.")
+            raise ValueError("Credenciais inválidas")
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador.")
+            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
 
         identity = str(user.id)
         additional_claims = cls._build_claims(user)
@@ -41,9 +41,9 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador.")
+            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
 
         return {
             "access_token": create_access_token(
@@ -58,7 +58,7 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         return user
 
@@ -68,11 +68,11 @@ class AuthService:
         user = UserRepository.get_by_id(identity)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
         if not user.is_active:
-            raise PermissionError("Conta inativa. Aguarde aprovação do administrador.")
+            raise PermissionError("Conta inativa. Aguarde aprovação do administrador")
         if not user.check_password(current_password):
-            raise ValueError("Senha atual inválida.")
+            raise ValueError("Senha atual inválida")
 
         UserRepository.update_password(
             user=user,

@@ -51,12 +51,12 @@ class SpeciesChangeRequestService:
         species_id = payload["species_id"]
         species = SpeciesChangeRequestRepository.get_species_by_id(species_id)
         if not species:
-            raise ValueError("Espécie não encontrada.")
+            raise ValueError("Espécie não encontrada")
 
         proposed_data = payload.get("proposed_data") or {}
         source_lang = (payload.get("source_lang") or "pt").strip().lower()
         if source_lang not in {"pt", "en"}:
-            raise ValueError("`source_lang` deve ser `pt` ou `en`.")
+            raise ValueError("`source_lang` deve ser `pt` ou `en`")
 
         proposed_data = SpeciesChangeRequestValidation.normalize_translatable_fields(
             proposed_data, source_lang
@@ -94,7 +94,7 @@ class SpeciesChangeRequestService:
         normalized_status = (status or "").strip().lower() or None
         if normalized_status and normalized_status not in SpeciesChangeRequest.STATUSES:
             raise ValueError(
-                "`status` inválido. Use: pending, approved, partial_approved, rejected."
+                "`status` inválido. Use: pending, approved, partial_approved, rejected"
             )
 
         if page is None and per_page is None:
@@ -114,11 +114,11 @@ class SpeciesChangeRequestService:
             per_page = cls.DEFAULT_PER_PAGE
 
         if not isinstance(page, int) or page < 1:
-            raise ValueError("`page` deve ser um inteiro >= 1.")
+            raise ValueError("`page` deve ser um inteiro >= 1")
         if not isinstance(per_page, int) or per_page < 1:
-            raise ValueError("`per_page` deve ser um inteiro >= 1.")
+            raise ValueError("`per_page` deve ser um inteiro >= 1")
         if per_page > cls.MAX_PER_PAGE:
-            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}.")
+            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}")
 
         pagination = SpeciesChangeRequestRepository.list(normalized_status, page, per_page)
         SpeciesChangeRequestEnrichment.enrich_requests(pagination.items)
@@ -136,7 +136,7 @@ class SpeciesChangeRequestService:
             SpeciesChangeRequestValidation.parse_id(request_id)
         )
         if not req:
-            raise ValueError("Solicitação não encontrada.")
+            raise ValueError("Solicitação não encontrada")
         SpeciesChangeRequestEnrichment.enrich_requests([req])
         return req
 
@@ -154,13 +154,13 @@ class SpeciesChangeRequestService:
             SpeciesChangeRequestValidation.parse_id(request_id)
         )
         if not req:
-            raise ValueError("Solicitação não encontrada.")
+            raise ValueError("Solicitação não encontrada")
         if req.status != SpeciesChangeRequest.STATUS_PENDING:
-            raise ValueError("Solicitação já revisada.")
+            raise ValueError("Solicitação já revisada")
 
         reviewer = UserRepository.get_by_id(reviewer_user_id)
         if not reviewer:
-            raise ValueError("Usuário autenticado não encontrado.")
+            raise ValueError("Usuário autenticado não encontrado")
 
         normalized_decision = SpeciesChangeRequestValidation.normalize_review_decision(
             decision, "decision"
@@ -199,7 +199,7 @@ class SpeciesChangeRequestService:
                 and not normalized_proposed_data_decision
             ) or (len(req.photos) > 0 and len(photo_decision_map) < len(req.photos)):
                 raise ValueError(
-                    "Forneça `decision` global ou decisões individuais para todos os campos/fotos."
+                    "Forneça `decision` global ou decisões individuais para todos os campos/fotos"
                 )
 
         if (
@@ -210,7 +210,7 @@ class SpeciesChangeRequestService:
             if has_proposed_data:
                 raise ValueError(
                     "Forneça `decision`, `proposed_data_decision` ou `proposed_data_fields`"
-                    " se a solicitação tiver `proposed_data`."
+                    " se a solicitação tiver `proposed_data`"
                 )
 
         approved_proposed_data = {}
@@ -235,7 +235,7 @@ class SpeciesChangeRequestService:
                     or normalized_decision
                 )
                 if not field_final_decision:
-                    raise ValueError(f"Decisão ausente para o campo `{field}`.")
+                    raise ValueError(f"Decisão ausente para o campo `{field}`")
 
                 if field_final_decision == "approve":
                     approved_proposed_data[field] = req.proposed_data[field]
@@ -246,7 +246,7 @@ class SpeciesChangeRequestService:
             if approved_proposed_data:
                 species = SpeciesChangeRequestRepository.get_species_by_id(req.species_id)
                 if not species:
-                    raise ValueError("Espécie não encontrada.")
+                    raise ValueError("Espécie não encontrada")
                 SpeciesChangeRequestRepository.apply_species_updates(
                     species, approved_proposed_data
                 )
@@ -262,7 +262,7 @@ class SpeciesChangeRequestService:
         for photo in req.photos:
             photo_final_decision = photo_decision_map.get(photo.id) or normalized_decision
             if not photo_final_decision:
-                raise ValueError(f"Decisão ausente para foto {photo.id}.")
+                raise ValueError(f"Decisão ausente para foto {photo.id}")
 
             if photo_final_decision == "approve":
                 promoted_bucket, promoted_key = SpeciesChangeRequestStorage.promote_object_to_final(

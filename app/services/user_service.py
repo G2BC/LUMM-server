@@ -14,9 +14,9 @@ class UserService:
         try:
             parsed = int(value)
         except (TypeError, ValueError):
-            raise ValueError("`current_user_id` inválido.")
+            raise ValueError("`current_user_id` inválido")
         if parsed < 1:
-            raise ValueError("`current_user_id` inválido.")
+            raise ValueError("`current_user_id` inválido")
         return parsed
 
     @staticmethod
@@ -58,11 +58,11 @@ class UserService:
             per_page = cls.DEFAULT_PER_PAGE
 
         if not isinstance(page, int) or page < 1:
-            raise ValueError("`page` deve ser um inteiro >= 1.")
+            raise ValueError("`page` deve ser um inteiro >= 1")
         if not isinstance(per_page, int) or per_page < 1:
-            raise ValueError("`per_page` deve ser um inteiro >= 1.")
+            raise ValueError("`per_page` deve ser um inteiro >= 1")
         if per_page > cls.MAX_PER_PAGE:
-            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}.")
+            raise ValueError(f"`per_page` deve ser <= {cls.MAX_PER_PAGE}")
 
         pagination = UserRepository.get_users_pagination(
             page,
@@ -87,7 +87,7 @@ class UserService:
         normalized_institution = institution.strip() if institution else None
 
         if UserRepository.get_by_email(email):
-            raise ValueError("Email já cadastrado.")
+            raise ValueError("Email já cadastrado")
 
         return UserRepository.create_user(
             name=name,
@@ -101,7 +101,7 @@ class UserService:
         user = UserRepository.get_by_id(id)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         return user
 
@@ -110,7 +110,7 @@ class UserService:
         user = UserRepository.get_by_id(id)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         if user.is_active:
             return user
@@ -122,7 +122,7 @@ class UserService:
         user = UserRepository.get_by_id(id)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         if not user.is_active:
             return user
@@ -134,7 +134,7 @@ class UserService:
         user = UserRepository.get_by_id(id)
 
         if not user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         temporary_password = cls._generate_temporary_password()
         UserRepository.update_password(
@@ -153,18 +153,18 @@ class UserService:
     def update_role(actor_id: str, target_user_id: str, role: str):
         actor = UserRepository.get_by_id(actor_id)
         if not actor:
-            raise ValueError("Usuário autenticado não encontrado.")
+            raise ValueError("Usuário autenticado não encontrado")
 
         target_user = UserRepository.get_by_id(target_user_id)
         if not target_user:
-            raise ValueError("Usuário não encontrado.")
+            raise ValueError("Usuário não encontrado")
 
         normalized_role = (role or "").strip().lower()
         if normalized_role not in User.ROLES:
-            raise ValueError("Role inválida.")
+            raise ValueError("Role inválida")
 
         if actor.id == target_user.id and normalized_role != User.ROLE_ADMIN:
-            raise ValueError("Você não pode revogar o próprio perfil de administrador.")
+            raise ValueError("Você não pode revogar o próprio perfil de administrador")
 
         if target_user.role == normalized_role:
             return target_user

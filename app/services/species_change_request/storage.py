@@ -25,11 +25,11 @@ class SpeciesChangeRequestStorage:
         max_size = int(current_app.config["SPECIES_PHOTO_MAX_BYTES"])
 
         if normalized_mime not in allowed_mimes:
-            raise ValueError("Tipo de arquivo não permitido.")
+            raise ValueError("Tipo de arquivo não permitido")
         if not isinstance(size_bytes, int) or size_bytes < 1:
-            raise ValueError("`size_bytes` deve ser > 0.")
+            raise ValueError("`size_bytes` deve ser > 0")
         if size_bytes > max_size:
-            raise ValueError(f"Arquivo excede o limite de {max_size} bytes.")
+            raise ValueError(f"Arquivo excede o limite de {max_size} bytes")
 
         ext = cls.safe_extension(filename, normalized_mime)
         sid = f"{species_id}" if species_id is not None else "unknown"
@@ -66,25 +66,25 @@ class SpeciesChangeRequestStorage:
         for photo in photos_payload:
             key = (photo.get("object_key") or "").strip()
             if not key.startswith(cls.TMP_PREFIX):
-                raise ValueError("`object_key` inválido para bucket temporário.")
+                raise ValueError("`object_key` inválido para bucket temporário")
 
             declared_bucket = (photo.get("bucket_name") or tmp_bucket).strip()
             if declared_bucket != tmp_bucket:
-                raise ValueError("Fotos devem vir do bucket temporário.")
+                raise ValueError("Fotos devem vir do bucket temporário")
 
             try:
                 meta = cls.head_object_with_retry(tmp_bucket, key)
             except ValueError:
                 raise
             except (object_storage.ObjectStorageError, BotoCoreError, ClientError):
-                raise ValueError("Falha ao validar arquivo no bucket temporário.")
+                raise ValueError("Falha ao validar arquivo no bucket temporário")
 
             content_length = int(meta.get("ContentLength") or 0)
             content_type = (meta.get("ContentType") or "").lower()
             if content_length < 1 or content_length > max_size:
-                raise ValueError("Arquivo com tamanho fora do limite permitido.")
+                raise ValueError("Arquivo com tamanho fora do limite permitido")
             if content_type not in allowed_mimes:
-                raise ValueError("Arquivo com tipo MIME não permitido.")
+                raise ValueError("Arquivo com tipo MIME não permitido")
 
             photo["bucket_name"] = tmp_bucket
             photo["size_bytes"] = content_length
@@ -104,7 +104,7 @@ class SpeciesChangeRequestStorage:
                 if attempt < attempts:
                     time.sleep(cls.UPLOAD_HEAD_RETRY_SECONDS)
 
-        raise ValueError("Arquivo não encontrado no bucket temporário.")
+        raise ValueError("Arquivo não encontrado no bucket temporário")
 
     @staticmethod
     def is_not_found_error(exc: Exception) -> bool:
@@ -125,7 +125,7 @@ class SpeciesChangeRequestStorage:
         if src_bucket == final_bucket:
             return final_bucket, src_key
         if src_bucket != tmp_bucket:
-            raise ValueError("Bucket de origem inválido para promoção.")
+            raise ValueError("Bucket de origem inválido para promoção")
 
         basename = os.path.basename(src_key)
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", basename)
@@ -167,7 +167,7 @@ class SpeciesChangeRequestStorage:
     def cleanup_tmp_objects(cls, retention_days: int | None = None, dry_run: bool = True):
         days = retention_days or int(current_app.config["SPECIES_TMP_RETENTION_DAYS"])
         if days < 1:
-            raise ValueError("`retention_days` deve ser >= 1.")
+            raise ValueError("`retention_days` deve ser >= 1")
 
         threshold = object_storage.utc_now() - timedelta(days=days)
         tmp_bucket = current_app.config["MINIO_TMP_BUCKET"]

@@ -51,7 +51,7 @@ def _parse_optional_bool_query(name: str) -> bool | None:
     if normalized in {"false", "0", "f", "no", "n"}:
         return False
 
-    raise ValueError(f"`{name}` deve ser booleano (`true` ou `false`).")
+    raise ValueError(f"`{name}` deve ser booleano (`true` ou `false`)")
 
 
 @specie_bp.route("/list")

@@ -30,7 +30,7 @@ class Contact(MethodView):
         to = (data.get("to") or "").strip()
 
         if not name or not email or not message or not subject:
-            abort(400, message="Preencha todos os campos.")
+            abort(400, message="Preencha todos os campos")
 
         try:
             send_email(
@@ -52,4 +52,4 @@ class Contact(MethodView):
             )
             return {"ok": True}
         except Exception:
-            abort(500, message="Falha ao enviar email.")
+            abort(500, message="Falha ao enviar email")

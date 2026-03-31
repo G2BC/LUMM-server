@@ -31,7 +31,7 @@ class SpeciesChangeRequestValidation:
         if value is None:
             return ""
         if not isinstance(value, str):
-            raise ValueError("Campos textuais traduzíveis devem ser string.")
+            raise ValueError("Campos textuais traduzíveis devem ser string")
         return value.strip()
 
     @classmethod
@@ -58,7 +58,7 @@ class SpeciesChangeRequestValidation:
 
         translated_texts = cls.translate_texts_with_deepl(queued_texts, source_lang=source_lang)
         if len(translated_texts) != len(queued_fields):
-            raise ValueError("Falha ao traduzir campos textuais.")
+            raise ValueError("Falha ao traduzir campos textuais")
 
         for index, (en_field, pt_field, source_text) in enumerate(queued_fields):
             translated_text = (translated_texts[index] or "").strip() or source_text
@@ -83,7 +83,7 @@ class SpeciesChangeRequestValidation:
             return texts
 
         if not api_key:
-            raise ValueError("DEEPL_API_KEY não configurada no servidor.")
+            raise ValueError("DEEPL_API_KEY não configurada no servidor")
 
         api_url = (
             current_app.config.get("DEEPL_API_URL") or "https://api-free.deepl.com/v2/translate"
@@ -113,13 +113,13 @@ class SpeciesChangeRequestValidation:
         if response.status_code >= 400:
             details = (response.text or "").strip()
             raise ValueError(
-                f"Erro na tradução automática (DeepL): {details or response.status_code}."
+                f"Erro na tradução automática (DeepL): {details or response.status_code}"
             )
 
         data = response.json() if response.content else {}
         translations = data.get("translations") if isinstance(data, dict) else None
         if not isinstance(translations, list):
-            raise ValueError("Resposta inválida da tradução automática (DeepL).")
+            raise ValueError("Resposta inválida da tradução automática (DeepL)")
 
         result: list[str] = []
         for item in translations:
@@ -141,76 +141,76 @@ class SpeciesChangeRequestValidation:
     ) -> None:
         edible = proposed_data.get("edible")
         if edible is not None and not isinstance(edible, bool):
-            raise ValueError("`edible` deve ser booleano ou null.")
+            raise ValueError("`edible` deve ser booleano ou null")
 
         size_cm = proposed_data.get("size_cm")
         if size_cm is not None:
             if isinstance(size_cm, bool) or not isinstance(size_cm, int | float):
-                raise ValueError("`size_cm` deve ser numérico.")
+                raise ValueError("`size_cm` deve ser numérico")
             if size_cm < 0:
-                raise ValueError("`size_cm` deve ser >= 0.")
+                raise ValueError("`size_cm` deve ser >= 0")
 
         growth_form_ids = proposed_data.get("growth_form_ids")
         if growth_form_ids is not None:
             if not isinstance(growth_form_ids, list):
-                raise ValueError("`growth_form_ids` deve ser uma lista de inteiros.")
+                raise ValueError("`growth_form_ids` deve ser uma lista de inteiros")
             normalized_growth_form_ids = []
             for growth_form_value in growth_form_ids:
                 if isinstance(growth_form_value, bool) or not isinstance(growth_form_value, int):
-                    raise ValueError("`growth_form_ids` deve conter apenas inteiros.")
+                    raise ValueError("`growth_form_ids` deve conter apenas inteiros")
                 if growth_form_value < 1:
-                    raise ValueError("`growth_form_ids` deve conter apenas inteiros >= 1.")
+                    raise ValueError("`growth_form_ids` deve conter apenas inteiros >= 1")
                 normalized_growth_form_ids.append(growth_form_value)
             unique_growth_form_ids = sorted(set(normalized_growth_form_ids))
             if len(unique_growth_form_ids) != len(normalized_growth_form_ids):
-                raise ValueError("`growth_form_ids` contém IDs duplicados.")
+                raise ValueError("`growth_form_ids` contém IDs duplicados")
             if unique_growth_form_ids:
                 active_count = GrowthForm.query.filter(
                     GrowthForm.id.in_(unique_growth_form_ids),
                     GrowthForm.is_active.is_(True),
                 ).count()
                 if active_count != len(unique_growth_form_ids):
-                    raise ValueError("`growth_form_ids` contém IDs inválidos ou inativos.")
+                    raise ValueError("`growth_form_ids` contém IDs inválidos ou inativos")
 
         substrate_ids = proposed_data.get("substrate_ids")
         if substrate_ids is not None:
             if not isinstance(substrate_ids, list):
-                raise ValueError("`substrate_ids` deve ser uma lista de inteiros.")
+                raise ValueError("`substrate_ids` deve ser uma lista de inteiros")
             normalized_substrate_ids = []
             for substrate_value in substrate_ids:
                 if isinstance(substrate_value, bool) or not isinstance(substrate_value, int):
-                    raise ValueError("`substrate_ids` deve conter apenas inteiros.")
+                    raise ValueError("`substrate_ids` deve conter apenas inteiros")
                 if substrate_value < 1:
-                    raise ValueError("`substrate_ids` deve conter apenas inteiros >= 1.")
+                    raise ValueError("`substrate_ids` deve conter apenas inteiros >= 1")
                 normalized_substrate_ids.append(substrate_value)
             unique_substrate_ids = sorted(set(normalized_substrate_ids))
             if len(unique_substrate_ids) != len(normalized_substrate_ids):
-                raise ValueError("`substrate_ids` contém IDs duplicados.")
+                raise ValueError("`substrate_ids` contém IDs duplicados")
             if unique_substrate_ids:
                 active_count = Substrate.query.filter(
                     Substrate.id.in_(unique_substrate_ids),
                     Substrate.is_active.is_(True),
                 ).count()
                 if active_count != len(unique_substrate_ids):
-                    raise ValueError("`substrate_ids` contém IDs inválidos ou inativos.")
+                    raise ValueError("`substrate_ids` contém IDs inválidos ou inativos")
 
         nutrition_mode_ids = proposed_data.get("nutrition_mode_ids")
         if nutrition_mode_ids is not None:
             if not isinstance(nutrition_mode_ids, list):
-                raise ValueError("`nutrition_mode_ids` deve ser uma lista de inteiros.")
+                raise ValueError("`nutrition_mode_ids` deve ser uma lista de inteiros")
             normalized_nutrition_mode_ids = []
             for nutrition_mode_value in nutrition_mode_ids:
                 if isinstance(nutrition_mode_value, bool) or not isinstance(
                     nutrition_mode_value, int
                 ):
-                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros.")
+                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros")
                 if nutrition_mode_value < 1:
-                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros >= 1.")
+                    raise ValueError("`nutrition_mode_ids` deve conter apenas inteiros >= 1")
                 normalized_nutrition_mode_ids.append(nutrition_mode_value)
 
             unique_nutrition_mode_ids = sorted(set(normalized_nutrition_mode_ids))
             if len(unique_nutrition_mode_ids) != len(normalized_nutrition_mode_ids):
-                raise ValueError("`nutrition_mode_ids` contém IDs duplicados.")
+                raise ValueError("`nutrition_mode_ids` contém IDs duplicados")
 
             if unique_nutrition_mode_ids:
                 active_count = NutritionMode.query.filter(
@@ -218,23 +218,23 @@ class SpeciesChangeRequestValidation:
                     NutritionMode.is_active.is_(True),
                 ).count()
                 if active_count != len(unique_nutrition_mode_ids):
-                    raise ValueError("`nutrition_mode_ids` contém IDs inválidos ou inativos.")
+                    raise ValueError("`nutrition_mode_ids` contém IDs inválidos ou inativos")
 
         habitat_ids = proposed_data.get("habitat_ids")
         if habitat_ids is not None:
             if not isinstance(habitat_ids, list):
-                raise ValueError("`habitat_ids` deve ser uma lista de inteiros.")
+                raise ValueError("`habitat_ids` deve ser uma lista de inteiros")
             normalized_habitat_ids = []
             for hid in habitat_ids:
                 if isinstance(hid, bool) or not isinstance(hid, int):
-                    raise ValueError("`habitat_ids` deve conter apenas inteiros.")
+                    raise ValueError("`habitat_ids` deve conter apenas inteiros")
                 if hid < 1:
-                    raise ValueError("`habitat_ids` deve conter apenas inteiros >= 1.")
+                    raise ValueError("`habitat_ids` deve conter apenas inteiros >= 1")
                 normalized_habitat_ids.append(hid)
 
             unique_habitat_ids = sorted(set(normalized_habitat_ids))
             if len(unique_habitat_ids) != len(normalized_habitat_ids):
-                raise ValueError("`habitat_ids` contém IDs duplicados.")
+                raise ValueError("`habitat_ids` contém IDs duplicados")
 
             if unique_habitat_ids:
                 active_count = Habitat.query.filter(
@@ -242,7 +242,7 @@ class SpeciesChangeRequestValidation:
                     Habitat.is_active.is_(True),
                 ).count()
                 if active_count != len(unique_habitat_ids):
-                    raise ValueError("`habitat_ids` contém IDs inválidos ou inativos.")
+                    raise ValueError("`habitat_ids` contém IDs inválidos ou inativos")
 
         start = proposed_data.get("season_start_month")
         end = proposed_data.get("season_end_month")
@@ -251,18 +251,18 @@ class SpeciesChangeRequestValidation:
             return
         if start is None or end is None:
             raise ValueError(
-                "`season_start_month` e `season_end_month` devem ser informados juntos."
+                "`season_start_month` e `season_end_month` devem ser informados juntos"
             )
         if not isinstance(start, int) or not isinstance(end, int):
-            raise ValueError("`season_start_month` e `season_end_month` devem ser inteiros.")
+            raise ValueError("`season_start_month` e `season_end_month` devem ser inteiros")
         if start < 1 or start > 12 or end < 1 or end > 12:
-            raise ValueError("`season_start_month` e `season_end_month` devem estar entre 1 e 12.")
+            raise ValueError("`season_start_month` e `season_end_month` devem estar entre 1 e 12")
 
     @staticmethod
     def validate_photos_payload(photos_payload: list[dict[str, Any]]) -> None:
         max_photos = int(current_app.config["SPECIES_REQUEST_MAX_PHOTOS"])
         if len(photos_payload) > max_photos:
-            raise ValueError(f"Máximo de {max_photos} fotos por solicitação.")
+            raise ValueError(f"Máximo de {max_photos} fotos por solicitação")
 
         for photo in photos_payload:
             if "lumm" not in photo or photo.get("lumm") is None:
@@ -270,7 +270,7 @@ class SpeciesChangeRequestValidation:
                 continue
 
             if not isinstance(photo.get("lumm"), bool):
-                raise ValueError("`photos.lumm` deve ser booleano.")
+                raise ValueError("`photos.lumm` deve ser booleano")
 
     # ------------------------------------------------------------------ #
     # Review normalization                                                 #
@@ -282,7 +282,7 @@ class SpeciesChangeRequestValidation:
         if not normalized:
             return None
         if normalized not in {"approve", "reject"}:
-            raise ValueError(f"`{field_name}` deve ser `approve` ou `reject`.")
+            raise ValueError(f"`{field_name}` deve ser `approve` ou `reject`")
         return normalized
 
     @classmethod
@@ -301,7 +301,7 @@ class SpeciesChangeRequestValidation:
             paired_decision = expanded.get(paired_field)
             if paired_decision and paired_decision != decision:
                 raise ValueError(
-                    f"Campos traduzíveis devem ter a mesma decisão: `{field}` e `{paired_field}`."
+                    f"Campos traduzíveis devem ter a mesma decisão: `{field}` e `{paired_field}`"
                 )
             expanded[paired_field] = decision
 
@@ -317,16 +317,16 @@ class SpeciesChangeRequestValidation:
         for item in proposed_data_fields:
             field_name = str(item.get("field") or "").strip()
             if not field_name:
-                raise ValueError("`proposed_data_fields.field` é obrigatório.")
+                raise ValueError("`proposed_data_fields.field` é obrigatório")
             if field_name in seen_fields:
-                raise ValueError(f"`field` duplicado em `proposed_data_fields`: {field_name}.")
+                raise ValueError(f"`field` duplicado em `proposed_data_fields`: {field_name}")
             seen_fields.add(field_name)
 
             decision = cls.normalize_review_decision(
                 item.get("decision"), "proposed_data_fields.decision"
             )
             if not decision:
-                raise ValueError("`proposed_data_fields.decision` é obrigatório.")
+                raise ValueError("`proposed_data_fields.decision` é obrigatório")
 
             normalized.append({"field": field_name, "decision": decision})
 
@@ -344,16 +344,16 @@ class SpeciesChangeRequestValidation:
             try:
                 photo_id = int(raw_photo_id)
             except (TypeError, ValueError):
-                raise ValueError("`photo_request_id` deve ser inteiro positivo.")
+                raise ValueError("`photo_request_id` deve ser inteiro positivo")
             if photo_id < 1:
-                raise ValueError("`photo_request_id` deve ser inteiro positivo.")
+                raise ValueError("`photo_request_id` deve ser inteiro positivo")
             if photo_id in seen_ids:
-                raise ValueError(f"`photo_request_id` duplicado: {photo_id}.")
+                raise ValueError(f"`photo_request_id` duplicado: {photo_id}")
             seen_ids.add(photo_id)
 
             decision = cls.normalize_review_decision(item.get("decision"), "photos.decision")
             if not decision:
-                raise ValueError("`photos.decision` é obrigatório.")
+                raise ValueError("`photos.decision` é obrigatório")
             normalized.append({"photo_request_id": photo_id, "decision": decision})
 
         return normalized
@@ -363,7 +363,7 @@ class SpeciesChangeRequestValidation:
         try:
             value = int(raw_id)
         except (TypeError, ValueError):
-            raise ValueError("ID inválido.")
+            raise ValueError("ID inválido")
         if value < 1:
-            raise ValueError("ID inválido.")
+            raise ValueError("ID inválido")
         return value

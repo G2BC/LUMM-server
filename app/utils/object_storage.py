@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -24,7 +24,7 @@ def _get_client() -> BaseClient:
     region = current_app.config.get("MINIO_REGION", "us-east-1")
 
     if not endpoint or not access_key or not secret_key:
-        raise ObjectStorageError("Configuração MinIO incompleta.")
+        raise ObjectStorageError("Configuração MinIO incompleta")
 
     endpoint_url = endpoint
     if not endpoint_url.startswith("http://") and not endpoint_url.startswith("https://"):
@@ -184,7 +184,7 @@ def normalize_object_url(url: str | None) -> str | None:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def utc_in(seconds: int) -> datetime:

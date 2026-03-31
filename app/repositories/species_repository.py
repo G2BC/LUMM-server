@@ -196,7 +196,7 @@ class SpeciesRepository:
         model = cls.DOMAIN_MODELS.get((domain or "").strip().lower())
         if not model:
             allowed = ", ".join(sorted(cls.DOMAIN_MODELS.keys()))
-            raise ValueError(f"`domain` inválido. Use um de: {allowed}.")
+            raise ValueError(f"`domain` inválido. Use um de: {allowed}")
 
         search = (search or "").strip()
         query = model.query.filter(model.is_active.is_(True))

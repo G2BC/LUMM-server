@@ -21,4 +21,4 @@ def send_email(subject: str, content: str, to: str) -> None:
     )
 
     if res.status_code != 200:
-        raise Exception("Falha ao enviar email. Tente novamente mais tarde.")
+        raise Exception("Falha ao enviar email. Tente novamente mais tarde")

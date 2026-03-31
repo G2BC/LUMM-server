@@ -146,7 +146,7 @@ class ApproveUser(MethodView):
         except ValueError as exc:
             abort(404, message=str(exc))
         except Exception:
-            abort(500, message="Usuário aprovado, mas falha ao enviar email.")
+            abort(500, message="Usuário aprovado, mas falha ao enviar email")
 
 
 @user_bp.route("/<string:user_id>/deactivate")
