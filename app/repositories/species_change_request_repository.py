@@ -12,6 +12,12 @@ from sqlalchemy.orm import selectinload
 
 
 class SpeciesChangeRequestRepository:
+    RELATION_FIELD_MODELS = {
+        "growth_form_ids": GrowthForm,
+        "substrate_ids": Substrate,
+        "nutrition_mode_ids": NutritionMode,
+        "habitat_ids": Habitat,
+    }
     CHARACTERISTICS_FIELDS = {
         "lum_mycelium",
         "lum_basidiome",

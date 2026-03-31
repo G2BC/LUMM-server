@@ -9,7 +9,7 @@ Uso:
 import argparse
 
 from app import create_app
-from app.services.species_change_request_service import SpeciesChangeRequestService
+from app.services.species_change_request import SpeciesChangeRequestService
 
 
 def parse_args():

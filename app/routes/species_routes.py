@@ -26,7 +26,7 @@ from app.schemas.species_schemas import (
     SpeciesSelectSchema,
     SpeciesWithPhotosPaginationSchema,
 )
-from app.services.species_change_request_service import SpeciesChangeRequestService
+from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_service import SpeciesService
 from app.utils.permissions import require_curator_or_admin

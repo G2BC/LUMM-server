@@ -10,7 +10,7 @@ from app.models.species_similarity import SpeciesSimilarity
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
-from app.services.species_change_request_service import SpeciesChangeRequestService
+from app.services.species_change_request import SpeciesChangeRequestService
 from Bio import Entrez
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
