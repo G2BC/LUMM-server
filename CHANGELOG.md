@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.0](https://github.com/G2BC/LUMM-server/compare/v1.14.0...v1.15.0) (2026-03-31)
+
+
+### Features
+
+* implement bilingual error handling and responses across services and routes for improved user experience ([abb5173](https://github.com/G2BC/LUMM-server/commit/abb5173d37e97fa4bf2410bd815579f76f688915))
+* implement SpeciesPhotoRepository for managing species photo data with methods for saving, deleting, and retrieving photo IDs ([be3e35e](https://github.com/G2BC/LUMM-server/commit/be3e35eacf3489ff1078b8c576801b6d25f69a02))
+
 ## [1.14.0](https://github.com/G2BC/LUMM-server/compare/v1.13.0...v1.14.0) (2026-03-29)
 
 
