@@ -10,7 +10,7 @@ from app.models.species_similarity import SpeciesSimilarity
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
-from app.services.species_change_request import SpeciesChangeRequestService
+from app.services.species_change_request.validation import SpeciesChangeRequestValidation
 from Bio import Entrez
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
@@ -168,7 +168,7 @@ class SpeciesService:
                 species,
                 normalized_payload,
             )
-            SpeciesChangeRequestService._validate_proposed_data(
+            SpeciesChangeRequestValidation.validate_proposed_data(
                 normalized_payload,
                 species_id=species.id,
             )
@@ -213,7 +213,7 @@ class SpeciesService:
         similar_species_ids = normalized_payload.pop("similar_species_ids", None)
 
         normalized_payload = cls._enrich_season_payload_with_current(species, normalized_payload)
-        SpeciesChangeRequestService._validate_proposed_data(
+        SpeciesChangeRequestValidation.validate_proposed_data(
             normalized_payload,
             species_id=species_id,
         )
