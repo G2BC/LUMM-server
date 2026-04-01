@@ -44,6 +44,9 @@ class Species(db.Model):
     references_raw = db.Column(db.Text)
     is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
+    # Flags
+    is_outdated_mycobank = db.Column(db.Boolean, nullable=False, server_default=db.false())
+
     # Timestamps
     created_at = db.Column(
         db.DateTime(timezone=True),
