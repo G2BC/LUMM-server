@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/G2BC/LUMM-server/compare/v1.15.0...v1.15.1) (2026-04-01)
+
+
+### Bug Fixes
+
+* replace SpeciesChangeRequestService validation calls with SpeciesChangeRequestValidation for improved modularity ([4090e6e](https://github.com/G2BC/LUMM-server/commit/4090e6e4a8e090a386240a50876227b11dcea222))
+
 ## [1.15.0](https://github.com/G2BC/LUMM-server/compare/v1.14.0...v1.15.0) (2026-03-31)
 
 
