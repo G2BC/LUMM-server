@@ -30,6 +30,7 @@ def _i(v):
     except Exception:
         return None
 
+
 def download_and_read_mblist_filtered(
     mb_ids: set[int],
     url: str = MBLIST_URL,
@@ -61,6 +62,7 @@ def download_and_read_mblist_filtered(
         "Synonymy",
         "Authors",
         "Year of effective publication",
+        "Taxon name",
     ]
 
     df = pd.read_excel(
@@ -85,6 +87,7 @@ def download_and_read_mblist_filtered(
             "Synonymy": "synonyms",
             "Authors": "authors",
             "Year of effective publication": "year",
+            "Taxon name": "taxon_name",
         }
     )
 
@@ -92,12 +95,14 @@ def download_and_read_mblist_filtered(
 
     return df, xlsx_path
 
+
 def main():
     print(">> Carregando chaves do banco…")
     with app.app_context():
         species_rows = (
             db.session.query(
                 Species.id,
+                Species.scientific_name,
                 Species.mycobank_index_fungorum_id,
                 Species.is_outdated_mycobank,
             )
@@ -105,21 +110,25 @@ def main():
             .all()
         )
 
-    mb_ids = {r.mycobank_index_fungorum_id for r in species_rows}
+    mb_ids = {_i(r.mycobank_index_fungorum_id) for r in species_rows if _i(r.mycobank_index_fungorum_id)}
     print(f">> Espécies com MycoBank ID no banco: {len(mb_ids)}")
 
     print(">> Baixando e lendo MBList...")
     df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids)
     print(f">> XLSX utilizado: {xlsx_path}")
 
-    inserted = updated = linked = 0
+    inserted = 0
+    updated = 0
+    linked = 0
+    outdated_count = 0
 
     with app.app_context():
-        species_by_mb = {r.mycobank_index_fungorum_id: r for r in species_rows}
+        species_by_mb = {_i(r.mycobank_index_fungorum_id): r for r in species_rows if _i(r.mycobank_index_fungorum_id)}
 
         for idx, row in enumerate(df.to_dict(orient="records"), start=1):
             mb_id = _i(row.get("mb_id"))
             current_mb_id = _i(row.get("current_mb_id"))
+
             if not mb_id:
                 continue
 
@@ -128,21 +137,36 @@ def main():
                 continue
 
             taxon = Taxon.query.filter_by(species_id=srow.id).one_or_none()
+            row_changed = False
+
             if not taxon:
                 taxon = Taxon(species_id=srow.id)
                 db.session.add(taxon)
                 inserted += 1
-            else:
-                updated += 1
+                row_changed = True
 
-            if val := _txt(row.get("classification")):
+            if (val := _txt(row.get("taxon_name"))) and val != srow.scientific_name:
+                db.session.query(Species).filter_by(id=srow.id).update(
+                    {"scientific_name": val},
+                    synchronize_session=False,
+                )
+                row_changed = True
+
+            if (val := _txt(row.get("classification"))) and val != taxon.classification:
                 taxon.classification = val
-            if val := _txt(row.get("synonyms")):
+                row_changed = True
+
+            if (val := _txt(row.get("synonyms"))) and val != taxon.synonyms:
                 taxon.synonyms = val
-            if val := _txt(row.get("authors")):
+                row_changed = True
+
+            if (val := _txt(row.get("authors"))) and val != taxon.authors:
                 taxon.authors = val
-            if val := _txt(row.get("year")):
+                row_changed = True
+
+            if (val := _txt(row.get("year"))) and val != taxon.years_of_effective_publication:
                 taxon.years_of_effective_publication = val
+                row_changed = True
 
             is_outdated = (
                 current_mb_id is not None
@@ -151,21 +175,32 @@ def main():
 
             if is_outdated != srow.is_outdated_mycobank:
                 db.session.query(Species).filter_by(id=srow.id).update(
-                    {
-                        "is_outdated_mycobank": is_outdated,
-                    },
+                    {"is_outdated_mycobank": is_outdated},
                     synchronize_session=False,
                 )
-                outdated_count += 1
+                row_changed = True
+                if is_outdated:
+                    outdated_count += 1
+
+            if taxon.id is not None and row_changed:
+                updated += 1
 
             linked += 1
             if idx <= 5:
-                print(f"-- Vinculado species_id={srow.id} MycoBank={mb_id}")
+                print(
+                    f"-- species_id={srow.id} "
+                    f"MycoBank={mb_id} "
+                    f"Current={current_mb_id} "
+                    f"outdated={is_outdated}"
+                )
 
         db.session.commit()
 
     print("== Resumo ==")
-    print(f"Inseridos: {inserted} | Atualizados: {updated} | Vinculados: {linked} | Desatualizados: {outdated_count}")
+    print(
+        f"Inseridos: {inserted} | Atualizados: {updated} | "
+        f"Vinculados: {linked} | Desatualizados: {outdated_count}"
+    )
     print(">> Sincronização finalizada")
 
 
