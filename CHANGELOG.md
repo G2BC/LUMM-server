@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.16.0](https://github.com/G2BC/LUMM-server/compare/v1.15.1...v1.16.0) (2026-04-01)
+
+
+### Features
+
+* add MycoBank synchronization workflow and update species model with outdated flag ([61567b5](https://github.com/G2BC/LUMM-server/commit/61567b5213af6abb6da6cae19e91bc136d0026b0))
+* enhance MycoBank synchronization script with taxon name handling and improved data updated ([d20a43a](https://github.com/G2BC/LUMM-server/commit/d20a43a13db88b7e612fe76f683769e03341fb8e))
+
 ## [1.15.1](https://github.com/G2BC/LUMM-server/compare/v1.15.0...v1.15.1) (2026-04-01)
 
 
