@@ -36,6 +36,10 @@ def _i(v):
         return None
 
 
+def _log(message: str, level: str = "INFO") -> None:
+    print(f"[{level}] {message}")
+
+
 def download_and_read_mblist_filtered(
     mb_ids: set[int],
     url: str = MBLIST_URL,
@@ -50,8 +54,20 @@ def download_and_read_mblist_filtered(
     base_dir.mkdir(parents=True, exist_ok=True)
     extract_dir.mkdir(parents=True, exist_ok=True)
 
-    response = requests.get(url, timeout=120)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/zip,application/octet-stream,*/*",
+        "Referer": "https://www.mycobank.org/",
+    }
+
+    _log(f"Baixando MBList de {url}")
+    response = requests.get(url, headers=headers, timeout=120)
     response.raise_for_status()
+    _log("MBList baixado com sucesso", "OK")
     zip_path.write_bytes(response.content)
 
     with ZipFile(zip_path, "r") as zip_ref:
@@ -96,13 +112,14 @@ def download_and_read_mblist_filtered(
         }
     )
 
-    print(f">> Filtrado XLSX: {len(df)}/{before} linhas correspondentes")
+    _log(f"XLSX filtrado: {len(df)}/{before} linhas correspondentes", "OK")
 
     return df, xlsx_path
 
 
 def main():
-    print(">> Carregando chaves do banco…")
+    _log("=== Sync MycoBank: inicio ===")
+    _log("Carregando chaves do banco")
     with app.app_context():
         species_rows = (
             db.session.query(
@@ -116,19 +133,21 @@ def main():
         )
 
     mb_ids = {_i(r.mycobank_index_fungorum_id) for r in species_rows if _i(r.mycobank_index_fungorum_id)}
-    print(f">> Espécies com MycoBank ID no banco: {len(mb_ids)}")
+    _log(f"Especies com MycoBank ID no banco: {len(mb_ids)}", "OK")
 
-    print(">> Baixando e lendo MBList...")
+    _log("=== Coleta do MBList ===")
+    _log("Baixando e lendo MBList")
     df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids)
-    print(f">> XLSX utilizado: {xlsx_path}")
+    _log(f"XLSX utilizado: {xlsx_path}", "OK")
 
     inserted = 0
     updated = 0
     linked = 0
-    outdated_count = 0
 
     with app.app_context():
+        _log("=== Sincronizacao no banco ===")
         species_by_mb = {_i(r.mycobank_index_fungorum_id): r for r in species_rows if _i(r.mycobank_index_fungorum_id)}
+        total_rows = len(df)
 
         for idx, row in enumerate(df.to_dict(orient="records"), start=1):
             mb_id = _i(row.get("mb_id"))
@@ -184,29 +203,21 @@ def main():
                     synchronize_session=False,
                 )
                 row_changed = True
-                if is_outdated:
-                    outdated_count += 1
 
             if taxon.id is not None and row_changed:
                 updated += 1
 
             linked += 1
-            if idx <= 5:
-                print(
-                    f"-- species_id={srow.id} "
-                    f"MycoBank={mb_id} "
-                    f"Current={current_mb_id} "
-                    f"outdated={is_outdated}"
-                )
+            print(
+                f"[{idx:>5}/{total_rows:<5}] "
+                f"species_id={srow.id} "
+                f"MycoBank={mb_id} "
+                f"Current={current_mb_id} "
+                f"outdated={is_outdated}"
+            )
 
         db.session.commit()
-
-    print("== Resumo ==")
-    print(
-        f"Inseridos: {inserted} | Atualizados: {updated} | "
-        f"Vinculados: {linked} | Desatualizados: {outdated_count}"
-    )
-    print(">> Sincronização finalizada")
+    _log("Sincronizacao finalizada", "OK")
 
 
 if __name__ == "__main__":
