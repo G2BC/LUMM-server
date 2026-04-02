@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.17.0](https://github.com/G2BC/LUMM-server/compare/v1.16.0...v1.17.0) (2026-04-02)
+
+
+### Features
+
+* add Distribution and Reference models with relationships to Species ([a003100](https://github.com/G2BC/LUMM-server/commit/a003100f7a460a44c32650102b92c48d97ee92dd))
+* create references table and update model imports ([9a72b7d](https://github.com/G2BC/LUMM-server/commit/9a72b7d3a170f00c73f972c7bdf6cd41af781152))
+
 ## [1.16.0](https://github.com/G2BC/LUMM-server/compare/v1.15.1...v1.16.0) (2026-04-01)
 
 
