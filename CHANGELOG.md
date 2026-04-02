@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0](https://github.com/G2BC/LUMM-server/compare/v1.17.0...v1.18.0) (2026-04-02)
+
+
+### Features
+
+* update distribution and reference models with new relationships and constraints ([3a25718](https://github.com/G2BC/LUMM-server/commit/3a2571871c64b334e6f9466387049b3f011977f7))
+
 ## [1.17.0](https://github.com/G2BC/LUMM-server/compare/v1.16.0...v1.17.0) (2026-04-02)
 
 
