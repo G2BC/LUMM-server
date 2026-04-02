@@ -11,8 +11,8 @@ class Distribution(db.Model):
 
     species = db.relationship(
         "Species",
-        secondary="species_distribution",
-        back_populates="distribution",
+        secondary="species_distributions",
+        back_populates="distributions",
     )
 
     def __repr__(self):

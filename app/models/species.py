@@ -83,6 +83,11 @@ class Species(db.Model):
         secondary="species_distributions",
         back_populates="species",
     )
+    references = db.relationship(
+        "Reference",
+        secondary="species_references",
+        back_populates="species",
+    )
 
     def __repr__(self):
         return f"<Specie id={self.id} scientific_name={self.scientific_name!r}>"
