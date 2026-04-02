@@ -1,3 +1,4 @@
+from .distribution import Distribution
 from .growth_form import GrowthForm
 from .habitat import Habitat
 from .nutrition_mode import NutritionMode
@@ -8,6 +9,7 @@ from .species_characteristics_growth_form import SpeciesCharacteristicsGrowthFor
 from .species_characteristics_habitat import SpeciesCharacteristicsHabitat
 from .species_characteristics_nutrition_mode import SpeciesCharacteristicsNutritionMode
 from .species_characteristics_substrate import SpeciesCharacteristicsSubstrate
+from .species_distribution import SpeciesDistribution
 from .species_photo import SpeciesPhoto
 from .species_similarity import SpeciesSimilarity
 from .substrate import Substrate
@@ -31,4 +33,6 @@ __all__ = [
     "Taxon",
     "SpeciesChangeRequest",
     "SpeciesPhotoRequest",
+    "Distribution",
+    "SpeciesDistribution",
 ]

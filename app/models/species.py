@@ -1,4 +1,3 @@
-from sqlalchemy.dialects import postgresql as pg
 from sqlalchemy.sql import func
 
 from app.extensions import db
@@ -10,7 +9,6 @@ class Species(db.Model):
         db.UniqueConstraint("scientific_name", name="uq_species_scientific_name"),
         db.Index("idx_species_family", "family"),
         db.Index("idx_species_lineage", "lineage"),
-        db.Index("idx_species_distribution", "distribution_regions", postgresql_using="gin"),
     )
 
     id = db.Column(db.BigInteger, primary_key=True)
@@ -26,11 +24,6 @@ class Species(db.Model):
 
     # Localidade tipo + distribuição
     type_country = db.Column(db.Text)
-    distribution_regions = db.Column(
-        pg.ARRAY(db.Text),
-        nullable=False,
-        server_default=db.text("'{}'::text[]"),  # array vazio
-    )
 
     # IDs externos
     mycobank_index_fungorum_id = db.Column(db.BigInteger)
@@ -40,11 +33,8 @@ class Species(db.Model):
     iucn_redlist = db.Column(db.Text)
     unite_taxon_id = db.Column(db.BigInteger, unique=True)
 
-    # Referências (texto bruto por ora)
-    references_raw = db.Column(db.Text)
-    is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
-
     # Flags
+    is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
     is_outdated_mycobank = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
     # Timestamps
@@ -87,6 +77,11 @@ class Species(db.Model):
         back_populates="species",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    distributions = db.relationship(
+        "Distribution",
+        secondary="species_distributions",
+        back_populates="species",
     )
 
     def __repr__(self):
