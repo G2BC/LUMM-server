@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.18.1](https://github.com/G2BC/LUMM-server/compare/v1.18.0...v1.18.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* correct field name in SpeciesWithPhotosSchema from 'types_country' to 'type_country' ([ede0dd7](https://github.com/G2BC/LUMM-server/commit/ede0dd74edfab77bca69ec33966c8a82d0b761fa))
+* update field name in SpeciesDetailSchema from 'types_country' to 'type_country' ([4ca60e5](https://github.com/G2BC/LUMM-server/commit/4ca60e5c6598b436ef9886aac43f4fcd3a97764c))
+
 ## [1.18.0](https://github.com/G2BC/LUMM-server/compare/v1.17.0...v1.18.0) (2026-04-02)
 
 
