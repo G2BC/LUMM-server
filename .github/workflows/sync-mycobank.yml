@@ -17,6 +17,7 @@ jobs:
     runs-on: self-hosted
     container:
       image: python:3.12-slim
+      options: --user 1000:1000
     timeout-minutes: 30
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -31,8 +32,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip uv
-          uv sync --frozen --no-dev
+          pip install --user uv
+          ~/.local/bin/uv sync --frozen --no-dev
 
       - name: Run sync script
-        run: uv run python scripts/sync_mycobank.py
+        run: ~/.local/bin/uv run python scripts/sync_mycobank.py

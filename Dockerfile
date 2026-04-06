@@ -14,9 +14,13 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --gid 1001 --ingroup app app
+
 COPY . .
 
 RUN sed -i "s/\r$//" entrypoint.sh && chmod +x entrypoint.sh
+
+USER app
 
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
   CMD curl -fsS http://localhost:4000/health || exit 1
