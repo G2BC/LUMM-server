@@ -427,7 +427,7 @@ class SpeciesDetailSchema(Schema):
     ncbi_taxonomy_id = fields.Integer(allow_none=True)
     lineage = fields.String(allow_none=True)
     family = fields.String(allow_none=True)
-    types_country = fields.String(allow_none=True)
+    type_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
     iucn_redlist = fields.String(allow_none=True)
