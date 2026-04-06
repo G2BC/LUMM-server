@@ -277,7 +277,7 @@ class SpeciesWithPhotosSchema(Schema):
     similar_species_ids = fields.Method("get_similar_species_ids", allow_none=True)
     season_start_month = fields.Method("get_season_start_month", allow_none=True)
     season_end_month = fields.Method("get_season_end_month", allow_none=True)
-    types_country = fields.String(allow_none=True)
+    type_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
     species_characteristics = fields.Nested(
