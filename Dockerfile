@@ -14,7 +14,7 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --gid 1001 --ingroup app app
+RUN addgroup --system --gid 10001 app && adduser --system --uid 10001 --gid 10001 --ingroup app app
 
 COPY . .
 
