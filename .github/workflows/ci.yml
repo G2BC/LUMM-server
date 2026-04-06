@@ -28,13 +28,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize GHCR owner
+        id: image_meta
+        run: |
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
+
       - name: Build image only (no push)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: false
-          tags: ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:ci
+          tags: ghcr.io/${{ steps.image_meta.outputs.owner }}/lumm-server:ci
 
   scan:
     if: "${{ !startsWith(github.event.pull_request.title, 'chore(main): release') }}"
@@ -53,6 +59,12 @@ jobs:
 
       - name: Ensure dirs
         run: mkdir -p artifacts
+
+      - name: Normalize GHCR owner
+        id: image_meta
+        run: |
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
 
       - name: Login GHCR
         uses: docker/login-action@v3
@@ -80,14 +92,14 @@ jobs:
 
       - name: Trivy image
         run: |
-          docker build -t ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:ci .
+          docker build -t ghcr.io/${{ steps.image_meta.outputs.owner }}/lumm-server:ci .
 
-          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:ci \
+          trivy image ghcr.io/${{ steps.image_meta.outputs.owner }}/lumm-server:ci \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
             --ignore-unfixed \
             -f table -o artifacts/trivy-image.txt || true
 
-          trivy image ghcr.io/${{ secrets.REPOSITORY_OWNER }}/lumm-server:ci \
+          trivy image ghcr.io/${{ steps.image_meta.outputs.owner }}/lumm-server:ci \
             --severity LOW,MEDIUM,HIGH,CRITICAL \
             --ignore-unfixed \
             -f json -o artifacts/trivy-image.json || echo '{}' > artifacts/trivy-image.json
