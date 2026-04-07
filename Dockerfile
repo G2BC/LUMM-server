@@ -16,7 +16,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 RUN addgroup --system --gid 10001 app && adduser --system --uid 10001 --ingroup app app
 
-COPY . .
+COPY --chown=app:app . .
 
 RUN sed -i "s/\r$//" entrypoint.sh && chmod +x entrypoint.sh
 
