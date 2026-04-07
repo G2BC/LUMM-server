@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.19.0](https://github.com/G2BC/LUMM-server/compare/v1.18.1...v1.19.0) (2026-04-07)
+
+
+### Features
+
+* add must_change_password flag to response for password change r… ([981f574](https://github.com/G2BC/LUMM-server/commit/981f574fdeb5e9b5c40ca33226a015f0abb759c0))
+* add must_change_password flag to response for password change requirement ([4491b5b](https://github.com/G2BC/LUMM-server/commit/4491b5b7e0df2e76f57a53462ffb4a6ee81e29de))
+* enhance user creation with active status and token generation ([b8def81](https://github.com/G2BC/LUMM-server/commit/b8def81ee5ee05d8dca7ef9012348c173dce56ca))
+* enhance user creation with active status and token generation ([5c1aed2](https://github.com/G2BC/LUMM-server/commit/5c1aed2d8e2bdb65afd13b465d03c9d5fe440e02))
+* introduce Dockerfile.dev for development environment ([90dce9f](https://github.com/G2BC/LUMM-server/commit/90dce9f6040d539313e8e3dee7cd37058315f624))
+
+
+### Bug Fixes
+
+* correct user creation command in Dockerfile ([4db4c4a](https://github.com/G2BC/LUMM-server/commit/4db4c4a827863967f1e468ba1acbcbda369a9bd5))
+* run containers as non-root to mitigate CVE-2022-0847 ([f624cd9](https://github.com/G2BC/LUMM-server/commit/f624cd9ae30a2c15d6055f14192cb7f646385bc5))
+* run containers as non-root to mitigate CVE-2022-0847 ([be6e2e0](https://github.com/G2BC/LUMM-server/commit/be6e2e08abdadab78ae79dcb95e9171730b9f48e))
+* update API_KEY placeholder in .env.example to 'changeme' ([86bdcce](https://github.com/G2BC/LUMM-server/commit/86bdcce25ec25acfc9259e2208a6698c40623c86))
+* update file ownership in Dockerfile for better permissions management ([ab0686b](https://github.com/G2BC/LUMM-server/commit/ab0686b95f2afdde67552abba5a6c3b16cc93a1f))
+* update user and group IDs in Dockerfile to avoid conflicts ([a84bdcf](https://github.com/G2BC/LUMM-server/commit/a84bdcf384a4f605bd15957f13d9ee547e1c4001))
+
 ## [1.18.1](https://github.com/G2BC/LUMM-server/compare/v1.18.0...v1.18.1) (2026-04-06)
 
 
