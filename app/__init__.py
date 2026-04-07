@@ -102,6 +102,7 @@ def create_app():
             return {
                 "code": 403,
                 "status": "Forbidden",
+                "must_change_password": True,
                 "message_pt": "Troca de senha obrigatória antes de continuar.",
                 "message_en": "Password change required before continuing.",
             }, 403
