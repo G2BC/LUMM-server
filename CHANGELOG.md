@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.19.1](https://github.com/G2BC/LUMM-server/compare/v1.19.0...v1.19.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* streamline entrypoint script for production mode ([ae0e01d](https://github.com/G2BC/LUMM-server/commit/ae0e01d7e77c6787f45bff3e8cb4285c20ebe459))
+* streamline entrypoint script for production mode ([35cb71a](https://github.com/G2BC/LUMM-server/commit/35cb71a62bd4149c61d0a76d53422ba1f1295a73))
+
 ## [1.19.0](https://github.com/G2BC/LUMM-server/compare/v1.18.1...v1.19.0) (2026-04-07)
 
 
