@@ -86,6 +86,7 @@ class UserRepository:
         email: str,
         password: str,
         role: str | None = None,
+        is_active: bool = True,
     ) -> User:
         normalized_role = cls._normalize_role(role)
         user = User(
@@ -94,6 +95,7 @@ class UserRepository:
             email=email.strip().lower(),
             role=normalized_role,
             is_admin=(normalized_role == User.ROLE_ADMIN),
+            is_active=is_active,
         )
         user.set_password(password)
         db.session.add(user)

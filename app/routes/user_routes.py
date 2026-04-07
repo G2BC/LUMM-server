@@ -5,7 +5,7 @@ from flask_jwt_extended import get_jwt_identity
 from flask_smorest import Blueprint
 
 from app.exceptions import AppError
-from app.schemas.login import AdminResetPasswordSchema
+from app.schemas.login import AdminResetPasswordSchema, TokenSchema
 from app.schemas.user_schemas import (
     UserCreateSchema,
     UserListQuerySchema,
@@ -44,7 +44,7 @@ class UsersList(MethodView):
             return bilingual_response(exc.status, exc.pt, exc.en)
 
     @user_bp.arguments(UserCreateSchema)
-    @user_bp.response(201, UserSchema)
+    @user_bp.response(201, TokenSchema)
     @user_bp.alt_response(400, description="Erro de validação/regra de negócio")
     def post(self, payload):
         try:
