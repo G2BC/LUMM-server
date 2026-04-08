@@ -2,6 +2,7 @@ from app.extensions import db
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
+from app.models.reference import Reference  # noqa: F401 – needed for selectinload
 from app.models.species import Species
 from app.models.species_characteristics import SpeciesCharacteristics
 from app.models.species_similarity import SpeciesSimilarity
@@ -70,6 +71,7 @@ class SpeciesRepository:
         base = Species.query.options(
             selectinload(Species.photos),
             selectinload(Species.taxonomy),
+            selectinload(Species.references),
             selectinload(Species.characteristics).selectinload(
                 SpeciesCharacteristics.nutrition_modes
             ),
