@@ -72,6 +72,7 @@ class SpeciesRepository:
             selectinload(Species.photos),
             selectinload(Species.taxonomy),
             selectinload(Species.references),
+            selectinload(Species.distributions),
             selectinload(Species.characteristics).selectinload(
                 SpeciesCharacteristics.nutrition_modes
             ),
