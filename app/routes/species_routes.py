@@ -7,6 +7,7 @@ from flask_smorest import Blueprint
 
 from app.exceptions import AppError, AppRuntimeError
 from app.schemas import DomainSelectSchema, SelectSchema
+from app.schemas.distribution_schemas import DistributionSchema
 from app.schemas.species_change_request_schemas import (
     SpeciesChangeRequestCreateSchema,
     SpeciesChangeRequestPaginationSchema,
@@ -69,7 +70,10 @@ class SpeciesSearchList(MethodView):
         country = request.args.get("country", type=str)
         page = request.args.get("page", type=int)
         per_page = request.args.get("per_page", type=int)
-        distributions = request.args.getlist("distributions") or None
+        distributions_raw = request.args.get("distributions", type=str)
+        distributions = (
+            [s for s in distributions_raw.split(",") if s.strip()] if distributions_raw else None
+        )
 
         try:
             is_visible = _parse_optional_bool_query("is_visible")
@@ -144,6 +148,13 @@ class SpeciesDomainsSelect(MethodView):
             return SpeciesService.domain_select(domain, search)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@specie_bp.route("/distributions/select")
+class SpeciesDistributionsSelect(MethodView):
+    @specie_bp.response(200, DistributionSchema(many=True))
+    def get(self):
+        return SpeciesService.distributions_select()
 
 
 @specie_bp.route("/<int:species_id>")

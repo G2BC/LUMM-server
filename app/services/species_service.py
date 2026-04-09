@@ -104,6 +104,10 @@ class SpeciesService:
         return SpeciesRepository.family_select(search)
 
     @staticmethod
+    def distributions_select():
+        return SpeciesRepository.distributions_select()
+
+    @staticmethod
     def species_select(
         search: str | None = "",
         exclude_species_id: int | None = None,
