@@ -1,4 +1,5 @@
 from app.extensions import db
+from app.models.distribution import Distribution
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -28,6 +29,7 @@ class SpeciesRepository:
         is_visible: bool | None = None,
         page: int | None = None,
         per_page: int | None = None,
+        distributions: list[str] | None = None,
     ):
         base = Species.query.options(
             selectinload(Species.photos),
@@ -52,8 +54,16 @@ class SpeciesRepository:
 
         if country:
             filters.append(Species.type_country.ilike(f"%{country}%"))
+
         if is_visible is not None:
             filters.append(Species.is_visible.is_(is_visible))
+
+        if distributions:
+            slugs = [s.strip().upper() for s in distributions if s.strip()]
+            if slugs:
+                base = (
+                    base.join(Species.distributions).filter(Distribution.slug.in_(slugs)).distinct()
+                )
 
         if filters:
             base = base.filter(*filters)

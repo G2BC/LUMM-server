@@ -69,10 +69,13 @@ class SpeciesSearchList(MethodView):
         country = request.args.get("country", type=str)
         page = request.args.get("page", type=int)
         per_page = request.args.get("per_page", type=int)
+        distributions = request.args.getlist("distributions") or None
 
         try:
             is_visible = _parse_optional_bool_query("is_visible")
-            return SpeciesService.search(search, lineage, country, is_visible, page, per_page)
+            return SpeciesService.search(
+                search, lineage, country, is_visible, page, per_page, distributions
+            )
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
 
