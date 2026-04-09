@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.20.0](https://github.com/G2BC/LUMM-server/compare/v1.19.1...v1.20.0) (2026-04-09)
+
+
+### Features
+
+* add Distribution schema and integrate into SpeciesDetailSchema ([dba4da0](https://github.com/G2BC/LUMM-server/commit/dba4da0807932785a6856b07244712e679f2dd8f))
+* add distributions selection endpoint and service method ([faacf70](https://github.com/G2BC/LUMM-server/commit/faacf7092085579cd22c408f884be2aa47029fdf))
+* add Reference model and integrate into Species schema ([4247070](https://github.com/G2BC/LUMM-server/commit/4247070e424db4bb585d8af056fa917877867c88))
+* enhance species search functionality with distribution filtering ([b291c76](https://github.com/G2BC/LUMM-server/commit/b291c76b36cea602ae62019845730180daa2425e))
+
+
+### Bug Fixes
+
+* update distribution query handling in species search ([27dd162](https://github.com/G2BC/LUMM-server/commit/27dd162b67dea1d1227765a16fb42f02700cf2a9))
+
 ## [1.19.1](https://github.com/G2BC/LUMM-server/compare/v1.19.0...v1.19.1) (2026-04-07)
 
 
