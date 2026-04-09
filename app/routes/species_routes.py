@@ -70,7 +70,10 @@ class SpeciesSearchList(MethodView):
         country = request.args.get("country", type=str)
         page = request.args.get("page", type=int)
         per_page = request.args.get("per_page", type=int)
-        distributions = request.args.getlist("distributions") or None
+        distributions_raw = request.args.get("distributions", type=str)
+        distributions = (
+            [s for s in distributions_raw.split(",") if s.strip()] if distributions_raw else None
+        )
 
         try:
             is_visible = _parse_optional_bool_query("is_visible")
