@@ -144,6 +144,11 @@ class SpeciesRepository:
         return options
 
     @classmethod
+    def distributions_select(cls):
+        distributions = Distribution.query.order_by(Distribution.slug.asc()).all()
+        return distributions
+
+    @classmethod
     def family_select(
         cls,
         search: str | None = "",
