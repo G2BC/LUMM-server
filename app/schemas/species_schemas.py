@@ -3,6 +3,8 @@ from marshmallow import EXCLUDE, Schema, ValidationError, fields, validates_sche
 from app.utils.object_storage import normalize_object_url
 from app.utils.photo_attribution import format_attribution_display
 
+from .distribution_schemas import DistributionSchema
+from .reference_schemas import ReferenceSchema
 from .taxon_schemas import TaxonSchema
 
 
@@ -432,6 +434,8 @@ class SpeciesDetailSchema(Schema):
     mycobank_index_fungorum_id = fields.String(allow_none=True)
     iucn_redlist = fields.String(allow_none=True)
     inaturalist_taxon_id = fields.String(allow_none=True)
+    references = fields.List(fields.Nested(ReferenceSchema), dump_only=True)
+    distributions = fields.List(fields.Nested(DistributionSchema), dump_only=True)
     species_characteristics = fields.Nested(
         SpeciesCharacteristicsSchema,
         attribute="characteristics",

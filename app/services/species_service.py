@@ -41,6 +41,7 @@ class SpeciesService:
         is_visible: bool | None = None,
         page: int | None = None,
         per_page: int | None = None,
+        distributions: list[str] | None = None,
     ) -> dict[str, Any]:
         search = (search or "").strip()
         lineage = (lineage or "").strip()
@@ -63,6 +64,7 @@ class SpeciesService:
                 is_visible,
                 page,
                 per_page,
+                distributions,
             )
             return {
                 "items": pagination.items,
@@ -79,6 +81,7 @@ class SpeciesService:
             is_visible,
             None,
             None,
+            distributions,
         )
         return {
             "items": spacies,
