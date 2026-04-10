@@ -5,6 +5,7 @@ from urllib.parse import quote_plus
 from urllib.request import urlopen as urllib_urlopen
 
 from app.exceptions import AppError, AppRuntimeError
+from app.models.distribution import Distribution
 from app.models.species import Species
 from app.models.species_similarity import SpeciesSimilarity
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
@@ -162,6 +163,7 @@ class SpeciesService:
             normalized_payload["scientific_name"] = normalized_name or None
 
         similar_species_ids = normalized_payload.pop("similar_species_ids", None)
+        distribution_ids = normalized_payload.pop("distributions", None)
         species = Species(
             scientific_name=normalized_payload.get("scientific_name"),
             lineage=normalized_payload["lineage"],
@@ -187,6 +189,8 @@ class SpeciesService:
                     SpeciesSimilarity(similar_species_id=similar_species_id)
                     for similar_species_id in similar_species_ids
                 ]
+            if distribution_ids is not None:
+                species.distributions = cls._fetch_distributions(distribution_ids)
 
             SpeciesRepository.save(species)
         except AppError:
@@ -218,6 +222,7 @@ class SpeciesService:
 
         normalized_payload = cls._normalize_patch_payload(payload or {})
         similar_species_ids = normalized_payload.pop("similar_species_ids", None)
+        distribution_ids = normalized_payload.pop("distributions", None)
 
         normalized_payload = cls._enrich_season_payload_with_current(species, normalized_payload)
         SpeciesChangeRequestValidation.validate_proposed_data(
@@ -232,6 +237,8 @@ class SpeciesService:
                 SpeciesSimilarity(similar_species_id=similar_species_id)
                 for similar_species_id in similar_species_ids
             ]
+        if distribution_ids is not None:
+            species.distributions = cls._fetch_distributions(distribution_ids)
 
         SpeciesRepository.save(species)
 
@@ -404,6 +411,32 @@ class SpeciesService:
                 pt="`similar_species_ids` contém IDs de espécies inexistentes",
                 en="`similar_species_ids` contains non-existent species IDs",
             )
+
+    @staticmethod
+    def _fetch_distributions(distribution_ids: list[int]) -> list:
+        if not isinstance(distribution_ids, list):
+            raise AppError(
+                pt="`distributions` deve ser uma lista de inteiros",
+                en="`distributions` must be a list of integers",
+            )
+        for value in distribution_ids:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise AppError(
+                    pt="`distributions` deve conter apenas inteiros >= 1",
+                    en="`distributions` must contain only integers >= 1",
+                )
+
+        if not distribution_ids:
+            return []
+
+        unique_ids = list(set(distribution_ids))
+        found = Distribution.query.filter(Distribution.id.in_(unique_ids)).all()
+        if len(found) != len(unique_ids):
+            raise AppError(
+                pt="`distributions` contém IDs de distribuições inexistentes",
+                en="`distributions` contains non-existent distribution IDs",
+            )
+        return found
 
     @staticmethod
     def get_ncbi_data(

@@ -98,7 +98,7 @@ class SpeciesPatchRequestSchema(Schema):
     unite_taxon_id = fields.Raw(required=False, allow_none=True)
     iucn_redlist = fields.String(required=False, allow_none=True)
     references_raw = fields.String(required=False, allow_none=True)
-    distribution_regions = fields.List(fields.String(), required=False, allow_none=True)
+    distributions = fields.List(fields.Integer(strict=True), required=False)
     is_visible = fields.Boolean(required=False)
 
     lum_mycelium = fields.Boolean(required=False, allow_none=True)
