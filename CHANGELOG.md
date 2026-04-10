@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.21.0](https://github.com/G2BC/LUMM-server/compare/v1.20.0...v1.21.0) (2026-04-10)
+
+
+### Features
+
+* update species schema and service to handle distribution IDs ([0356c06](https://github.com/G2BC/LUMM-server/commit/0356c06f5fe29f539a2661110ee5dcc98f046b8c))
+* update species schema and service to handle distribution IDs ([f1a854b](https://github.com/G2BC/LUMM-server/commit/f1a854b20393128768a19c13df843d7d56edfe44))
+
 ## [1.20.0](https://github.com/G2BC/LUMM-server/compare/v1.19.1...v1.20.0) (2026-04-09)
 
 
