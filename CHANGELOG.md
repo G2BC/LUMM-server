@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.22.0](https://github.com/G2BC/LUMM-server/compare/v1.21.0...v1.22.0) (2026-04-11)
+
+
+### Features
+
+* add reference management functionality ([a03ba0b](https://github.com/G2BC/LUMM-server/commit/a03ba0b31888eea4a0301c768957134ce63ec5eb))
+* add reference management functionality ([6e3abbc](https://github.com/G2BC/LUMM-server/commit/6e3abbcb52b097f8bf9ad4ad4842f039ac5f2c8a))
+
 ## [1.21.0](https://github.com/G2BC/LUMM-server/compare/v1.20.0...v1.21.0) (2026-04-10)
 
 
