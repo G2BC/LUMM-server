@@ -1,6 +1,7 @@
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, validates_schema
 
 from app.utils.object_storage import normalize_object_url
+from app.utils.pagination import make_pagination_schema
 from app.utils.photo_attribution import format_attribution_display
 
 from .distribution_schemas import DistributionSchema
@@ -414,12 +415,7 @@ class SpeciesWithPhotosSchema(Schema):
         return self._get_characteristic_value(obj, "season_end_month")
 
 
-class SpeciesWithPhotosPaginationSchema(Schema):
-    items = fields.List(fields.Nested(SpeciesWithPhotosSchema))
-    total = fields.Integer()
-    page = fields.Integer(allow_none=True)
-    per_page = fields.Integer(allow_none=True)
-    pages = fields.Integer(allow_none=True)
+SpeciesWithPhotosPaginationSchema = make_pagination_schema(SpeciesWithPhotosSchema)
 
 
 class SpeciesDetailSchema(Schema):

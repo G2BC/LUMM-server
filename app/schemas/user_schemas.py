@@ -3,6 +3,7 @@ import re
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, pre_load, validate, validates
 
 from app.models.user import User
+from app.utils.pagination import make_pagination_schema
 
 
 class UserSchema(Schema):
@@ -66,12 +67,7 @@ class UserCreateSchema(Schema):
             raise ValidationError("A senha precisa ter ao menos um número")
 
 
-class UserPaginationSchema(Schema):
-    items = fields.List(fields.Nested(UserSchema))
-    total = fields.Integer()
-    page = fields.Integer(allow_none=True)
-    per_page = fields.Integer(allow_none=True)
-    pages = fields.Integer(allow_none=True)
+UserPaginationSchema = make_pagination_schema(UserSchema)
 
 
 class UserRoleUpdateSchema(Schema):

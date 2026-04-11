@@ -12,6 +12,7 @@ from app.repositories.species_change_request_repository import SpeciesChangeRequ
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
 from app.services.species_change_request.validation import SpeciesChangeRequestValidation
+from app.utils.pagination import build_page_response
 from Bio import Entrez
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
@@ -56,41 +57,12 @@ class SpeciesService:
                 raise AppError(
                     pt="`page` deve ser um inteiro >= 1", en="`page` must be an integer >= 1"
                 )
-
             per_page = per_page or cls.DEFAULT_PER_PAGE
-            pagination = SpeciesRepository.list(
-                search,
-                lineage,
-                country,
-                is_visible,
-                page,
-                per_page,
-                distributions,
-            )
-            return {
-                "items": pagination.items,
-                "total": pagination.total,
-                "page": page,
-                "per_page": per_page,
-                "pages": pagination.pages,
-            }
 
-        spacies = SpeciesRepository.list(
-            search,
-            lineage,
-            country,
-            is_visible,
-            None,
-            None,
-            distributions,
+        result = SpeciesRepository.list(
+            search, lineage, country, is_visible, page, per_page, distributions
         )
-        return {
-            "items": spacies,
-            "total": len(spacies),
-            "page": None,
-            "per_page": None,
-            "pages": None,
-        }
+        return build_page_response(result, page, per_page)
 
     @staticmethod
     def select_lineage(search: str | None = ""):
@@ -199,10 +171,7 @@ class SpeciesService:
         except IntegrityError as exc:
             SpeciesRepository.rollback()
             raise AppError(
-                pt=(
-                    "Já existe espécie com `scientific_name`"
-                    " ou identificadores únicos informados"
-                ),
+                pt=("Já existe espécie com `scientific_name` ou identificadores únicos informados"),
                 en=(
                     "A species with the given `scientific_name`"
                     " or unique identifiers already exists"
@@ -574,11 +543,11 @@ class SpeciesService:
                 resultado[label] = {
                     "direct_links": {
                         "quantity": direct_count,
-                        "link": f'{info["search_url"]}{quote_plus(direct_term)}',
+                        "link": f"{info['search_url']}{quote_plus(direct_term)}",
                     },
                     "subtree_links": {
                         "quantity": subtree_count,
-                        "link": f'{info["search_url"]}{quote_plus(subtree_term)}',
+                        "link": f"{info['search_url']}{quote_plus(subtree_term)}",
                     },
                 }
 
