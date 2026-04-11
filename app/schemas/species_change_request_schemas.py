@@ -1,5 +1,7 @@
 from marshmallow import EXCLUDE, Schema, ValidationError, fields, validate, validates_schema
 
+from app.utils.pagination import make_pagination_schema
+
 
 class SpeciesPhotoRequestInputSchema(Schema):
     object_key = fields.String(required=True)
@@ -92,12 +94,7 @@ class SpeciesChangeRequestSchema(Schema):
         return getattr(obj, "proposed_data", None) or {}
 
 
-class SpeciesChangeRequestPaginationSchema(Schema):
-    items = fields.List(fields.Nested(SpeciesChangeRequestSchema))
-    total = fields.Integer()
-    page = fields.Integer(allow_none=True)
-    per_page = fields.Integer(allow_none=True)
-    pages = fields.Integer(allow_none=True)
+SpeciesChangeRequestPaginationSchema = make_pagination_schema(SpeciesChangeRequestSchema)
 
 
 class SpeciesPhotoReviewDecisionInputSchema(Schema):

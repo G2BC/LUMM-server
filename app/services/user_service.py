@@ -4,6 +4,7 @@ import string
 from app.exceptions import AppError
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
+from app.utils.pagination import build_page_response, resolve_page_params
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 
@@ -43,50 +44,18 @@ class UserService:
         is_active=None,
     ):
         exclude_user_id = cls._parse_positive_user_id(current_user_id)
-
-        if page is None and per_page is None:
-            users = UserRepository.get_users(search, is_active, exclude_user_id=exclude_user_id)
-            return {
-                "items": users,
-                "total": len(users),
-                "page": None,
-                "per_page": None,
-                "pages": None,
-            }
+        page, per_page = resolve_page_params(
+            page, per_page, default_per_page=cls.DEFAULT_PER_PAGE, max_per_page=cls.MAX_PER_PAGE
+        )
 
         if page is None:
-            page = 1
-        if per_page is None:
-            per_page = cls.DEFAULT_PER_PAGE
-
-        if not isinstance(page, int) or page < 1:
-            raise AppError(
-                pt="`page` deve ser um inteiro >= 1", en="`page` must be an integer >= 1"
-            )
-        if not isinstance(per_page, int) or per_page < 1:
-            raise AppError(
-                pt="`per_page` deve ser um inteiro >= 1", en="`per_page` must be an integer >= 1"
-            )
-        if per_page > cls.MAX_PER_PAGE:
-            raise AppError(
-                pt=f"`per_page` deve ser <= {cls.MAX_PER_PAGE}",
-                en=f"`per_page` must be <= {cls.MAX_PER_PAGE}",
+            result = UserRepository.get_users(search, is_active, exclude_user_id=exclude_user_id)
+        else:
+            result = UserRepository.get_users_pagination(
+                page, per_page, search, is_active, exclude_user_id=exclude_user_id
             )
 
-        pagination = UserRepository.get_users_pagination(
-            page,
-            per_page,
-            search,
-            is_active,
-            exclude_user_id=exclude_user_id,
-        )
-        return {
-            "items": pagination.items,
-            "total": pagination.total,
-            "page": page,
-            "per_page": per_page,
-            "pages": pagination.pages,
-        }
+        return build_page_response(result, page, per_page)
 
     @staticmethod
     def create_user(data):

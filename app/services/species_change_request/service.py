@@ -4,6 +4,7 @@ from app.exceptions import AppError
 from app.models.species_change_request import SpeciesChangeRequest
 from app.repositories.species_change_request_repository import SpeciesChangeRequestRepository
 from app.repositories.user_repository import UserRepository
+from app.utils.pagination import build_page_response, resolve_page_params
 
 from .enrichment import SpeciesChangeRequestEnrichment
 from .storage import SpeciesChangeRequestStorage
@@ -103,45 +104,13 @@ class SpeciesChangeRequestService:
                 en="Invalid `status`. Use: pending, approved, partial_approved, rejected",
             )
 
-        if page is None and per_page is None:
-            items = SpeciesChangeRequestRepository.list(normalized_status, None, None)
-            SpeciesChangeRequestEnrichment.enrich_requests(items)
-            return {
-                "items": items,
-                "total": len(items),
-                "page": None,
-                "per_page": None,
-                "pages": None,
-            }
-
-        if page is None:
-            page = 1
-        if per_page is None:
-            per_page = cls.DEFAULT_PER_PAGE
-
-        if not isinstance(page, int) or page < 1:
-            raise AppError(
-                pt="`page` deve ser um inteiro >= 1", en="`page` must be an integer >= 1"
-            )
-        if not isinstance(per_page, int) or per_page < 1:
-            raise AppError(
-                pt="`per_page` deve ser um inteiro >= 1", en="`per_page` must be an integer >= 1"
-            )
-        if per_page > cls.MAX_PER_PAGE:
-            raise AppError(
-                pt=f"`per_page` deve ser <= {cls.MAX_PER_PAGE}",
-                en=f"`per_page` must be <= {cls.MAX_PER_PAGE}",
-            )
-
-        pagination = SpeciesChangeRequestRepository.list(normalized_status, page, per_page)
-        SpeciesChangeRequestEnrichment.enrich_requests(pagination.items)
-        return {
-            "items": pagination.items,
-            "total": pagination.total,
-            "page": page,
-            "per_page": per_page,
-            "pages": pagination.pages,
-        }
+        page, per_page = resolve_page_params(
+            page, per_page, default_per_page=cls.DEFAULT_PER_PAGE, max_per_page=cls.MAX_PER_PAGE
+        )
+        result = SpeciesChangeRequestRepository.list(normalized_status, page, per_page)
+        items = result if page is None else result.items
+        SpeciesChangeRequestEnrichment.enrich_requests(items)
+        return build_page_response(result, page, per_page)
 
     @staticmethod
     def get_request(request_id: str):
@@ -221,8 +190,7 @@ class SpeciesChangeRequestService:
                         " para todos os campos/fotos"
                     ),
                     en=(
-                        "Provide a global `decision` or individual decisions"
-                        " for all fields/photos"
+                        "Provide a global `decision` or individual decisions for all fields/photos"
                     ),
                 )
 
