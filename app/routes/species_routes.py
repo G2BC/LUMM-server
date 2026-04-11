@@ -8,6 +8,11 @@ from flask_smorest import Blueprint
 from app.exceptions import AppError, AppRuntimeError
 from app.schemas import DomainSelectSchema, SelectSchema
 from app.schemas.distribution_schemas import DistributionSchema
+from app.schemas.reference_schemas import (
+    ReferenceAssociateExistingSchema,
+    ReferenceCreateAndAssociateSchema,
+    ReferenceSchema,
+)
 from app.schemas.species_change_request_schemas import (
     SpeciesChangeRequestCreateSchema,
     SpeciesChangeRequestPaginationSchema,
@@ -30,6 +35,7 @@ from app.schemas.species_schemas import (
 )
 from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
+from app.services.species_reference_service import SpeciesReferenceService
 from app.services.species_service import SpeciesService
 from app.utils.bilingual import bilingual_response
 from app.utils.permissions import require_curator_or_admin
@@ -258,6 +264,64 @@ class SpeciesPhotoDetail(MethodView):
     def delete(self, species_id: int, photo_id: str):
         try:
             SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
+            return None
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@specie_bp.route("/<int:species_id>/references/associate")
+class SpeciesReferenceAssociate(MethodView):
+    @require_curator_or_admin
+    @specie_bp.arguments(ReferenceAssociateExistingSchema, location="json")
+    @specie_bp.response(201, ReferenceSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
+    def post(self, payload, species_id: int):
+        """Associate an already-existing reference to a species."""
+        try:
+            return SpeciesReferenceService.associate_existing(
+                species_id=species_id,
+                reference_id=payload["reference_id"],
+            ), 201
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@specie_bp.route("/<int:species_id>/references")
+class SpeciesReferences(MethodView):
+    @require_curator_or_admin
+    @specie_bp.arguments(ReferenceCreateAndAssociateSchema, location="json")
+    @specie_bp.response(201, ReferenceSchema)
+    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        """Create a new reference and associate it to a species."""
+        try:
+            return SpeciesReferenceService.create_and_associate(
+                species_id=species_id,
+                apa=payload.get("apa"),
+                doi=payload.get("doi"),
+                url=payload.get("url"),
+            ), 201
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@specie_bp.route("/<int:species_id>/references/<int:reference_id>")
+class SpeciesReferenceDetail(MethodView):
+    @require_curator_or_admin
+    @specie_bp.response(204)
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
+    def delete(self, species_id: int, reference_id: int):
+        """Disassociate a reference from a species (and delete it if orphaned)."""
+        try:
+            SpeciesReferenceService.disassociate(
+                species_id=species_id,
+                reference_id=reference_id,
+            )
             return None
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
