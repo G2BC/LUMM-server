@@ -1,4 +1,4 @@
-name: Import IUCN Red List Status
+name: Sync IUCN Red List
 
 on:
   workflow_dispatch: {}
@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: import-iucn-red-list-status
+  group: sync-iucn-red-list
   cancel-in-progress: true
 
 jobs:
-  import:
+  sync:
     runs-on: self-hosted
     container:
       image: python:3.12-slim
@@ -36,5 +36,5 @@ jobs:
           pip install --user uv
           ~/.local/bin/uv sync --frozen --no-dev
 
-      - name: Run import script
-        run: ~/.local/bin/uv run python scripts/import_iucn_red_list_status.py
+      - name: Run sync script
+        run: ~/.local/bin/uv run python scripts/sync_iucn_red_list.py
