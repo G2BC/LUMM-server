@@ -70,7 +70,7 @@ def create_app():
             return None
 
         path = request.path
-        protected_prefixes = ("/auth", "/users", "/species", "/contact")
+        protected_prefixes = ("/auth", "/users", "/species", "/references", "/contact")
 
         if any(path == prefix or path.startswith(f"{prefix}/") for prefix in protected_prefixes):
             result = enforce_api_key()

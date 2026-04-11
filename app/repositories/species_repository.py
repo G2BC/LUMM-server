@@ -255,6 +255,14 @@ class SpeciesRepository:
 
         return species.ncbi_taxonomy_id
 
+    @staticmethod
+    def get_by_id(species_id: int) -> "Species | None":
+        return (
+            Species.query.options(selectinload(Species.references))
+            .filter(Species.id == species_id)
+            .first()
+        )
+
     @classmethod
     def exists_by_id(cls, species_id: str | None = "") -> bool:
         if not species_id:
