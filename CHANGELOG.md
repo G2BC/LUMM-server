@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.23.0](https://github.com/G2BC/LUMM-server/compare/v1.22.0...v1.23.0) (2026-04-14)
+
+
+### Features
+
+* add IUCN Red List synchronization workflow and script ([4bfa455](https://github.com/G2BC/LUMM-server/commit/4bfa455281d10210dedb153c12b98d02fe2fe6ca))
+* add MINIO_DB_BUCKET configuration for MinIO setup ([f1eb4fc](https://github.com/G2BC/LUMM-server/commit/f1eb4fc394d6785df07d2cf557137d993914c6d3))
+* add MINIO_DB_BUCKET configuration for MinIO setup ([553befe](https://github.com/G2BC/LUMM-server/commit/553befe1dbf5649db3bbc3e4a1978d9c846a215a))
+* add snapshot database workflow and update taxon and species schemas ([3a09336](https://github.com/G2BC/LUMM-server/commit/3a09336b86268be76e6a304dba53fe67bda81779))
+* implement pagination utility functions and update schemas and s… ([8875ddc](https://github.com/G2BC/LUMM-server/commit/8875ddc7020cfe0f5e7f6483f38c6899fa8eb23b))
+* implement pagination utility functions and update schemas and services ([aabdf66](https://github.com/G2BC/LUMM-server/commit/aabdf66666527dcd995c903e8406828d8d4e7d1a))
+
 ## [1.22.0](https://github.com/G2BC/LUMM-server/compare/v1.21.0...v1.22.0) (2026-04-11)
 
 
