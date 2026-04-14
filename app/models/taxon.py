@@ -15,6 +15,7 @@ class Taxon(db.Model):
     )
     classification = db.Column(db.Text, nullable=True)
     synonyms = db.Column(db.Text, nullable=True)
+    basionym = db.Column(db.Text, nullable=True)
     name_type = db.Column(db.Text, nullable=True)
     gender = db.Column(db.Text, nullable=True)
     years_of_effective_publication = db.Column(db.Text, nullable=True)

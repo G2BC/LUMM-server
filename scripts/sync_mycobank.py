@@ -1,5 +1,6 @@
 import math
 import sys
+import re
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -117,6 +118,30 @@ def download_and_read_mblist_filtered(
     return df, xlsx_path
 
 
+def parse_basionym_and_synonyms(text: str) -> tuple[str | None, str | None]:
+    if not text:
+        return None, None
+
+    basionym_match = re.search(r"Basionym:\s*(.*?\[MB#\d+\])", text)
+    basionym = basionym_match.group(1).strip() if basionym_match else None
+
+    synonyms_list = [
+        item.strip()
+        for item in re.findall(r"-\s+([^[]+\[MB#\d+\])", text)
+        if item.strip()
+    ]
+
+    synonyms = "\n".join(synonyms_list) if synonyms_list else None
+
+    return basionym, synonyms
+
+def normalize_text(value):
+    if value is None:
+        return None
+
+    value = value.strip()
+    return value or None
+
 def main():
     _log("=== Sync MycoBank: inicio ===")
     _log("Carregando chaves do banco")
@@ -180,9 +205,17 @@ def main():
                 taxon.classification = val
                 row_changed = True
 
-            if (val := _txt(row.get("synonyms"))) and val != taxon.synonyms:
-                taxon.synonyms = val
-                row_changed = True
+            raw_synonyms = _txt(row.get("synonyms"))
+            if raw_synonyms:
+                basionym, synonyms = parse_basionym_and_synonyms(raw_synonyms)
+        
+                if basionym:
+                    taxon.basionym = basionym
+                    row_changed = True
+
+                if synonyms:
+                    taxon.synonyms = synonyms
+                    row_changed = True
 
             if (val := _txt(row.get("authors"))) and val != taxon.authors:
                 taxon.authors = val

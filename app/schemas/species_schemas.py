@@ -422,6 +422,7 @@ class SpeciesDetailSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(allow_none=True)
     is_visible = fields.Boolean()
+    section = fields.String(llow_none=True)
     ncbi_taxonomy_id = fields.Integer(allow_none=True)
     lineage = fields.String(allow_none=True)
     family = fields.String(allow_none=True)
