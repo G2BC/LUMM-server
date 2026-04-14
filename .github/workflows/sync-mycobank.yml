@@ -15,20 +15,23 @@ concurrency:
 jobs:
   sync:
     runs-on: self-hosted
+    container:
+      image: python:3.12-slim
     timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APP_ENV: production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run sync script
+      - name: Python version
+        run: python --version
+
+      - name: Install dependencies
         run: |
-          docker run --rm \
-            --user 1000:1000 \
-            --network host \
-            -v "${{ github.workspace }}:/app:ro" \
-            -w /app \
-            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-            -e APP_ENV=production \
-            python:3.12-slim \
-            sh -c "pip install -q uv && uv sync --frozen --no-dev && uv run python scripts/sync_mycobank.py"
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --no-dev
+      - name: Run sync script
+        run: uv run python scripts/sync_mycobank.py
