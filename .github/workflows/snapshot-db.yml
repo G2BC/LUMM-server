@@ -1,0 +1,51 @@
+name: Snapshot DB
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versão do BD (ex: 1)"
+        required: true
+        default: "1"
+  # schedule:
+  #   - cron: "0 4 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snapshot-db
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: self-hosted
+    container:
+      image: python:3.12-slim
+      options: --user 1000:1000
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_SECURE: ${{ secrets.MINIO_SECURE }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_DB_BUCKET: ${{ secrets.MINIO_DB_BUCKET }}
+      LUMM_DB_VERSION: ${{ inputs.version }}
+      APP_ENV: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python version
+        run: python --version
+
+      - name: Install dependencies
+        run: |
+          pip install --user uv
+          ~/.local/bin/uv sync --frozen --no-dev
+
+      - name: Run snapshot script
+        run: ~/.local/bin/uv run python scripts/snapshot_db.py

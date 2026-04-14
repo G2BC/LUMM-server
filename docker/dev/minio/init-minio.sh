@@ -8,6 +8,7 @@ set -eu
 : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY nao definido}"
 : "${MINIO_TMP_BUCKET:?MINIO_TMP_BUCKET nao definido}"
 : "${MINIO_FINAL_BUCKET:?MINIO_FINAL_BUCKET nao definido}"
+: "${MINIO_DB_BUCKET:?MINIO_DB_BUCKET nao definido}"
 
 ALIAS_NAME="local"
 MINIO_URL="http://${MINIO_ENDPOINT}"
@@ -26,6 +27,7 @@ done
 
 mc mb --ignore-existing "${ALIAS_NAME}/${MINIO_TMP_BUCKET}"
 mc mb --ignore-existing "${ALIAS_NAME}/${MINIO_FINAL_BUCKET}"
+mc mb --ignore-existing "${ALIAS_NAME}/${MINIO_DB_BUCKET}"
 
 if ! mc admin user info "${ALIAS_NAME}" "${MINIO_ACCESS_KEY}" >/dev/null 2>&1; then
   mc admin user add "${ALIAS_NAME}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
@@ -46,7 +48,7 @@ fi
 mc admin policy create "${ALIAS_NAME}" "${POLICY_NAME}" "${POLICY_FILE}" >/dev/null
 mc admin policy attach "${ALIAS_NAME}" "${POLICY_NAME}" --user "${MINIO_ACCESS_KEY}" >/dev/null
 mc anonymous set download "${ALIAS_NAME}/${MINIO_FINAL_BUCKET}" >/dev/null
-
+mc anonymous set none "${ALIAS_NAME}/${MINIO_DB_BUCKET}" >/dev/null || true
 mc anonymous set none "${ALIAS_NAME}/${MINIO_TMP_BUCKET}" >/dev/null || true
 
 echo "MinIO configurado com sucesso."

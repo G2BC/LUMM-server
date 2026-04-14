@@ -75,6 +75,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
       MINIO_TMP_BUCKET: ${MINIO_TMP_BUCKET:?MINIO_TMP_BUCKET is required}
       MINIO_FINAL_BUCKET: ${MINIO_FINAL_BUCKET:?MINIO_FINAL_BUCKET is required}
+      MINIO_DB_BUCKET: ${MINIO_DB_BUCKET:?MINIO_DB_BUCKET is required}
     volumes:
       - ./docker/dev/minio/policies:/policies:ro
       - ./docker/dev/minio/init-minio.sh:/init-minio.sh:ro
