@@ -162,7 +162,7 @@ def main():
 
     _log("=== Coleta do MBList ===")
     _log("Baixando e lendo MBList")
-    df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids)
+    df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids, pasta_base="/tmp/lumm")
     _log(f"XLSX utilizado: {xlsx_path}", "OK")
 
     inserted = 0
