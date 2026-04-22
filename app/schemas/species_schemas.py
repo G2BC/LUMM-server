@@ -109,6 +109,7 @@ class SpeciesPatchRequestSchema(Schema):
     lum_lamellae = fields.Boolean(required=False, allow_none=True)
     lum_spores = fields.Boolean(required=False, allow_none=True)
     edible = fields.Boolean(required=False, allow_none=True)
+    cultivation_possible = fields.Boolean(required=False, allow_none=True)
 
     colors = fields.String(required=False, allow_none=True)
     colors_pt = fields.String(required=False, allow_none=True)
@@ -193,6 +194,9 @@ class SpeciesCharacteristicsSchema(Schema):
     season_end_month = fields.Integer(allow_none=True)
     habitats = fields.Method("get_habitats", allow_none=True)
     similar_species = fields.Method("get_similar_species", allow_none=True)
+    cultivation_possible = fields.Boolean(allow_none=True)
+    iucn_assessment_year = fields.String(allow_none=True)
+    iucn_assessment_url = fields.String(allow_none=True)
 
     @staticmethod
     def get_habitats(obj):
@@ -431,6 +435,7 @@ class SpeciesDetailSchema(Schema):
     mycobank_index_fungorum_id = fields.String(allow_none=True)
     iucn_redlist = fields.String(allow_none=True)
     inaturalist_taxon_id = fields.String(allow_none=True)
+    unite_taxon_id = fields.String(allow_none=True)
     references = fields.List(fields.Nested(ReferenceSchema), dump_only=True)
     distributions = fields.List(fields.Nested(DistributionSchema), dump_only=True)
     species_characteristics = fields.Nested(
