@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.1](https://github.com/G2BC/LUMM-server/compare/v1.24.0...v1.24.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* remove 'corticolous' entry from substrates migration ([7f82de9](https://github.com/G2BC/LUMM-server/commit/7f82de99b253e07ebcaae9bea0e82db65a957c12))
+
 ## [1.24.0](https://github.com/G2BC/LUMM-server/compare/v1.23.0...v1.24.0) (2026-04-22)
 
 
