@@ -112,13 +112,19 @@ def main():
             else:
                 conservation_status = latest_assessment.get("red_list_category_code")
                 assessment_id = latest_assessment.get("assessment_id")
+                iucn_assessment_year = latest_assessment.get("year_published")
+                url = latest_assessment.get("url")
 
                 Species.query.filter_by(id=species.id).update(
                     {"iucn_redlist": assessment_id},
                     synchronize_session=False,
                 )
                 SpeciesCharacteristics.query.filter_by(species_id=species.id).update(
-                    {"conservation_status": conservation_status},
+                    {
+                        "conservation_status": conservation_status,
+                        "iucn_assessment_year": iucn_assessment_year,
+                        "iucn_assessment_url": url
+                    },
                     synchronize_session=False,
                 )
 

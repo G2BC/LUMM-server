@@ -26,6 +26,7 @@ class SpeciesChangeRequestRepository:
         "lum_lamellae",
         "lum_spores",
         "edible",
+        "cultivation_possible",
         "cultivation",
         "cultivation_pt",
         "finding_tips",

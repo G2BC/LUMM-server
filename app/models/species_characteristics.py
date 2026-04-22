@@ -16,6 +16,7 @@ class SpeciesCharacteristics(db.Model):
     lum_lamellae = db.Column(db.Boolean)
     lum_spores = db.Column(db.Boolean)
     edible = db.Column(db.Boolean)
+    cultivation_possible = db.Column(db.Boolean)
     cultivation = db.Column(db.Text)
     cultivation_pt = db.Column(db.Text)
     finding_tips = db.Column(db.Text)
@@ -32,6 +33,8 @@ class SpeciesCharacteristics(db.Model):
     size_cm = db.Column(db.Float)
     season_start_month = db.Column(db.SmallInteger)
     season_end_month = db.Column(db.SmallInteger)
+    iucn_assessment_year = db.Column(db.Text)
+    iucn_assessment_url = db.Column(db.Text)
 
     species = db.relationship("Species", back_populates="characteristics")
     growth_forms = db.relationship(
