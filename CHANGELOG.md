@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.24.0](https://github.com/G2BC/LUMM-server/compare/v1.23.0...v1.24.0) (2026-04-22)
+
+
+### Features
+
+* enhance species characteristics model and schemas with new fields ([29d86bd](https://github.com/G2BC/LUMM-server/commit/29d86bd25c1712970ae3519d8e2fc27a640d84e9))
+* enhance species characteristics model and schemas with new fields ([4770ce5](https://github.com/G2BC/LUMM-server/commit/4770ce5cf29b5a779262e758d277450af39b69f0))
+
 ## [1.23.0](https://github.com/G2BC/LUMM-server/compare/v1.22.0...v1.23.0) (2026-04-14)
 
 
