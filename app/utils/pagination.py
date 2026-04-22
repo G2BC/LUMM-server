@@ -57,12 +57,17 @@ def build_page_response(result, page, per_page):
 
 def make_pagination_schema(item_schema_class):
     """Return a Marshmallow Schema class for paginated responses of the given item type."""
+    item_name = item_schema_class.__name__.removesuffix("Schema")
 
-    class PaginationSchema(Schema):
-        items = fields.List(fields.Nested(item_schema_class))
-        total = fields.Integer()
-        page = fields.Integer(allow_none=True)
-        per_page = fields.Integer(allow_none=True)
-        pages = fields.Integer(allow_none=True)
-
-    return PaginationSchema
+    schema = type(
+        f"{item_name}PaginationSchema",
+        (Schema,),
+        {
+            "items": fields.List(fields.Nested(item_schema_class)),
+            "total": fields.Integer(),
+            "page": fields.Integer(allow_none=True),
+            "per_page": fields.Integer(allow_none=True),
+            "pages": fields.Integer(allow_none=True),
+        },
+    )
+    return schema
