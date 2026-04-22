@@ -20,7 +20,6 @@ def upgrade():
     op.execute("""
         INSERT INTO substrates (slug, label_en, label_pt)
         VALUES 
-        ('corticolous', 'Corticolous', 'Cortícolo'),
         ('campestral', 'Campestral', 'Campestre'),
         ('unknown', 'Unknown', 'Desconhecido');
 
