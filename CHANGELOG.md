@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.2](https://github.com/G2BC/LUMM-server/compare/v1.24.1...v1.24.2) (2026-04-22)
+
+
+### Bug Fixes
+
+* simplify pagination schema creation in utils ([20f1a3c](https://github.com/G2BC/LUMM-server/commit/20f1a3c73a46ed6c18efdaef0a563e4ee973ccfc))
+
 ## [1.24.1](https://github.com/G2BC/LUMM-server/compare/v1.24.0...v1.24.1) (2026-04-22)
 
 
