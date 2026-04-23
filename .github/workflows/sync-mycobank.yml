@@ -20,27 +20,23 @@ concurrency:
 jobs:
   sync:
     runs-on: self-hosted
+    container:
+      image: python:3.12-slim
     timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APP_ENV: production
+      PYTHONUNBUFFERED: "1"
+      LUMM_ID: ${{ inputs.lumm_id }}
 
     steps:
-      - name: Fix workspace permissions
-        run: docker run --rm -v "${{ github.workspace }}:/workspace" python:3.12-slim chown -R "$(id -u):$(id -g)" /workspace
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run sync script
+      - name: Install dependencies
         run: |
-          docker run --rm \
-            --user 1000:1000 \
-            -v "${{ github.workspace }}:/app:ro" \
-            -v "/tmp/lumm:/tmp/lumm" \
-            -v "/tmp/lumm/uv-home:/tmp/uv-home" \
-            -w /app \
-            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-            -e APP_ENV=production \
-            -e PYTHONUNBUFFERED=1 \
-            -e LUMM_ID="${{ inputs.lumm_id }}" \
-            -e HOME=/tmp/uv-home \
-            python:3.12-slim \
-            sh -c "pip install -q --user uv && ~/.local/bin/uv sync --frozen --no-dev && ~/.local/bin/uv run python scripts/sync_mycobank.py"
+          pip install -q --user uv
+          ~/.local/bin/uv sync --frozen --no-dev
+
+      - name: Run sync script
+        run: ~/.local/bin/uv run python scripts/sync_mycobank.py
