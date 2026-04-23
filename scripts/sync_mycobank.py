@@ -1,5 +1,6 @@
 import math
 import os
+import shutil
 import sys
 import re
 from pathlib import Path
@@ -169,7 +170,7 @@ def main():
 
     _log("=== Coleta do MBList ===")
     _log("Baixando e lendo MBList")
-    df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids, pasta_base="/tmp/lumm")
+    df, xlsx_path = download_and_read_mblist_filtered(mb_ids=mb_ids, pasta_base="/tmp/lumm/mycobank")
     _log(f"XLSX utilizado: {xlsx_path}", "OK")
 
     inserted = 0
@@ -258,6 +259,10 @@ def main():
 
         db.session.commit()
     _log("Sincronizacao finalizada", "OK")
+
+    base_dir = Path("/tmp/lumm/mycobank")
+    shutil.rmtree(base_dir, ignore_errors=True)
+    _log("Arquivos temporarios removidos", "OK")
 
 
 if __name__ == "__main__":
