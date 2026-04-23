@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/G2BC/LUMM-server/compare/v1.27.0...v1.28.0) (2026-04-23)
+
+
+### Features
+
+* add snapshot download functionality with response schema ([85233cd](https://github.com/G2BC/LUMM-server/commit/85233cdff24be96dac5d95a9d10f22d1b2221f75))
+
 ## [1.27.0](https://github.com/G2BC/LUMM-server/compare/v1.26.0...v1.27.0) (2026-04-23)
 
 
