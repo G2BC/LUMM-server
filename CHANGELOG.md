@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/G2BC/LUMM-server/compare/v1.25.0...v1.26.0) (2026-04-23)
+
+
+### Features
+
+* update sync-mycobank workflow and script for enhanced data handling ([2f47baa](https://github.com/G2BC/LUMM-server/commit/2f47baaff5dd8a5ddff57460ba9211d845350d3e))
+
 ## [1.25.0](https://github.com/G2BC/LUMM-server/compare/v1.24.2...v1.25.0) (2026-04-23)
 
 
