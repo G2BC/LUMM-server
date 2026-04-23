@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.25.0](https://github.com/G2BC/LUMM-server/compare/v1.24.2...v1.25.0) (2026-04-23)
+
+
+### Features
+
+* enhance sync_mycobank script with temporary file management ([e1f212a](https://github.com/G2BC/LUMM-server/commit/e1f212addd03b7a54773ce15fb756eae4e9c8904))
+* enhance sync-mycobank workflow and script with LUMM_ID input support ([7a9f3fb](https://github.com/G2BC/LUMM-server/commit/7a9f3fb152e0498932a1bc3f7a52f63618a10af2))
+* enhance sync-mycobank workflow with additional volume and environment variable ([eb19980](https://github.com/G2BC/LUMM-server/commit/eb1998049d6b75ffa90470b6a735631a20bb732f))
+* streamline sync-mycobank workflow and script for improved execution ([a1abe20](https://github.com/G2BC/LUMM-server/commit/a1abe2015cf65cb0486cd3bc280ce49497e80ab8))
+
 ## [1.24.2](https://github.com/G2BC/LUMM-server/compare/v1.24.1...v1.24.2) (2026-04-22)
 
 
