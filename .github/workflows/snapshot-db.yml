@@ -22,7 +22,6 @@ jobs:
     runs-on: self-hosted
     container:
       image: python:3.12-slim
-      options: --user 1000:1000
     timeout-minutes: 30
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -34,18 +33,20 @@ jobs:
       MINIO_DB_BUCKET: ${{ secrets.MINIO_DB_BUCKET }}
       LUMM_DB_VERSION: ${{ inputs.version }}
       APP_ENV: production
+      UV_LINK_MODE: copy
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python version
-        run: python --version
-
       - name: Install dependencies
         run: |
-          pip install --user uv
+          pip install -q --user uv
           ~/.local/bin/uv sync --frozen --no-dev
 
       - name: Run snapshot script
         run: ~/.local/bin/uv run python scripts/snapshot_db.py
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf ~/.local
