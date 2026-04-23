@@ -216,14 +216,16 @@ def main():
             raw_synonyms = _txt(row.get("synonyms"))
             if raw_synonyms:
                 basionym, synonyms = parse_basionym_and_synonyms(raw_synonyms)
-        
-                if basionym:
-                    taxon.basionym = basionym
-                    row_changed = True
+            else:
+                basionym, synonyms = None, None
 
-                if synonyms:
-                    taxon.synonyms = synonyms
-                    row_changed = True
+            if basionym != taxon.basionym:
+                taxon.basionym = basionym
+                row_changed = True
+
+            if synonyms != taxon.synonyms:
+                taxon.synonyms = synonyms
+                row_changed = True
 
             if (val := _txt(row.get("authors"))) and val != taxon.authors:
                 taxon.authors = val

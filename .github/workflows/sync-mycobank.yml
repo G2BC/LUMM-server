@@ -27,6 +27,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APP_ENV: production
       PYTHONUNBUFFERED: "1"
+      UV_LINK_MODE: copy
       LUMM_ID: ${{ inputs.lumm_id }}
 
     steps:
