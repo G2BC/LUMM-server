@@ -2,6 +2,7 @@ from typing import Any
 
 import requests
 from app.exceptions import AppError
+from app.models.decay_type import DecayType
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -321,6 +322,45 @@ class SpeciesChangeRequestValidation:
                     raise AppError(
                         pt="`habitat_ids` contém IDs inválidos ou inativos",
                         en="`habitat_ids` contains invalid or inactive IDs",
+                    )
+
+        decay_type_ids = proposed_data.get("decay_type_ids")
+        if decay_type_ids is not None:
+            if not isinstance(decay_type_ids, list):
+                raise AppError(
+                    pt="`decay_type_ids` deve ser uma lista de inteiros",
+                    en="`decay_type_ids` must be a list of integers",
+                )
+            normalized_decay_type_ids = []
+            for dtid in decay_type_ids:
+                if isinstance(dtid, bool) or not isinstance(dtid, int):
+                    raise AppError(
+                        pt="`decay_type_ids` deve conter apenas inteiros",
+                        en="`decay_type_ids` must contain only integers",
+                    )
+                if dtid < 1:
+                    raise AppError(
+                        pt="`decay_type_ids` deve conter apenas inteiros >= 1",
+                        en="`decay_type_ids` must contain only integers >= 1",
+                    )
+                normalized_decay_type_ids.append(dtid)
+
+            unique_decay_type_ids = sorted(set(normalized_decay_type_ids))
+            if len(unique_decay_type_ids) != len(normalized_decay_type_ids):
+                raise AppError(
+                    pt="`decay_type_ids` contém IDs duplicados",
+                    en="`decay_type_ids` contains duplicate IDs",
+                )
+
+            if unique_decay_type_ids:
+                active_count = DecayType.query.filter(
+                    DecayType.id.in_(unique_decay_type_ids),
+                    DecayType.is_active.is_(True),
+                ).count()
+                if active_count != len(unique_decay_type_ids):
+                    raise AppError(
+                        pt="`decay_type_ids` contém IDs inválidos ou inativos",
+                        en="`decay_type_ids` contains invalid or inactive IDs",
                     )
 
         start = proposed_data.get("season_start_month")

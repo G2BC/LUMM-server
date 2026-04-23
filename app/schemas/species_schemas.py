@@ -132,6 +132,7 @@ class SpeciesPatchRequestSchema(Schema):
     nutrition_modes = fields.List(fields.Integer(strict=True), required=False)
     substrates = fields.List(fields.Integer(strict=True), required=False)
     habitats = fields.List(fields.Integer(strict=True), required=False)
+    decay_types = fields.List(fields.Integer(strict=True), required=False)
     similar_species_ids = fields.List(fields.Integer(strict=True), required=False)
 
     @validates_schema
@@ -193,6 +194,7 @@ class SpeciesCharacteristicsSchema(Schema):
     season_start_month = fields.Integer(allow_none=True)
     season_end_month = fields.Integer(allow_none=True)
     habitats = fields.Method("get_habitats", allow_none=True)
+    decay_types = fields.Method("get_decay_types", allow_none=True)
     similar_species = fields.Method("get_similar_species", allow_none=True)
     cultivation_possible = fields.Boolean(allow_none=True)
     iucn_assessment_year = fields.String(allow_none=True)
@@ -247,6 +249,18 @@ class SpeciesCharacteristicsSchema(Schema):
         ]
 
     @staticmethod
+    def get_decay_types(obj):
+        decay_types = getattr(obj, "decay_types", None) or []
+        return [
+            {
+                "id": decay_type.id,
+                "label_pt": decay_type.label_pt,
+                "label_en": decay_type.label_en,
+            }
+            for decay_type in decay_types
+        ]
+
+    @staticmethod
     def get_similar_species(obj):
         species = getattr(obj, "species", None)
         links = getattr(species, "similar_species_links", None) or []
@@ -281,6 +295,7 @@ class SpeciesWithPhotosSchema(Schema):
     growth_forms = fields.Method("get_growth_forms", allow_none=True)
     substrates = fields.Method("get_substrates", allow_none=True)
     habitats = fields.Method("get_habitats", allow_none=True)
+    decay_types = fields.Method("get_decay_types", allow_none=True)
     similar_species_ids = fields.Method("get_similar_species_ids", allow_none=True)
     season_start_month = fields.Method("get_season_start_month", allow_none=True)
     season_end_month = fields.Method("get_season_end_month", allow_none=True)
@@ -406,6 +421,20 @@ class SpeciesWithPhotosSchema(Schema):
                 "label_en": habitat.label_en,
             }
             for habitat in habitats
+        ]
+
+    def get_decay_types(self, obj):
+        characteristics = getattr(obj, "characteristics", None)
+        if not characteristics:
+            return []
+        decay_types = getattr(characteristics, "decay_types", None) or []
+        return [
+            {
+                "id": decay_type.id,
+                "label_pt": decay_type.label_pt,
+                "label_en": decay_type.label_en,
+            }
+            for decay_type in decay_types
         ]
 
     def get_similar_species_ids(self, obj):

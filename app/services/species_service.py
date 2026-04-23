@@ -26,6 +26,7 @@ class SpeciesService:
         "substrates": "substrate_ids",
         "nutrition_modes": "nutrition_mode_ids",
         "habitats": "habitat_ids",
+        "decay_types": "decay_type_ids",
     }
     PATCH_BIGINT_FIELDS = {
         "mycobank_index_fungorum_id",

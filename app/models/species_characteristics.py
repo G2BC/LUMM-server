@@ -57,6 +57,11 @@ class SpeciesCharacteristics(db.Model):
         secondary="species_characteristics_habitats",
         back_populates="species_characteristics",
     )
+    decay_types = db.relationship(
+        "DecayType",
+        secondary="species_characteristics_decay_types",
+        back_populates="species_characteristics",
+    )
 
     def __repr__(self):
         return f"<SpeciesCharacteristics species_id={self.species_id}>"

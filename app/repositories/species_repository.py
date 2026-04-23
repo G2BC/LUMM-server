@@ -1,4 +1,5 @@
 from app.extensions import db
+from app.models.decay_type import DecayType
 from app.models.distribution import Distribution
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
@@ -18,6 +19,7 @@ class SpeciesRepository:
         "nutrition_mode": NutritionMode,
         "substrate": Substrate,
         "habitat": Habitat,
+        "decay_type": DecayType,
     }
 
     @classmethod
@@ -39,6 +41,7 @@ class SpeciesRepository:
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.habitats),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.growth_forms),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.substrates),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.decay_types),
             selectinload(Species.similar_species_links).selectinload(
                 SpeciesSimilarity.similar_species
             ),
@@ -89,6 +92,7 @@ class SpeciesRepository:
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.habitats),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.growth_forms),
             selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.substrates),
+            selectinload(Species.characteristics).selectinload(SpeciesCharacteristics.decay_types),
             selectinload(Species.similar_species_links).selectinload(
                 SpeciesSimilarity.similar_species
             ),

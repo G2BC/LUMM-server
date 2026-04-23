@@ -1,3 +1,4 @@
+from .decay_type import DecayType
 from .distribution import Distribution
 from .growth_form import GrowthForm
 from .habitat import Habitat
@@ -6,6 +7,7 @@ from .reference import Reference
 from .species import Species
 from .species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
 from .species_characteristics import SpeciesCharacteristics
+from .species_characteristics_decay_type import SpeciesCharacteristicsDecayType
 from .species_characteristics_growth_form import SpeciesCharacteristicsGrowthForm
 from .species_characteristics_habitat import SpeciesCharacteristicsHabitat
 from .species_characteristics_nutrition_mode import SpeciesCharacteristicsNutritionMode
@@ -24,10 +26,12 @@ __all__ = [
     "SpeciesSimilarity",
     "Species",
     "SpeciesCharacteristics",
+    "SpeciesCharacteristicsDecayType",
     "SpeciesCharacteristicsGrowthForm",
     "SpeciesCharacteristicsHabitat",
     "SpeciesCharacteristicsNutritionMode",
     "SpeciesCharacteristicsSubstrate",
+    "DecayType",
     "GrowthForm",
     "Habitat",
     "NutritionMode",
