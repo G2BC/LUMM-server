@@ -49,6 +49,9 @@ def _get_s3_client():
         scheme = "https" if secure else "http"
         endpoint = f"{scheme}://{endpoint}"
 
+    _log(f"MinIO endpoint: {repr(endpoint)}")
+    _log(f"MinIO region: {repr(region)}")
+
     return boto3.client(
         "s3",
         endpoint_url=endpoint,
