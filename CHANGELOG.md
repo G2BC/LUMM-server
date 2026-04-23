@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.27.0](https://github.com/G2BC/LUMM-server/compare/v1.26.0...v1.27.0) (2026-04-23)
+
+
+### Features
+
+* add decay_type domain with M2M relationship to species characte… ([3a84d9b](https://github.com/G2BC/LUMM-server/commit/3a84d9bdc4de7a2a2c2ddcb55c70ec70f6962267))
+* add decay_type domain with M2M relationship to species characteristics ([0a19703](https://github.com/G2BC/LUMM-server/commit/0a1970345b86ff9a188e911f83659ce119fc4b71))
+
+
+### Bug Fixes
+
+* allow decay_type_ids in species change request proposed data ([b36b3ed](https://github.com/G2BC/LUMM-server/commit/b36b3ed150d50490e1772ff93f1643c04513a9c4))
+
 ## [1.26.0](https://github.com/G2BC/LUMM-server/compare/v1.25.0...v1.26.0) (2026-04-23)
 
 
