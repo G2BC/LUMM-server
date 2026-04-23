@@ -51,6 +51,7 @@ class Config:
     MINIO_PUBLIC_BASE_URL = os.getenv("MINIO_PUBLIC_BASE_URL", "").strip()
     MINIO_TMP_BUCKET = os.getenv("MINIO_TMP_BUCKET", "lumm-web-tmp").strip()
     MINIO_FINAL_BUCKET = os.getenv("MINIO_FINAL_BUCKET", "lumm-web").strip()
+    MINIO_DB_BUCKET = os.getenv("MINIO_DB_BUCKET", "lumm-db").strip()
     SPECIES_PHOTO_MAX_BYTES = int(os.getenv("SPECIES_PHOTO_MAX_BYTES", str(5 * 1024 * 1024)))
     SPECIES_PHOTO_ALLOWED_MIME_TYPES = [
         mime.strip().lower()

@@ -493,3 +493,11 @@ class SpeciesDetailSchema(Schema):
             dump_only=True,
         )
     )
+
+
+class SnapshotDownloadResponseSchema(Schema):
+    url = fields.String(dump_only=True)
+    expires_in_seconds = fields.Integer(dump_only=True)
+    version = fields.Integer(dump_only=True)
+    lang = fields.String(dump_only=True)
+    format = fields.String(dump_only=True)
