@@ -35,10 +35,12 @@ jobs:
             --user 1000:1000 \
             -v "${{ github.workspace }}:/app:ro" \
             -v "/tmp/lumm:/tmp/lumm" \
+            -v "/tmp/lumm/uv-home:/tmp/uv-home" \
             -w /app \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e APP_ENV=production \
             -e PYTHONUNBUFFERED=1 \
             -e LUMM_ID="${{ inputs.lumm_id }}" \
+            -e HOME=/tmp/uv-home \
             python:3.12-slim \
             sh -c "pip install -q --user uv && ~/.local/bin/uv sync --frozen --no-dev && ~/.local/bin/uv run python scripts/sync_mycobank.py"
