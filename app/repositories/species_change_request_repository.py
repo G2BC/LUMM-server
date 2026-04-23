@@ -1,5 +1,6 @@
 import app.utils.object_storage as object_storage
 from app.extensions import db
+from app.models.decay_type import DecayType
 from app.models.growth_form import GrowthForm
 from app.models.habitat import Habitat
 from app.models.nutrition_mode import NutritionMode
@@ -17,6 +18,7 @@ class SpeciesChangeRequestRepository:
         "substrate_ids": Substrate,
         "nutrition_mode_ids": NutritionMode,
         "habitat_ids": Habitat,
+        "decay_type_ids": DecayType,
     }
     CHARACTERISTICS_FIELDS = {
         "lum_mycelium",
@@ -44,6 +46,7 @@ class SpeciesChangeRequestRepository:
         "substrate_ids",
         "nutrition_mode_ids",
         "habitat_ids",
+        "decay_type_ids",
         "season_start_month",
         "season_end_month",
     }
@@ -133,6 +136,9 @@ class SpeciesChangeRequestRepository:
                 ),
                 selectinload(Species.characteristics).selectinload(
                     SpeciesCharacteristics.substrates
+                ),
+                selectinload(Species.characteristics).selectinload(
+                    SpeciesCharacteristics.decay_types
                 ),
                 selectinload(Species.similar_species_links),
             )
@@ -225,6 +231,21 @@ class SpeciesChangeRequestRepository:
                     else:
                         nutrition_modes = []
                     characteristics.nutrition_modes = nutrition_modes
+                    continue
+                if field == "decay_type_ids":
+                    decay_type_ids = value or []
+                    if decay_type_ids:
+                        decay_types = (
+                            DecayType.query.filter(
+                                DecayType.id.in_(decay_type_ids),
+                                DecayType.is_active.is_(True),
+                            )
+                            .order_by(DecayType.id.asc())
+                            .all()
+                        )
+                    else:
+                        decay_types = []
+                    characteristics.decay_types = decay_types
                     continue
                 setattr(characteristics, field, value)
                 continue

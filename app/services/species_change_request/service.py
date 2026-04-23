@@ -42,6 +42,7 @@ class SpeciesChangeRequestService:
         "substrate_ids",
         "nutrition_mode_ids",
         "habitat_ids",
+        "decay_type_ids",
         "season_start_month",
         "season_end_month",
         "distribution_regions",
