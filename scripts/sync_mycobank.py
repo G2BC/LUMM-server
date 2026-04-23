@@ -128,7 +128,7 @@ def parse_basionym_and_synonyms(text: str) -> tuple[str | None, str | None]:
     synonyms_list = [
         item.strip()
         for item in re.findall(r"-\s+([^[]+\[MB#\d+\])", text)
-        if item.strip()
+        if item.strip() and not item.strip().startswith("Current name:")
     ]
 
     synonyms = "\n".join(synonyms_list) if synonyms_list else None
