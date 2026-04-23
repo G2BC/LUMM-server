@@ -1,7 +1,12 @@
 name: Sync MycoBank
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      lumm_id:
+        description: "LUMM species ID(s) separados por vírgula, ex: 1 ou 1,2,3 (deixe vazio para sincronizar todas)"
+        required: false
+        type: string
   schedule:
     - cron: "0 3 1 * *"
 
@@ -34,5 +39,6 @@ jobs:
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e APP_ENV=production \
             -e PYTHONUNBUFFERED=1 \
+            -e LUMM_ID="${{ inputs.lumm_id }}" \
             python:3.12-slim \
             sh -c "pip install -q --user uv && ~/.local/bin/uv sync --frozen --no-dev && ~/.local/bin/uv run python scripts/sync_mycobank.py"

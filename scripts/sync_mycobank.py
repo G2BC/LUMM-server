@@ -1,4 +1,5 @@
 import math
+import os
 import sys
 import re
 from pathlib import Path
@@ -143,19 +144,25 @@ def normalize_text(value):
     return value or None
 
 def main():
+    raw_lumm_ids = os.environ.get("LUMM_ID", "")
+    lumm_ids = [v for raw in raw_lumm_ids.split(",") if (v := _i(raw.strip()))]
+
     _log("=== Sync MycoBank: inicio ===")
+    if lumm_ids:
+        _log(f"Modo individual: LUMM_IDs={lumm_ids}")
     _log("Carregando chaves do banco")
     with app.app_context():
-        species_rows = (
-            db.session.query(
-                Species.id,
-                Species.scientific_name,
-                Species.mycobank_index_fungorum_id,
-                Species.is_outdated_mycobank,
-            )
-            .filter(Species.mycobank_index_fungorum_id.isnot(None))
-            .all()
-        )
+        query = db.session.query(
+            Species.id,
+            Species.scientific_name,
+            Species.mycobank_index_fungorum_id,
+            Species.is_outdated_mycobank,
+        ).filter(Species.mycobank_index_fungorum_id.isnot(None))
+
+        if lumm_ids:
+            query = query.filter(Species.id.in_(lumm_ids))
+
+        species_rows = query.all()
 
     mb_ids = {_i(r.mycobank_index_fungorum_id) for r in species_rows if _i(r.mycobank_index_fungorum_id)}
     _log(f"Especies com MycoBank ID no banco: {len(mb_ids)}", "OK")
