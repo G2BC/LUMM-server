@@ -36,11 +36,11 @@ def _log(message: str, level: str = "INFO") -> None:
 
 
 def _get_s3_client():
-    endpoint = (os.getenv("MINIO_ENDPOINT") or app.config.get("MINIO_ENDPOINT") or "").strip().rstrip("/")
-    access_key = (os.getenv("MINIO_ACCESS_KEY") or app.config.get("MINIO_ACCESS_KEY") or "").strip()
-    secret_key = (os.getenv("MINIO_SECRET_KEY") or app.config.get("MINIO_SECRET_KEY") or "").strip()
-    secure = os.getenv("MINIO_SECURE", "false").strip().lower() == "true"
-    region = (os.getenv("MINIO_REGION") or app.config.get("MINIO_REGION") or "us-east-1").strip()
+    endpoint = app.config.get("MINIO_ENDPOINT", "").rstrip("/")
+    access_key = app.config.get("MINIO_ACCESS_KEY", "")
+    secret_key = app.config.get("MINIO_SECRET_KEY", "")
+    secure = app.config.get("MINIO_SECURE", False)
+    region = app.config.get("MINIO_REGION", "us-east-1")
 
     if not endpoint:
         raise RuntimeError("MINIO_ENDPOINT não configurado")
@@ -55,7 +55,10 @@ def _get_s3_client():
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         region_name=region,
-        config=Config(request_checksum_calculation="when_required", response_checksum_validation="when_required")
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path", "payload_signing_enabled": False},
+        ),
     )
 
 
