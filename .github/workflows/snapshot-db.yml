@@ -40,6 +40,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          pip install -q --user uv
+          ~/.local/bin/uv sync --frozen --no-dev
+
       - name: Test MinIO auth
         run: |
           python - <<'PY'
@@ -70,11 +75,6 @@ jobs:
           print("listing buckets...")
           print(client.list_buckets())
           PY
-
-      - name: Install dependencies
-        run: |
-          pip install -q --user uv
-          ~/.local/bin/uv sync --frozen --no-dev
 
       - name: Run snapshot script
         run: ~/.local/bin/uv run python scripts/snapshot_db.py
