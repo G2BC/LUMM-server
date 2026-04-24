@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.1](https://github.com/G2BC/LUMM-server/compare/v1.29.0...v1.29.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* add public MinIO client for presigned URL generation ([6764c7f](https://github.com/G2BC/LUMM-server/commit/6764c7fd46337ad6d15945845f2e84a22633ede1))
+
 ## [1.29.0](https://github.com/G2BC/LUMM-server/compare/v1.28.1...v1.29.0) (2026-04-24)
 
 
