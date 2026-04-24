@@ -60,7 +60,12 @@ def _get_s3_client():
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         region_name=region,
-        config=Config(signature_version="s3v4", s3={"addressing_style": "path", "payload_signing_enabled": False}),
+        config=Config(
+            signature_version="s3v4",
+            s3={
+                "addressing_style": "path",
+            },
+        ),
     )
 
 

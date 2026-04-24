@@ -40,11 +40,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Test MinIO connection
-        run: |
-          apt-get update && apt-get install -y curl
-          curl -v --connect-timeout 5 --max-time 10 http://host.docker.internal:9000/minio/health/ready
-
       - name: Install dependencies
         run: |
           pip install -q --user uv
