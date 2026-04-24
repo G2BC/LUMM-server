@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.1](https://github.com/G2BC/LUMM-server/compare/v1.28.0...v1.28.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* normalize presigned URL in generate_presigned_get_url function ([4c0b672](https://github.com/G2BC/LUMM-server/commit/4c0b6724ca6bb47cc58cfac6695e41251f6dc2ff))
+
 ## [1.28.0](https://github.com/G2BC/LUMM-server/compare/v1.27.0...v1.28.0) (2026-04-23)
 
 
