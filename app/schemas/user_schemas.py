@@ -109,3 +109,33 @@ class UserListQuerySchema(Schema):
         if payload.get("is_active") in (None, "") and "isactive" in payload:
             payload["is_active"] = payload.get("isactive")
         return payload
+
+class UserUpdateSchema(Schema):
+    name = fields.String(
+        validate=validate.Length(min=2, max=100),
+        error_messages={"invalid": "Nome inválido"}
+    )
+    institution = fields.String(
+        allow_none=True,
+        validate=validate.Length(max=150)
+    )
+    email = fields.Email(
+        error_messages={"invalid": "Email inválido"}
+    )
+    
+    current_password = fields.String(load_only=True)
+    new_password = fields.String(
+        load_only=True,
+        validate=validate.Length(min=8, max=128)
+    )
+    confirm_password = fields.String(load_only=True)
+
+    @validates("new_password")
+    def validate_new_password_strength(self, value: str):
+        if value:
+            if not re.search(r"[A-Z]", value):
+                raise ValidationError("A nova senha precisa ter ao menos uma letra maiúscula")
+            if not re.search(r"[a-z]", value):
+                raise ValidationError("A nova senha precisa ter ao menos uma letra minúscula")
+            if not re.search(r"\d", value):
+                raise ValidationError("A nova senha precisa ter ao menos um número")

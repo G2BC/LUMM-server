@@ -12,6 +12,7 @@ from app.schemas.user_schemas import (
     UserPaginationSchema,
     UserRoleUpdateSchema,
     UserSchema,
+    UserUpdateSchema,
 )
 from app.services.user_service import UserService
 from app.utils.bilingual import bilingual_response
@@ -197,5 +198,16 @@ class UpdateUserRole(MethodView):
                 target_user_id=user_id,
                 role=payload["role"],
             )
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+@user_bp.route("/me")
+class UpdateUserProfile(MethodView):
+    @user_bp.arguments(UserUpdateSchema)
+    @user_bp.response(200, UserSchema)
+    def patch(self, data):
+        try:
+            user_id = get_jwt_identity()           
+            return UserService.update_profile(user_id, data)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
