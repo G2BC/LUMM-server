@@ -15,9 +15,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import boto3
 import pandas as pd
-from botocore.config import Config
+from minio import Minio
 from sqlalchemy.orm import joinedload, selectinload
 
 from app import create_app
@@ -35,33 +34,24 @@ def _log(message: str, level: str = "INFO") -> None:
     print(f"[{level}] {message}")
 
 
-def _get_s3_client():
-    endpoint = app.config.get("MINIO_ENDPOINT", "").rstrip("/")
+def _get_minio_client() -> Minio:
+    endpoint = app.config.get("MINIO_ENDPOINT", "")
     access_key = app.config.get("MINIO_ACCESS_KEY", "")
     secret_key = app.config.get("MINIO_SECRET_KEY", "")
     secure = app.config.get("MINIO_SECURE", False)
-    region = app.config.get("MINIO_REGION", "us-east-1")
 
     if not endpoint:
         raise RuntimeError("MINIO_ENDPOINT não configurado")
 
-    if not endpoint.startswith(("http://", "https://")):
-        scheme = "https" if secure else "http"
-        endpoint = f"{scheme}://{endpoint}"
+    for scheme in ("http://", "https://"):
+        if endpoint.startswith(scheme):
+            endpoint = endpoint[len(scheme):]
+            break
 
-    return boto3.client(
-        "s3",
-        endpoint_url=endpoint,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        region_name=region,
-        config=Config(
-            signature_version="s3v4",
-            s3={"addressing_style": "path", "payload_signing_enabled": False},
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required",
-        ),
-    )
+    _log(f"MinIO endpoint: {repr(endpoint)}")
+    _log(f"MinIO access_key: {repr(access_key)}")
+
+    return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
 
 
 def _id(value) -> str | None:
@@ -271,8 +261,8 @@ def build_files(data: list[dict], lang: str, version: int, generated_at: datetim
     return xlsx_bytes, json_bytes
 
 
-def upload(client, bucket: str, key: str, body: bytes, content_type: str) -> None:
-    client.put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
+def upload(client: Minio, bucket: str, key: str, body: bytes, content_type: str) -> None:
+    client.put_object(bucket, key, io.BytesIO(body), len(body), content_type=content_type)
     _log(f"Upload concluído: s3://{bucket}/{key}", "OK")
 
 
@@ -297,7 +287,7 @@ def main() -> None:
         _log(f"Registros coletados: {len(data_pt)}", "OK")
 
     _log("Conectando ao MinIO...")
-    client = _get_s3_client()
+    client = _get_minio_client()
     _log(f"Versão: v{version}", "OK")
 
     upload_lang(client, data_pt, "pt", version, now)
