@@ -41,8 +41,40 @@ def _get_client() -> BaseClient:
     )
 
 
+@lru_cache(maxsize=1)
+def _get_public_client() -> BaseClient:
+    """Client whose endpoint_url matches MINIO_PUBLIC_BASE_URL.
+
+    Presigned GET URLs embed the host in the signature, so the client must be
+    created with the public endpoint so the signed host matches what browsers hit.
+    Falls back to the regular client when MINIO_PUBLIC_BASE_URL is not set.
+    """
+    public_base = current_app.config.get("MINIO_PUBLIC_BASE_URL", "").strip()
+    if not public_base:
+        return _get_client()
+
+    access_key = current_app.config.get("MINIO_ACCESS_KEY")
+    secret_key = current_app.config.get("MINIO_SECRET_KEY")
+    secure = bool(current_app.config.get("MINIO_SECURE", False))
+    region = current_app.config.get("MINIO_REGION", "us-east-1")
+
+    if not public_base.startswith(("http://", "https://")):
+        scheme = "https" if secure else "http"
+        public_base = f"{scheme}://{public_base}"
+
+    return boto3.client(
+        "s3",
+        endpoint_url=public_base.rstrip("/"),
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region,
+        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+    )
+
+
 def clear_client_cache() -> None:
     _get_client.cache_clear()
+    _get_public_client.cache_clear()
 
 
 def generate_presigned_post(
@@ -74,13 +106,12 @@ def generate_presigned_post(
 
 
 def generate_presigned_get_url(bucket: str, key: str, expires_in_seconds: int) -> str:
-    client = _get_client()
-    url = client.generate_presigned_url(
+    client = _get_public_client()
+    return client.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": bucket, "Key": key},
         ExpiresIn=expires_in_seconds,
     )
-    return _normalize_presigned_post_url(url)
 
 
 def head_object(bucket: str, key: str) -> dict[str, Any]:
