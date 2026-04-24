@@ -136,3 +136,9 @@ class UserRepository:
         db.session.add(user)
         db.session.commit()
         return user
+
+    @classmethod
+    def update_user(cls, user: User) -> User:
+        db.session.add(user)
+        db.session.commit()
+        return user

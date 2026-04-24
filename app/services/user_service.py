@@ -204,3 +204,29 @@ class UserService:
             return target_user
 
         return UserRepository.update_role(target_user, normalized_role)
+
+    @staticmethod
+    def update_profile(user_id, data):
+        user = UserRepository.get_by_id(user_id)
+        if not user:
+            raise AppError(pt="Usuário não encontrado.", en="User not found.", status=404)
+
+        new_email = data.get("email", "").strip().lower()
+        if new_email and new_email != user.email:
+            if UserRepository.get_by_email(new_email):
+                raise AppError(pt="Email já cadastrado", en="Email already registered")
+            user.email = new_email
+
+        if "name" in data:
+            user.name = data["name"].strip()
+        if "institution" in data:
+            user.institution = data["institution"].strip() if data["institution"] else None
+
+        if "new_password" in data and data["new_password"]:
+            current_pw = data.get("current_password")
+            if not current_pw or not user.check_password(current_pw):
+                raise AppError(pt="Senha atual incorreta", en="Incorrect current password", status=401)
+            
+            UserRepository.update_password(user, data["new_password"], False)
+
+        return UserRepository.update_user(user)
