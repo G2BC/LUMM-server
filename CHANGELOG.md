@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.29.0](https://github.com/G2BC/LUMM-server/compare/v1.28.1...v1.29.0) (2026-04-24)
+
+
+### Features
+
+* implement user profile update functionality and schema ([4ef5494](https://github.com/G2BC/LUMM-server/commit/4ef5494a9230af87129a7009e09d11349db26311))
+* implement user profile update functionality and schema ([bb58621](https://github.com/G2BC/LUMM-server/commit/bb58621612009b6701edd924071b6a5b14fc915f))
+
 ## [1.28.1](https://github.com/G2BC/LUMM-server/compare/v1.28.0...v1.28.1) (2026-04-24)
 
 
