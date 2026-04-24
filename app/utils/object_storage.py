@@ -75,11 +75,12 @@ def generate_presigned_post(
 
 def generate_presigned_get_url(bucket: str, key: str, expires_in_seconds: int) -> str:
     client = _get_client()
-    return client.generate_presigned_url(
+    url = client.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": bucket, "Key": key},
         ExpiresIn=expires_in_seconds,
     )
+    return _normalize_presigned_post_url(url)
 
 
 def head_object(bucket: str, key: str) -> dict[str, Any]:
