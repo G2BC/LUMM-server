@@ -45,37 +45,6 @@ jobs:
           pip install -q --user uv
           ~/.local/bin/uv sync --frozen --no-dev
 
-      - name: Test MinIO auth
-        run: |
-          python - <<'PY'
-          import os
-          import boto3
-          from botocore.config import Config
-
-          endpoint = os.environ["MINIO_ENDPOINT"].rstrip("/")
-          access_key = os.environ["MINIO_ACCESS_KEY"].strip()
-          secret_key = os.environ["MINIO_SECRET_KEY"].strip()
-
-          print("endpoint:", endpoint)
-          print("access_key length:", len(access_key))
-          print("secret_key length:", len(secret_key))
-
-          client = boto3.client(
-              "s3",
-              endpoint_url=endpoint,
-              aws_access_key_id=access_key,
-              aws_secret_access_key=secret_key,
-              region_name=os.getenv("MINIO_REGION", "us-east-1"),
-              config=Config(
-                  signature_version="s3v4",
-                  s3={"addressing_style": "path"},
-              ),
-          )
-
-          print("listing buckets...")
-          print(client.list_buckets())
-          PY
-
       - name: Run snapshot script
         run: ~/.local/bin/uv run python scripts/snapshot_db.py
 
