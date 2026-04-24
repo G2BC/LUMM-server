@@ -36,11 +36,11 @@ def _log(message: str, level: str = "INFO") -> None:
 
 
 def _get_s3_client():
-    endpoint = os.getenv("MINIO_ENDPOINT") or app.config.get("MINIO_ENDPOINT")
-    access_key = os.getenv("MINIO_ACCESS_KEY") or app.config.get("MINIO_ACCESS_KEY")
-    secret_key = os.getenv("MINIO_SECRET_KEY") or app.config.get("MINIO_SECRET_KEY")
-    secure = os.getenv("MINIO_SECURE", "false").lower() == "true"
-    region = os.getenv("MINIO_REGION") or app.config.get("MINIO_REGION", "us-east-1")
+    endpoint = (os.getenv("MINIO_ENDPOINT") or app.config.get("MINIO_ENDPOINT") or "").strip().rstrip("/")
+    access_key = (os.getenv("MINIO_ACCESS_KEY") or app.config.get("MINIO_ACCESS_KEY") or "").strip()
+    secret_key = (os.getenv("MINIO_SECRET_KEY") or app.config.get("MINIO_SECRET_KEY") or "").strip()
+    secure = os.getenv("MINIO_SECURE", "false").strip().lower() == "true"
+    region = (os.getenv("MINIO_REGION") or app.config.get("MINIO_REGION") or "us-east-1").strip()
 
     if not endpoint:
         raise RuntimeError("MINIO_ENDPOINT não configurado")
