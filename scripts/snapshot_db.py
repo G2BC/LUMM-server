@@ -51,6 +51,8 @@ def _get_s3_client():
 
     _log(f"MinIO endpoint: {repr(endpoint)}")
     _log(f"MinIO region: {repr(region)}")
+    _log(f"MinIO access_key: {repr(access_key)}")
+    _log(f"MinIO secret_key length: {len(secret_key)}, last_char: {repr(secret_key[-1]) if secret_key else 'EMPTY'}")
 
     return boto3.client(
         "s3",
