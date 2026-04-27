@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0](https://github.com/G2BC/LUMM-server/compare/v1.30.0...v1.31.0) (2026-04-27)
+
+
+### Features
+
+* enhance species ordering by photo availability ([f6fd4fd](https://github.com/G2BC/LUMM-server/commit/f6fd4fd7e34057e0b2a4cab043f8d2d302dcc615))
+
 ## [1.30.0](https://github.com/G2BC/LUMM-server/compare/v1.29.1...v1.30.0) (2026-04-27)
 
 
