@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.1](https://github.com/G2BC/LUMM-server/compare/v1.32.0...v1.32.1) (2026-04-27)
+
+
+### Bug Fixes
+
+* refine species photo prioritization logic ([11d439a](https://github.com/G2BC/LUMM-server/commit/11d439a3a0849c0f6d09035d4e368cfea2806386))
+
 ## [1.32.0](https://github.com/G2BC/LUMM-server/compare/v1.31.0...v1.32.0) (2026-04-27)
 
 
