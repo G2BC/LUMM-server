@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/G2BC/LUMM-server/compare/v1.29.1...v1.30.0) (2026-04-27)
+
+
+### Features
+
+* include image/gif on permitted files ([e20fd6e](https://github.com/G2BC/LUMM-server/commit/e20fd6ea722682ff254d7b02c3ad2eef374ce566))
+
 ## [1.29.1](https://github.com/G2BC/LUMM-server/compare/v1.29.0...v1.29.1) (2026-04-24)
 
 
