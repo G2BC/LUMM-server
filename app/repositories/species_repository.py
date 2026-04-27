@@ -35,11 +35,14 @@ class SpeciesRepository:
         per_page: int | None = None,
         distributions: list[str] | None = None,
     ):
+        has_gif_photo = exists().where(
+            (SpeciesPhoto.species_id == Species.id) & SpeciesPhoto.medium_url.ilike("%.gif")
+        )
         has_lumm_photo = exists().where(
             (SpeciesPhoto.species_id == Species.id) & SpeciesPhoto.lumm.is_(True)
         )
         has_any_photo = exists().where(SpeciesPhoto.species_id == Species.id)
-        photo_priority = case((has_lumm_photo, 1), (has_any_photo, 2), else_=3)
+        photo_priority = case((has_gif_photo, 1), (has_lumm_photo, 2), (has_any_photo, 3), else_=4)
 
         base = Species.query.options(
             selectinload(Species.photos),
@@ -72,9 +75,7 @@ class SpeciesRepository:
         if distributions:
             slugs = [s.strip().upper() for s in distributions if s.strip()]
             if slugs:
-                base = (
-                    base.join(Species.distributions).filter(Distribution.slug.in_(slugs)).distinct()
-                )
+                base = base.filter(Species.distributions.any(Distribution.slug.in_(slugs)))
 
         if filters:
             base = base.filter(*filters)
