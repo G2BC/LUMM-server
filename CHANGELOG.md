@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.32.0](https://github.com/G2BC/LUMM-server/compare/v1.31.0...v1.32.0) (2026-04-27)
+
+
+### Features
+
+* enhance species photo prioritization logic ([7a1ed13](https://github.com/G2BC/LUMM-server/commit/7a1ed137386d2bf3baf564713908b6ebbfc9902f))
+* update .env.example with default values ([980f66c](https://github.com/G2BC/LUMM-server/commit/980f66cdfe06e7f27536c994c210ee70219cfa1b))
+
 ## [1.31.0](https://github.com/G2BC/LUMM-server/compare/v1.30.0...v1.31.0) (2026-04-27)
 
 
