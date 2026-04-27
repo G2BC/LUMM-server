@@ -7,9 +7,11 @@ from app.models.nutrition_mode import NutritionMode
 from app.models.reference import Reference  # noqa: F401 – needed for selectinload
 from app.models.species import Species
 from app.models.species_characteristics import SpeciesCharacteristics
+from app.models.species_photo import SpeciesPhoto
 from app.models.species_similarity import SpeciesSimilarity
 from app.models.substrate import Substrate
 from app.utils.object_storage import normalize_object_url
+from sqlalchemy import case, exists
 from sqlalchemy.orm import selectinload
 
 
@@ -33,6 +35,12 @@ class SpeciesRepository:
         per_page: int | None = None,
         distributions: list[str] | None = None,
     ):
+        has_lumm_photo = exists().where(
+            (SpeciesPhoto.species_id == Species.id) & SpeciesPhoto.lumm.is_(True)
+        )
+        has_any_photo = exists().where(SpeciesPhoto.species_id == Species.id)
+        photo_priority = case((has_lumm_photo, 1), (has_any_photo, 2), else_=3)
+
         base = Species.query.options(
             selectinload(Species.photos),
             selectinload(Species.characteristics).selectinload(
@@ -45,7 +53,7 @@ class SpeciesRepository:
             selectinload(Species.similar_species_links).selectinload(
                 SpeciesSimilarity.similar_species
             ),
-        ).order_by(Species.scientific_name.asc())
+        ).order_by(photo_priority, Species.scientific_name.asc())
 
         filters = []
 
