@@ -56,7 +56,7 @@ class Config:
     SPECIES_PHOTO_ALLOWED_MIME_TYPES = [
         mime.strip().lower()
         for mime in os.getenv(
-            "SPECIES_PHOTO_ALLOWED_MIME_TYPES", "image/jpeg,image/png,image/webp"
+            "SPECIES_PHOTO_ALLOWED_MIME_TYPES", "image/jpeg,image/png,image/webp,image/gif"
         ).split(",")
         if mime.strip()
     ]
