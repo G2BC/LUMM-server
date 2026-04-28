@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/G2BC/LUMM-server/compare/v1.32.1...v1.33.0) (2026-04-28)
+
+
+### Features
+
+* add endpoint and schema for listing outdated species ([77c238d](https://github.com/G2BC/LUMM-server/commit/77c238dc9b5e50c21aa8ce850df456039cbe2b04))
+
 # Changelog
 
 ## [1.32.1](https://github.com/G2BC/LUMM-server/compare/v1.32.0...v1.32.1) (2026-04-27)

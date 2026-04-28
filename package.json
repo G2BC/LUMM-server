@@ -1,9 +1,11 @@
 {
   "name": "lumm-server",
-  "version": "1.32.1",
+  "version": "1.33.0",
   "private": true,
   "release": {
-    "branches": ["main"],
+    "branches": [
+      "main"
+    ],
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
@@ -22,7 +24,10 @@
       [
         "@semantic-release/git",
         {
-          "assets": ["CHANGELOG.md", "package.json"],
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ],
           "message": "chore(main): release ${nextRelease.version}\n\n${nextRelease.notes}"
         }
       ],
