@@ -2,7 +2,7 @@ name: DAST
 
 on:
   workflow_run:
-    workflows: ["Nova release"]
+    workflows: ["Deploy"]
     types: [ completed ]
   schedule:
     - cron: "0 3 */14 * *"
