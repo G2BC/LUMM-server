@@ -286,6 +286,20 @@ class SpeciesRepository:
         species = Species.query.with_entities(Species.id).filter(Species.id == species_id).first()
         return species is not None
 
+    @classmethod
+    def list_outdated(cls, page: int | None = None, per_page: int | None = None):
+        base = (
+            Species.query.with_entities(
+                Species.id, Species.scientific_name, Species.mycobank_index_fungorum_id
+            )
+            .filter(Species.is_outdated_mycobank.is_(True))
+            .order_by(Species.scientific_name.asc())
+        )
+
+        if page:
+            return base.paginate(page=page, per_page=per_page, error_out=False)
+        return base.all()
+
     @staticmethod
     def stage(species) -> None:
         """add + flush to generate the species.id without committing."""

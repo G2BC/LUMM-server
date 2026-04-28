@@ -451,6 +451,15 @@ class SpeciesWithPhotosSchema(Schema):
 SpeciesWithPhotosPaginationSchema = make_pagination_schema(SpeciesWithPhotosSchema)
 
 
+class SpeciesOutdatedSchema(Schema):
+    id = fields.Integer(dump_only=True)
+    scientific_name = fields.String(dump_only=True)
+    mycobank_index_fungorum_id = fields.String(dump_only=True, allow_none=True)
+
+
+SpeciesOutdatedPaginationSchema = make_pagination_schema(SpeciesOutdatedSchema)
+
+
 class SpeciesDetailSchema(Schema):
     id = fields.Integer(dump_only=True)
     scientific_name = fields.String(allow_none=True)
@@ -462,6 +471,7 @@ class SpeciesDetailSchema(Schema):
     type_country = fields.String(allow_none=True)
     mycobank_type = fields.String(allow_none=True)
     mycobank_index_fungorum_id = fields.String(allow_none=True)
+    is_outdated_mycobank = fields.Boolean(allow_none=True)
     iucn_redlist = fields.String(allow_none=True)
     inaturalist_taxon_id = fields.String(allow_none=True)
     unite_taxon_id = fields.String(allow_none=True)

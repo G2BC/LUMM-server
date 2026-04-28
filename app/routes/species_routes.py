@@ -25,6 +25,7 @@ from app.schemas.species_change_request_schemas import (
 from app.schemas.species_schemas import (
     SpeciesCreateRequestSchema,
     SpeciesDetailSchema,
+    SpeciesOutdatedPaginationSchema,
     SpeciesPatchRequestSchema,
     SpeciesPhotoCreateRequestSchema,
     SpeciesPhotoCreateResponseSchema,
@@ -161,6 +162,21 @@ class SpeciesDistributionsSelect(MethodView):
     @specie_bp.response(200, DistributionSchema(many=True))
     def get(self):
         return SpeciesService.distributions_select()
+
+
+@specie_bp.route("/outdated")
+class SpeciesOutdated(MethodView):
+    @require_curator_or_admin
+    @specie_bp.response(200, SpeciesOutdatedPaginationSchema)
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def get(self):
+        page = request.args.get("page", type=int)
+        per_page = request.args.get("per_page", type=int)
+        try:
+            return SpeciesService.list_outdated(page, per_page)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
 
 
 @specie_bp.route("/<int:species_id>")

@@ -12,7 +12,7 @@ from app.repositories.species_change_request_repository import SpeciesChangeRequ
 from app.repositories.species_repository import SpeciesRepository
 from app.services.cache_service import CacheService
 from app.services.species_change_request.validation import SpeciesChangeRequestValidation
-from app.utils.pagination import build_page_response
+from app.utils.pagination import build_page_response, resolve_page_params
 from Bio import Entrez
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
@@ -63,6 +63,12 @@ class SpeciesService:
         result = SpeciesRepository.list(
             search, lineage, country, is_visible, page, per_page, distributions
         )
+        return build_page_response(result, page, per_page)
+
+    @classmethod
+    def list_outdated(cls, page: int | None = None, per_page: int | None = None) -> dict:
+        page, per_page = resolve_page_params(page, per_page, default_per_page=cls.DEFAULT_PER_PAGE)
+        result = SpeciesRepository.list_outdated(page, per_page)
         return build_page_response(result, page, per_page)
 
     @staticmethod
