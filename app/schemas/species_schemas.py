@@ -101,6 +101,7 @@ class SpeciesPatchRequestSchema(Schema):
     references_raw = fields.String(required=False, allow_none=True)
     distributions = fields.List(fields.Integer(strict=True), required=False)
     is_visible = fields.Boolean(required=False)
+    is_outdated_mycobank = fields.Boolean(required=False)
 
     lum_mycelium = fields.Boolean(required=False, allow_none=True)
     lum_basidiome = fields.Boolean(required=False, allow_none=True)
