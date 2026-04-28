@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/G2BC/LUMM-server/compare/v1.33.0...v1.34.0) (2026-04-28)
+
+
+### Features
+
+* add is_outdated_mycobank field to SpeciesPatchRequestSchema ([92041aa](https://github.com/G2BC/LUMM-server/commit/92041aa17032b7131ef9b8ab04a1878423b044ff))
+
 # [1.33.0](https://github.com/G2BC/LUMM-server/compare/v1.32.1...v1.33.0) (2026-04-28)
 
 

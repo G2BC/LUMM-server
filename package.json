@@ -1,6 +1,6 @@
 {
   "name": "lumm-server",
-  "version": "1.33.0",
+  "version": "1.34.0",
   "private": true,
   "release": {
     "branches": [
