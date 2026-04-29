@@ -6,8 +6,12 @@ from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from flask_smorest import Blueprint
 
 from app.exceptions import AppError, AppRuntimeError
+from app.extensions import db
+from app.models.observation import Observation
+from app.models.species import Species
 from app.schemas import DomainSelectSchema, SelectSchema
 from app.schemas.distribution_schemas import DistributionSchema
+from app.schemas.observation_schemas import ObservationListSchema
 from app.schemas.reference_schemas import (
     ReferenceAssociateExistingSchema,
     ReferenceCreateAndAssociateSchema,
@@ -467,3 +471,22 @@ class GetNCBISpeciesData(MethodView):
             return bilingual_response(502, exc.pt, exc.en)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@specie_bp.route("/<int:species_id>/observations")
+class SpeciesObservations(MethodView):
+    @specie_bp.response(200, ObservationListSchema)
+    @specie_bp.alt_response(404, description="Espécie não encontrada")
+    def get(self, species_id: int):
+        if not db.session.get(Species, species_id):
+            return bilingual_response(404, "Espécie não encontrada.", "Species not found.")
+
+        source = request.args.get("source", type=str)
+
+        query = Observation.query.filter_by(species_id=species_id)
+        if source:
+            query = query.filter_by(source=source)
+
+        observations = query.order_by(Observation.observed_on.desc().nullslast()).all()
+
+        return {"observations": observations, "total": len(observations)}
