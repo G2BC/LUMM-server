@@ -37,6 +37,9 @@ class Species(db.Model):
     is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
     is_outdated_mycobank = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
+    # Sync timestamps
+    last_inaturalist_sync_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     # Timestamps
     created_at = db.Column(
         db.DateTime(timezone=True),

@@ -7,8 +7,13 @@ on:
         description: "LUMM species ID(s) separados por vírgula, ex: 1 ou 1,2,3 (deixe vazio para sincronizar todas)"
         required: false
         type: string
+      force_full_sync:
+        description: "Full sync (apaga e re-insere tudo — use para limpar lixo ou após troca de taxon_id)"
+        required: false
+        type: boolean
+        default: false
   schedule:
-    - cron: "0 4 * * 0"
+    - cron: "0 4 * * *"
 
 permissions:
   contents: read
@@ -30,6 +35,7 @@ jobs:
       PYTHONUNBUFFERED: "1"
       UV_LINK_MODE: copy
       LUMM_ID: ${{ inputs.lumm_id }}
+      FORCE_FULL_SYNC: ${{ inputs.force_full_sync }}
 
     steps:
       - name: Checkout
