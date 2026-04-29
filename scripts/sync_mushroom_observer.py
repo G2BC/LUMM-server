@@ -1,12 +1,15 @@
 """
 Sincroniza observações do Mushroom Observer para espécies com scientific_name cadastrado.
-Estratégia replace: apaga todas as obs da espécie+source e re-insere tudo.
-Coordenadas precisas quando disponíveis, senão centro do bounding box da localidade.
+
+- Estratégia replace: apaga todas as obs da espécie+source e re-insere tudo
+- ThreadPoolExecutor com MAX_WORKERS threads
+- Kill switch por MAX_RUNTIME_SECONDS
 """
 
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
@@ -21,25 +24,19 @@ from app.models.observation import Observation
 from app.models.species import Species
 
 MO_API_URL = os.getenv("MUSHROOM_OBSERVER_API_URL", "https://mushroomobserver.org/api2")
-SLEEP_BETWEEN_SPECIES = float(os.getenv("MUSHROOM_OBSERVER_SLEEP_BETWEEN_SPECIES", "2"))
-SLEEP_BETWEEN_PAGES = float(os.getenv("MUSHROOM_OBSERVER_SLEEP_BETWEEN_PAGES", "1"))
-REQUEST_TIMEOUT = int(os.getenv("MUSHROOM_OBSERVER_REQUEST_TIMEOUT_SECONDS", "30"))
+REQUEST_TIMEOUT = 30
+SLEEP_BETWEEN_PAGES = float("1")
+MAX_WORKERS = 4
+MAX_RUNTIME_SECONDS = int("3540")
 
 app = create_app()
 
 
-def _log(message: str, level: str = "INFO") -> None:
-    print(f"[{level}] {message}")
+def _log(msg):
+    print(msg, flush=True)
 
 
-def _int(v) -> int | None:
-    try:
-        return int(v)
-    except (TypeError, ValueError):
-        return None
-
-
-def _center_of_bbox(loc: dict) -> tuple[float | None, float | None]:
+def _center_of_bbox(loc):
     try:
         lat = (float(loc["latitude_north"]) + float(loc["latitude_south"])) / 2
         lng = (float(loc["longitude_east"]) + float(loc["longitude_west"])) / 2
@@ -48,152 +45,144 @@ def _center_of_bbox(loc: dict) -> tuple[float | None, float | None]:
         return None, None
 
 
-def _parse_coords(obs: dict) -> tuple[float | None, float | None]:
-    """Coordenada precisa quando disponível, senão centro do bbox da localidade."""
-    lat = obs.get("latitude")
-    lng = obs.get("longitude")
+def _parse_coords(obs):
+    lat, lng = obs.get("latitude"), obs.get("longitude")
     if lat is not None and lng is not None:
         try:
             return float(lat), float(lng)
         except (TypeError, ValueError):
             pass
-
     loc = obs.get("location")
     if isinstance(loc, dict):
         return _center_of_bbox(loc)
-
     return None, None
 
 
-def _photo_url(obs: dict) -> str | None:
+def _photo_url(obs):
     primary = obs.get("primary_image")
     if not primary:
         return None
     url = primary.get("original_url", "")
-    # troca /orig/ por /640/ — menor e suficiente para marcadores de mapa
     return url.replace("/orig/", "/640/") if url else None
 
 
-def _obs_url(obs_id: int | str) -> str:
-    return f"https://mushroomobserver.org/observations/{obs_id}"
+def _fetch_page(name_id, scientific_name, page):
+    if name_id:
+        params = {"format": "json", "detail": "high", "name_id": name_id, "page": page}
+    else:
+        params = {"format": "json", "detail": "high", "name": scientific_name, "page": page}
+    r = requests.get(f"{MO_API_URL}/observations", params=params, timeout=REQUEST_TIMEOUT)
+    r.raise_for_status()
+    return r.json()
 
 
-def _fetch_page(scientific_name: str, page: int) -> dict:
-    response = requests.get(
-        f"{MO_API_URL}/observations",
-        params={
-            "format": "json",
-            "detail": "high",
-            "name": scientific_name,
-            "page": page,
-        },
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()
+def _sync_species(species_id, scientific_name, mo_name_id, start_time):
+    with app.app_context():
+        collected = []
+        discovered_name_id = None
+        page = 1
 
+        while True:
+            if time.time() - start_time > MAX_RUNTIME_SECONDS:
+                _log(f"  [{species_id}] Kill switch — abortando")
+                return 0, False
 
-def _collect_species(scientific_name: str) -> list[dict]:
-    """Coleta todas as observações do MO para a espécie. Levanta exceção se falhar."""
-    collected = []
-    page = 1
+            data = _fetch_page(mo_name_id, scientific_name, page)
+            if data.get("errors"):
+                raise RuntimeError(f"Erro da API MO: {data['errors']}")
 
-    while True:
-        data = _fetch_page(scientific_name, page)
+            results = data.get("results") or []
+            if not results:
+                break
 
-        errors = data.get("errors")
-        if errors:
-            raise RuntimeError(f"Erro da API MO: {errors}")
+            for obs in results:
+                # salva o name_id do primeiro resultado se ainda não temos
+                if discovered_name_id is None and not mo_name_id:
+                    discovered_name_id = (obs.get("consensus") or {}).get("id")
 
-        results = data.get("results") or []
-        if not results:
-            break
+                lat, lng = _parse_coords(obs)
+                if lat is None:
+                    continue
+                has_precise = obs.get("latitude") is not None
+                obs_id = str(obs["id"])
+                collected.append({
+                    "species_id": species_id,
+                    "source": "mushroom_observer",
+                    "external_id": obs_id,
+                    "latitude": lat,
+                    "longitude": lng,
+                    "location_obscured": bool(obs.get("gps_hidden", False)) or not has_precise,
+                    "observed_on": obs.get("date") or None,
+                    "quality_grade": None,
+                    "photo_url": _photo_url(obs),
+                    "url": f"https://mushroomobserver.org/observations/{obs_id}",
+                })
 
-        for obs in results:
-            obs_id = str(obs.get("id"))
-            lat, lng = _parse_coords(obs)
-            if lat is None or lng is None:
-                continue
+            total_pages = data.get("number_of_pages", 1)
+            _log(f"  [{species_id}] página {page}/{total_pages}: {len(results)} obs (via {'id' if mo_name_id else 'name'})")
 
-            has_precise_coords = obs.get("latitude") is not None
-            collected.append({
-                "source": "mushroom_observer",
-                "external_id": obs_id,
-                "latitude": lat,
-                "longitude": lng,
-                "location_obscured": bool(obs.get("gps_hidden", False)) or not has_precise_coords,
-                "observed_on": obs.get("date") or None,
-                "quality_grade": None,
-                "photo_url": _photo_url(obs),
-                "url": _obs_url(obs_id),
-            })
+            if page >= total_pages:
+                break
+            page += 1
+            time.sleep(SLEEP_BETWEEN_PAGES)
 
-        total_pages = data.get("number_of_pages", 1)
-        _log(f"  página {page}/{total_pages}: {len(results)} obs coletadas (total={len(collected)})")
+        db.session.query(Observation).filter_by(species_id=species_id, source="mushroom_observer").delete()
+        for row in collected:
+            db.session.add(Observation(**row))
 
-        if page >= total_pages:
-            break
+        # persiste o name_id descoberto para os próximos syncs
+        if discovered_name_id:
+            species = db.session.get(Species, species_id)
+            if species and not species.mushroom_observer_name_id:
+                species.mushroom_observer_name_id = discovered_name_id
 
-        page += 1
-        time.sleep(SLEEP_BETWEEN_PAGES)
+        db.session.commit()
+        db.session.remove()
 
-    return collected
-
-
-def _sync_species(species: Species) -> tuple[int, int]:
-    """Retorna (apagadas, inseridas) para a espécie."""
-    collected = _collect_species(species.scientific_name)
-
-    deleted = Observation.query.filter_by(
-        species_id=species.id, source="mushroom_observer"
-    ).delete()
-
-    for row in collected:
-        db.session.add(Observation(species_id=species.id, **row))
-
-    db.session.commit()
-    return deleted, len(collected)
+        return len(collected), True
 
 
 def main():
-    raw_lumm_ids = os.environ.get("LUMM_ID", "")
-    lumm_ids = [v for raw in raw_lumm_ids.split(",") if (v := _int(raw.strip()))]
+    start_time = time.time()
 
-    _log("=== Sync Mushroom Observer: inicio ===")
+    raw_lumm_ids = os.getenv("LUMM_ID", "")
+    lumm_ids = [int(v) for raw in raw_lumm_ids.split(",") if (v := raw.strip()).isdigit()]
+
+    _log("=== Sync Mushroom Observer ===")
+    _log(f"workers={MAX_WORKERS} | limite={MAX_RUNTIME_SECONDS}s")
 
     with app.app_context():
-        query = db.session.query(Species).filter(Species.scientific_name.isnot(None))
+        query = db.session.query(
+            Species.id, Species.scientific_name, Species.mushroom_observer_name_id
+        ).filter(Species.scientific_name.isnot(None))
         if lumm_ids:
-            _log(f"Modo individual: LUMM_IDs={lumm_ids}")
             query = query.filter(Species.id.in_(lumm_ids))
+        species_rows = query.all()
 
-        species_list = query.all()
-        total_species = len(species_list)
-        _log(f"Espécies para sincronizar: {total_species}", "OK")
+    _log(f"Espécies: {len(species_rows)}")
 
-        total_deleted = 0
-        total_inserted = 0
-        errors = 0
+    total = 0
+    errors = 0
 
-        for idx, species in enumerate(species_list, start=1):
-            _log(f"[{idx}/{total_species}] {species.scientific_name}")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(_sync_species, row.id, row.scientific_name, row.mushroom_observer_name_id, start_time): row.id
+            for row in species_rows
+        }
+        for future in as_completed(futures):
+            species_id = futures[future]
             try:
-                deleted, inserted = _sync_species(species)
-                total_deleted += deleted
-                total_inserted += inserted
-                _log(f"  apagadas={deleted} inseridas={inserted}", "OK")
+                inserted, completed = future.result()
+                total += inserted
+                _log(f"[OK] species={species_id} +{inserted}")
+                if not completed:
+                    pool.shutdown(wait=False, cancel_futures=True)
+                    break
             except Exception as e:
                 errors += 1
-                _log(f"  Erro inesperado: {e}", "ERRO")
-                db.session.rollback()
+                _log(f"[ERRO] species={species_id}: {e}")
 
-            time.sleep(SLEEP_BETWEEN_SPECIES)
-
-    _log(
-        f"Apagadas: {total_deleted} | Inseridas: {total_inserted} | Erros: {errors}",
-        "RESUMO",
-    )
-    _log("Sincronização finalizada", "OK")
+    _log(f"Total: {total} | Erros: {errors} | Tempo: {int(time.time() - start_time)}s")
 
 
 if __name__ == "__main__":

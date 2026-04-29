@@ -37,6 +37,9 @@ class Species(db.Model):
     is_visible = db.Column(db.Boolean, nullable=False, server_default=db.false())
     is_outdated_mycobank = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
+    # IDs externos adicionais
+    mushroom_observer_name_id = db.Column(db.BigInteger, nullable=True, unique=True)
+
     # Sync timestamps
     last_inaturalist_sync_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
