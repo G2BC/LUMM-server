@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/G2BC/LUMM-server/compare/v1.36.0...v1.37.0) (2026-04-29)
+
+
+### Features
+
+* enhance iNaturalist synchronization with full sync option and last sync timestamp ([77e72a2](https://github.com/G2BC/LUMM-server/commit/77e72a242e959af317c6b4a4801724ee1d9f7cf4))
+
 # [1.36.0](https://github.com/G2BC/LUMM-server/compare/v1.35.0...v1.36.0) (2026-04-29)
 
 
