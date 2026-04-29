@@ -22,6 +22,7 @@ from app import create_app
 from app.extensions import db
 from app.models.observation import Observation
 from app.models.species import Species
+from app.services.cache_service import CacheService
 
 MO_API_URL = os.getenv("MUSHROOM_OBSERVER_API_URL", "https://mushroomobserver.org/api2")
 REQUEST_TIMEOUT = 30
@@ -137,6 +138,11 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
                 species.mushroom_observer_name_id = discovered_name_id
 
         db.session.commit()
+
+        prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
+        CacheService.delete(f"{prefix}:{species_id}:all")
+        CacheService.delete(f"{prefix}:{species_id}:mushroom_observer")
+
         db.session.remove()
 
         return len(collected), True

@@ -27,6 +27,7 @@ from app import create_app
 from app.extensions import db
 from app.models.observation import Observation
 from app.models.species import Species
+from app.services.cache_service import CacheService
 
 INAT_API_URL = os.getenv("INATURALIST_API_URL", "https://api.inaturalist.org/v1")
 INAT_API_KEY = os.getenv("INATURALIST_API_KEY")
@@ -160,6 +161,10 @@ def _sync_species(species_id, taxon_id, last_sync_at, force_full, start_time):
         if species:
             species.last_inaturalist_sync_at = datetime.now(timezone.utc)
             db.session.commit()
+
+        prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
+        CacheService.delete(f"{prefix}:{species_id}:all")
+        CacheService.delete(f"{prefix}:{species_id}:inaturalist")
 
         db.session.remove()
         return total, True

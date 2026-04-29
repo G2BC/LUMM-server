@@ -1,6 +1,6 @@
 import json
 
-from flask import Response, request
+from flask import Response, current_app, request
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from flask_smorest import Blueprint
@@ -38,6 +38,7 @@ from app.schemas.species_schemas import (
     SpeciesSelectSchema,
     SpeciesWithPhotosPaginationSchema,
 )
+from app.services.cache_service import CacheService
 from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_reference_service import SpeciesReferenceService
@@ -478,10 +479,20 @@ class SpeciesObservations(MethodView):
     @specie_bp.response(200, ObservationListSchema)
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     def get(self, species_id: int):
+        source = (request.args.get("source", type=str) or "").strip()
+
+        cache_prefix = current_app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
+        cache_ttl = int(current_app.config.get("OBSERVATIONS_CACHE_TTL_SECONDS", 3600))
+        cache_key = f"{cache_prefix}:{species_id}:{source or 'all'}"
+
+        cached = CacheService.get(cache_key)
+        if cached is not None:
+            return Response(
+                cached, status=200, mimetype="application/json", headers={"X-Cache": "HIT"}
+            )
+
         if not db.session.get(Species, species_id):
             return bilingual_response(404, "Espécie não encontrada.", "Species not found.")
-
-        source = request.args.get("source", type=str)
 
         query = Observation.query.filter_by(species_id=species_id)
         if source:
@@ -489,4 +500,9 @@ class SpeciesObservations(MethodView):
 
         observations = query.order_by(Observation.observed_on.desc().nullslast()).all()
 
-        return {"observations": observations, "total": len(observations)}
+        result = {"observations": observations, "total": len(observations)}
+        body = json.dumps(ObservationListSchema().dump(result), ensure_ascii=False)
+
+        CacheService.set(cache_key, body, ttl_seconds=cache_ttl)
+
+        return Response(body, status=200, mimetype="application/json", headers={"X-Cache": "MISS"})
