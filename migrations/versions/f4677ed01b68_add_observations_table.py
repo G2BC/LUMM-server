@@ -1,8 +1,8 @@
 """add observations table
 
-Revision ID: dc6fd7a2dcd7
+Revision ID: f4677ed01b68
 Revises: d1e2f3a4b5c6
-Create Date: 2026-04-28 22:15:53.191446
+Create Date: 2026-04-28 22:20:17.906925
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'dc6fd7a2dcd7'
+revision = 'f4677ed01b68'
 down_revision = 'd1e2f3a4b5c6'
 branch_labels = None
 depends_on = None
@@ -23,8 +23,9 @@ def upgrade():
     sa.Column('species_id', sa.BigInteger(), nullable=False),
     sa.Column('source', sa.Text(), nullable=False),
     sa.Column('external_id', sa.Text(), nullable=False),
-    sa.Column('latitude', sa.Numeric(precision=9, scale=6), nullable=True),
-    sa.Column('longitude', sa.Numeric(precision=9, scale=6), nullable=True),
+    sa.Column('latitude', sa.Numeric(precision=10, scale=6), nullable=True),
+    sa.Column('longitude', sa.Numeric(precision=10, scale=6), nullable=True),
+    sa.Column('location_obscured', sa.Boolean(), server_default=sa.text('false'), nullable=False),
     sa.Column('observed_on', sa.Date(), nullable=True),
     sa.Column('quality_grade', sa.Text(), nullable=True),
     sa.Column('photo_url', sa.Text(), nullable=True),

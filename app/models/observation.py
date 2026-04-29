@@ -22,8 +22,9 @@ class Observation(db.Model):
     source = db.Column(db.Text, nullable=False)  # "inaturalist" | "mushroom_observer"
     external_id = db.Column(db.Text, nullable=False)
 
-    latitude = db.Column(db.Numeric(9, 6), nullable=True)
-    longitude = db.Column(db.Numeric(9, 6), nullable=True)
+    latitude = db.Column(db.Numeric(10, 6), nullable=True)
+    longitude = db.Column(db.Numeric(10, 6), nullable=True)
+    location_obscured = db.Column(db.Boolean, nullable=False, server_default=db.false())
 
     observed_on = db.Column(db.Date, nullable=True)
     quality_grade = db.Column(db.Text, nullable=True)
