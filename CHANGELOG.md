@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/G2BC/LUMM-server/compare/v1.35.0...v1.36.0) (2026-04-29)
+
+
+### Features
+
+* update synchronization scripts for iNaturalist and Mushroom Observer ([80cf516](https://github.com/G2BC/LUMM-server/commit/80cf516a147885f05d182db2895d7ac990f94d76))
+
 # [1.35.0](https://github.com/G2BC/LUMM-server/compare/v1.34.0...v1.35.0) (2026-04-29)
 
 
