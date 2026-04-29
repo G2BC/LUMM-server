@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/G2BC/LUMM-server/compare/v1.37.0...v1.38.0) (2026-04-29)
+
+
+### Features
+
+* add mushroom_observer_name_id to Species model and migration ([3249a30](https://github.com/G2BC/LUMM-server/commit/3249a308d04f02c7b670aa3cb8ea576fc8a2781d))
+
 # [1.37.0](https://github.com/G2BC/LUMM-server/compare/v1.36.0...v1.37.0) (2026-04-29)
 
 
