@@ -1,6 +1,7 @@
 """
 Sincroniza observações do iNaturalist para espécies com inaturalist_taxon_id cadastrado.
-Usa upsert por (source, external_id). Busca apenas observações geolocalizadas.
+Estratégia replace: apaga todas as obs da espécie+source e re-insere tudo.
+Garante que mudanças de taxon_id ou remoções no iNat sejam refletidas corretamente.
 Paginação via id_above para superar o limite de 10k resultados da API.
 """
 
@@ -79,25 +80,15 @@ def _fetch_page(taxon_id: int, id_above: int | None) -> dict:
     return response.json()
 
 
-def _sync_species(species: Species) -> tuple[int, int]:
-    """Retorna (inseridas, atualizadas) para a espécie."""
-    taxon_id = species.inaturalist_taxon_id
-    inserted = 0
-    updated = 0
+def _collect_species(taxon_id: int) -> list[dict]:
+    """Coleta todas as observações do iNat para o taxon. Levanta exceção se falhar."""
+    collected = []
     id_above = None
     page_num = 0
 
     while True:
         page_num += 1
-        try:
-            data = _fetch_page(taxon_id, id_above)
-        except requests.HTTPError as e:
-            _log(f"  HTTP {e.response.status_code} ao buscar taxon_id={taxon_id}: {e}", "ERRO")
-            break
-        except requests.RequestException as e:
-            _log(f"  Erro de rede ao buscar taxon_id={taxon_id}: {e}", "ERRO")
-            break
-
+        data = _fetch_page(taxon_id, id_above)
         results = data.get("results", [])
         if not results:
             break
@@ -105,18 +96,14 @@ def _sync_species(species: Species) -> tuple[int, int]:
         for obs in results:
             obs_id = str(obs.get("id"))
             lat, lng = _parse_location(obs.get("location"))
-
             if lat is None or lng is None:
                 continue
 
             photos = obs.get("photos") or []
             raw_photo_url = photos[0].get("url") if photos else None
-            photo_url = (
-                raw_photo_url.replace("/square.", "/medium.") if raw_photo_url else None
-            )
+            photo_url = raw_photo_url.replace("/square.", "/medium.") if raw_photo_url else None
 
-            values = {
-                "species_id": species.id,
+            collected.append({
                 "source": "inaturalist",
                 "external_id": obs_id,
                 "latitude": lat,
@@ -126,38 +113,34 @@ def _sync_species(species: Species) -> tuple[int, int]:
                 "quality_grade": obs.get("quality_grade") or None,
                 "photo_url": photo_url,
                 "url": obs.get("uri") or None,
-            }
+            })
 
-            existing = Observation.query.filter_by(
-                source="inaturalist", external_id=obs_id
-            ).one_or_none()
+        _log(f"  página {page_num}: {len(results)} obs coletadas (total={len(collected)})")
 
-            if existing:
-                for k, v in values.items():
-                    setattr(existing, k, v)
-                updated += 1
-            else:
-                db.session.add(Observation(**values))
-                inserted += 1
-
-        db.session.commit()
-
-        last_id = results[-1].get("id")
-        total_so_far = page_num * PER_PAGE
-
-        _log(
-            f"  página {page_num}: {len(results)} obs | "
-            f"inseridas={inserted} atualizadas={updated} | último id={last_id}"
-        )
-
-        # iNat retorna no máximo PER_PAGE por página; se veio menos, acabou
         if len(results) < PER_PAGE:
             break
 
-        id_above = last_id
+        id_above = results[-1].get("id")
         time.sleep(SLEEP_BETWEEN_PAGES)
 
-    return inserted, updated
+    return collected
+
+
+def _sync_species(species: Species) -> tuple[int, int]:
+    """Retorna (apagadas, inseridas) para a espécie."""
+    taxon_id = species.inaturalist_taxon_id
+
+    collected = _collect_species(taxon_id)
+
+    deleted = Observation.query.filter_by(
+        species_id=species.id, source="inaturalist"
+    ).delete()
+
+    for row in collected:
+        db.session.add(Observation(species_id=species.id, **row))
+
+    db.session.commit()
+    return deleted, len(collected)
 
 
 def main():
@@ -182,8 +165,8 @@ def main():
         total_species = len(species_list)
         _log(f"Espécies com inaturalist_taxon_id: {total_species}", "OK")
 
+        total_deleted = 0
         total_inserted = 0
-        total_updated = 0
         errors = 0
 
         for idx, species in enumerate(species_list, start=1):
@@ -192,9 +175,10 @@ def main():
                 f"(taxon_id={species.inaturalist_taxon_id})"
             )
             try:
-                ins, upd = _sync_species(species)
-                total_inserted += ins
-                total_updated += upd
+                deleted, inserted = _sync_species(species)
+                total_deleted += deleted
+                total_inserted += inserted
+                _log(f"  apagadas={deleted} inseridas={inserted}", "OK")
             except Exception as e:
                 errors += 1
                 _log(f"  Erro inesperado: {e}", "ERRO")
@@ -203,7 +187,7 @@ def main():
             time.sleep(SLEEP_BETWEEN_SPECIES)
 
     _log(
-        f"Inseridas: {total_inserted} | Atualizadas: {total_updated} | Erros: {errors}",
+        f"Apagadas: {total_deleted} | Inseridas: {total_inserted} | Erros: {errors}",
         "RESUMO",
     )
     _log("Sincronização finalizada", "OK")

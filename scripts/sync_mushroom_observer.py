@@ -1,7 +1,7 @@
 """
 Sincroniza observações do Mushroom Observer para espécies com scientific_name cadastrado.
-Usa upsert por (source, external_id). Coordenadas precisas quando disponíveis,
-caso contrário calcula o centro do bounding box da localidade.
+Estratégia replace: apaga todas as obs da espécie+source e re-insere tudo.
+Coordenadas precisas quando disponíveis, senão centro do bounding box da localidade.
 """
 
 import os
@@ -93,27 +93,17 @@ def _fetch_page(scientific_name: str, page: int) -> dict:
     return response.json()
 
 
-def _sync_species(species: Species) -> tuple[int, int]:
-    """Retorna (inseridas, atualizadas) para a espécie."""
-    name = species.scientific_name
-    inserted = 0
-    updated = 0
+def _collect_species(scientific_name: str) -> list[dict]:
+    """Coleta todas as observações do MO para a espécie. Levanta exceção se falhar."""
+    collected = []
     page = 1
 
     while True:
-        try:
-            data = _fetch_page(name, page)
-        except requests.HTTPError as e:
-            _log(f"  HTTP {e.response.status_code} na página {page}: {e}", "ERRO")
-            break
-        except requests.RequestException as e:
-            _log(f"  Erro de rede na página {page}: {e}", "ERRO")
-            break
+        data = _fetch_page(scientific_name, page)
 
         errors = data.get("errors")
         if errors:
-            _log(f"  Erro da API MO: {errors}", "ERRO")
-            break
+            raise RuntimeError(f"Erro da API MO: {errors}")
 
         results = data.get("results") or []
         if not results:
@@ -122,45 +112,24 @@ def _sync_species(species: Species) -> tuple[int, int]:
         for obs in results:
             obs_id = str(obs.get("id"))
             lat, lng = _parse_coords(obs)
-
             if lat is None or lng is None:
                 continue
 
-            location_obscured = bool(obs.get("gps_hidden", False))
             has_precise_coords = obs.get("latitude") is not None
-
-            values = {
-                "species_id": species.id,
+            collected.append({
                 "source": "mushroom_observer",
                 "external_id": obs_id,
                 "latitude": lat,
                 "longitude": lng,
-                "location_obscured": location_obscured or not has_precise_coords,
+                "location_obscured": bool(obs.get("gps_hidden", False)) or not has_precise_coords,
                 "observed_on": obs.get("date") or None,
-                "quality_grade": None,  # MO usa confidence (float), sem equivalente direto
+                "quality_grade": None,
                 "photo_url": _photo_url(obs),
                 "url": _obs_url(obs_id),
-            }
-
-            existing = Observation.query.filter_by(
-                source="mushroom_observer", external_id=obs_id
-            ).one_or_none()
-
-            if existing:
-                for k, v in values.items():
-                    setattr(existing, k, v)
-                updated += 1
-            else:
-                db.session.add(Observation(**values))
-                inserted += 1
-
-        db.session.commit()
+            })
 
         total_pages = data.get("number_of_pages", 1)
-        _log(
-            f"  página {page}/{total_pages}: {len(results)} obs | "
-            f"inseridas={inserted} atualizadas={updated}"
-        )
+        _log(f"  página {page}/{total_pages}: {len(results)} obs coletadas (total={len(collected)})")
 
         if page >= total_pages:
             break
@@ -168,7 +137,22 @@ def _sync_species(species: Species) -> tuple[int, int]:
         page += 1
         time.sleep(SLEEP_BETWEEN_PAGES)
 
-    return inserted, updated
+    return collected
+
+
+def _sync_species(species: Species) -> tuple[int, int]:
+    """Retorna (apagadas, inseridas) para a espécie."""
+    collected = _collect_species(species.scientific_name)
+
+    deleted = Observation.query.filter_by(
+        species_id=species.id, source="mushroom_observer"
+    ).delete()
+
+    for row in collected:
+        db.session.add(Observation(species_id=species.id, **row))
+
+    db.session.commit()
+    return deleted, len(collected)
 
 
 def main():
@@ -187,16 +171,17 @@ def main():
         total_species = len(species_list)
         _log(f"Espécies para sincronizar: {total_species}", "OK")
 
+        total_deleted = 0
         total_inserted = 0
-        total_updated = 0
         errors = 0
 
         for idx, species in enumerate(species_list, start=1):
             _log(f"[{idx}/{total_species}] {species.scientific_name}")
             try:
-                ins, upd = _sync_species(species)
-                total_inserted += ins
-                total_updated += upd
+                deleted, inserted = _sync_species(species)
+                total_deleted += deleted
+                total_inserted += inserted
+                _log(f"  apagadas={deleted} inseridas={inserted}", "OK")
             except Exception as e:
                 errors += 1
                 _log(f"  Erro inesperado: {e}", "ERRO")
@@ -205,7 +190,7 @@ def main():
             time.sleep(SLEEP_BETWEEN_SPECIES)
 
     _log(
-        f"Inseridas: {total_inserted} | Atualizadas: {total_updated} | Erros: {errors}",
+        f"Apagadas: {total_deleted} | Inseridas: {total_inserted} | Erros: {errors}",
         "RESUMO",
     )
     _log("Sincronização finalizada", "OK")
