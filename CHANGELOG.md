@@ -1,3 +1,13 @@
+# [1.35.0](https://github.com/G2BC/LUMM-server/compare/v1.34.0...v1.35.0) (2026-04-29)
+
+
+### Features
+
+* add endpoint for retrieving observations by species ([f76360e](https://github.com/G2BC/LUMM-server/commit/f76360e2256756355deaab28bf5f83d7dd51421c))
+* add Observation model and related database migration ([e129f61](https://github.com/G2BC/LUMM-server/commit/e129f6146c2bbec5a3be59df5396b0c274bead8f))
+* add workflows for syncing iNaturalist and Mushroom Observer data ([b103fca](https://github.com/G2BC/LUMM-server/commit/b103fcadaf125af9269e74ed35be0403e283cd18))
+* enhance Observation model and add migration for observations table ([524cade](https://github.com/G2BC/LUMM-server/commit/524cade7c73b7ac4703e6bd7249594e001b181e2))
+
 # [1.34.0](https://github.com/G2BC/LUMM-server/compare/v1.33.0...v1.34.0) (2026-04-28)
 
 
