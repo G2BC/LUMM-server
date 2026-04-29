@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/G2BC/LUMM-server/compare/v1.38.0...v1.39.0) (2026-04-29)
+
+
+### Features
+
+* implement caching for species observations and enhance synchronization scripts ([a72ab7b](https://github.com/G2BC/LUMM-server/commit/a72ab7b174826a743d3710f83782f8e641d286c4))
+
 # [1.38.0](https://github.com/G2BC/LUMM-server/compare/v1.37.0...v1.38.0) (2026-04-29)
 
 
