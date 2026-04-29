@@ -29,6 +29,8 @@ REQUEST_TIMEOUT = 30
 SLEEP_BETWEEN_PAGES = float("6")
 MAX_WORKERS = 2
 MAX_RUNTIME_SECONDS = int("3540")
+MO_MAX_RETRIES = 3
+HEADERS = {"User-Agent": "LUMM-server/1.0 (lumm.uneb.br; contact: lumm.g2bc@gmail.com)"}
 
 app = create_app()
 
@@ -72,9 +74,18 @@ def _fetch_page(name_id, scientific_name, page):
         params = {"format": "json", "detail": "high", "name_id": name_id, "page": page}
     else:
         params = {"format": "json", "detail": "high", "name": scientific_name, "page": page}
-    r = requests.get(f"{MO_API_URL}/observations", params=params, timeout=REQUEST_TIMEOUT)
-    r.raise_for_status()
-    return r.json()
+
+    for attempt in range(MO_MAX_RETRIES):
+        r = requests.get(f"{MO_API_URL}/observations", params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        if r.status_code == 429:
+            wait = 2 ** attempt * 10
+            _log(f"  429 recebido — aguardando {wait}s (tentativa {attempt + 1}/{MO_MAX_RETRIES})")
+            time.sleep(wait)
+            continue
+        r.raise_for_status()
+        return r.json()
+
+    raise RuntimeError("Máximo de tentativas atingido (429)")
 
 
 def _sync_species(species_id, scientific_name, mo_name_id, start_time):
