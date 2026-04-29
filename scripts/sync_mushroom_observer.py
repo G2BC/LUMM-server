@@ -26,8 +26,8 @@ from app.services.cache_service import CacheService
 
 MO_API_URL = os.getenv("MUSHROOM_OBSERVER_API_URL", "https://mushroomobserver.org/api2")
 REQUEST_TIMEOUT = 30
-SLEEP_BETWEEN_PAGES = float("1")
-MAX_WORKERS = 4
+SLEEP_BETWEEN_PAGES = float("6")
+MAX_WORKERS = 2
 MAX_RUNTIME_SECONDS = int("3540")
 
 app = create_app()
