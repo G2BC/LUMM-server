@@ -3,6 +3,7 @@ from .distribution import Distribution
 from .growth_form import GrowthForm
 from .habitat import Habitat
 from .nutrition_mode import NutritionMode
+from .observation import Observation
 from .reference import Reference
 from .species import Species
 from .species_change_request import SpeciesChangeRequest, SpeciesPhotoRequest
@@ -43,4 +44,5 @@ __all__ = [
     "SpeciesDistribution",
     "Reference",
     "SpeciesReference",
+    "Observation",
 ]

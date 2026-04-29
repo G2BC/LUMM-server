@@ -88,6 +88,12 @@ class Species(db.Model):
         secondary="species_references",
         back_populates="species",
     )
+    observations = db.relationship(
+        "Observation",
+        back_populates="species",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<Specie id={self.id} scientific_name={self.scientific_name!r}>"
