@@ -1,7 +1,9 @@
 """
 Sincroniza observações do Mushroom Observer para espécies com scientific_name cadastrado.
 
-- Estratégia replace: apaga todas as obs da espécie+source e re-insere tudo
+- Full sync por padrão
+- UPSERT via INSERT ... ON CONFLICT DO UPDATE
+- Reconcilia observações removendo, no final, o que não veio mais da API
 - ThreadPoolExecutor com MAX_WORKERS threads
 - Kill switch por MAX_RUNTIME_SECONDS
 """
@@ -13,23 +15,26 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.sql import func
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app import create_app
-from app.extensions import db
-from app.models.observation import Observation
-from app.models.species import Species
-from app.services.cache_service import CacheService
+from app import create_app  # noqa: E402
+from app.extensions import db  # noqa: E402
+from app.models.observation import Observation  # noqa: E402
+from app.models.species import Species  # noqa: E402
+from app.services.cache_service import CacheService  # noqa: E402
 
 MO_API_URL = os.getenv("MUSHROOM_OBSERVER_API_URL", "https://mushroomobserver.org/api2")
 REQUEST_TIMEOUT = 30
-SLEEP_BETWEEN_PAGES = float("6")
-MAX_WORKERS = 2
+SLEEP_AFTER_REQUEST = float(os.getenv("MO_SLEEP_AFTER_REQUEST", "12"))
+MAX_WORKERS = int(os.getenv("MO_MAX_WORKERS", "1"))
 MAX_RUNTIME_SECONDS = int("3540")
-MO_MAX_RETRIES = 3
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+BLOCK_STATUS_CODES = {403}
 HEADERS = {"User-Agent": "LUMM-server/1.0 (lumm.uneb.br; contact: lumm.g2bc@gmail.com)"}
 
 app = create_app()
@@ -75,29 +80,84 @@ def _fetch_page(name_id, scientific_name, page):
     else:
         params = {"format": "json", "detail": "high", "name": scientific_name, "page": page}
 
-    for attempt in range(MO_MAX_RETRIES):
-        r = requests.get(f"{MO_API_URL}/observations", params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-        if r.status_code == 429:
-            wait = 2 ** attempt * 10
-            _log(f"  429 recebido — aguardando {wait}s (tentativa {attempt + 1}/{MO_MAX_RETRIES})")
-            time.sleep(wait)
-            continue
+    try:
+        r = requests.get(
+            f"{MO_API_URL}/observations",
+            params=params,
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+        if r.status_code in BLOCK_STATUS_CODES:
+            raise RuntimeError(f"Possível bloqueio do Mushroom Observer: HTTP {r.status_code}")
+        if r.status_code in RETRYABLE_STATUS_CODES:
+            raise RuntimeError(
+                f"Mushroom Observer indisponível ou limitando requests: HTTP {r.status_code}"
+            )
         r.raise_for_status()
         return r.json()
+    finally:
+        time.sleep(SLEEP_AFTER_REQUEST)
 
-    raise RuntimeError("Máximo de tentativas atingido (429)")
+
+def _upsert(rows):
+    if not rows:
+        return 0
+    stmt = pg_insert(Observation).values(rows)
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_observation_source_external_id",
+        set_={
+            "species_id": stmt.excluded.species_id,
+            "latitude": stmt.excluded.latitude,
+            "longitude": stmt.excluded.longitude,
+            "location_obscured": stmt.excluded.location_obscured,
+            "observed_on": stmt.excluded.observed_on,
+            "quality_grade": stmt.excluded.quality_grade,
+            "photo_url": stmt.excluded.photo_url,
+            "url": stmt.excluded.url,
+            "updated_at": func.now(),
+        },
+    )
+    db.session.execute(stmt)
+    db.session.commit()
+    return len(rows)
+
+
+def _delete_stale_observations(species_id, seen_external_ids):
+    current_ids = {
+        external_id
+        for (external_id,) in db.session.query(Observation.external_id).filter_by(
+            species_id=species_id,
+            source="mushroom_observer",
+        )
+    }
+    stale_ids = current_ids - seen_external_ids
+    if not stale_ids:
+        return 0
+
+    deleted = 0
+    stale_ids = list(stale_ids)
+    for i in range(0, len(stale_ids), 1000):
+        chunk = stale_ids[i:i + 1000]
+        deleted += db.session.query(Observation).filter(
+            Observation.species_id == species_id,
+            Observation.source == "mushroom_observer",
+            Observation.external_id.in_(chunk),
+        ).delete(synchronize_session=False)
+    db.session.commit()
+    return deleted
 
 
 def _sync_species(species_id, scientific_name, mo_name_id, start_time):
     with app.app_context():
-        collected = []
+        seen_external_ids = set()
         discovered_name_id = None
+        total = 0
         page = 1
 
         while True:
             if time.time() - start_time > MAX_RUNTIME_SECONDS:
                 _log(f"  [{species_id}] Kill switch — abortando")
-                return 0, False
+                return total, 0, False
 
             data = _fetch_page(mo_name_id, scientific_name, page)
             if data.get("errors"):
@@ -107,6 +167,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
             if not results:
                 break
 
+            rows_by_external_id = {}
             for obs in results:
                 # salva o name_id do primeiro resultado se ainda não temos
                 if discovered_name_id is None and not mo_name_id:
@@ -117,7 +178,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
                     continue
                 has_precise = obs.get("latitude") is not None
                 obs_id = str(obs["id"])
-                collected.append({
+                rows_by_external_id[obs_id] = {
                     "species_id": species_id,
                     "source": "mushroom_observer",
                     "external_id": obs_id,
@@ -128,19 +189,21 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
                     "quality_grade": None,
                     "photo_url": _photo_url(obs),
                     "url": f"https://mushroomobserver.org/observations/{obs_id}",
-                })
+                }
+                seen_external_ids.add(obs_id)
+
+            rows = list(rows_by_external_id.values())
+            total += _upsert(rows)
 
             total_pages = data.get("number_of_pages", 1)
-            _log(f"  [{species_id}] página {page}/{total_pages}: {len(results)} obs (via {'id' if mo_name_id else 'name'})")
+            _log(
+                f"  [{species_id}] página {page}/{total_pages}: {len(results)} obs, "
+                f"{len(rows)} válidas (via {'id' if mo_name_id else 'name'})"
+            )
 
             if page >= total_pages:
                 break
             page += 1
-            time.sleep(SLEEP_BETWEEN_PAGES)
-
-        db.session.query(Observation).filter_by(species_id=species_id, source="mushroom_observer").delete()
-        for row in collected:
-            db.session.add(Observation(**row))
 
         # persiste o name_id descoberto para os próximos syncs
         if discovered_name_id:
@@ -149,6 +212,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
                 species.mushroom_observer_name_id = discovered_name_id
 
         db.session.commit()
+        deleted = _delete_stale_observations(species_id, seen_external_ids)
 
         prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
         CacheService.delete(f"{prefix}:{species_id}:all")
@@ -156,7 +220,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
 
         db.session.remove()
 
-        return len(collected), True
+        return total, deleted, True
 
 
 def main():
@@ -166,7 +230,10 @@ def main():
     lumm_ids = [int(v) for raw in raw_lumm_ids.split(",") if (v := raw.strip()).isdigit()]
 
     _log("=== Sync Mushroom Observer ===")
-    _log(f"workers={MAX_WORKERS} | limite={MAX_RUNTIME_SECONDS}s")
+    _log(
+        f"workers={MAX_WORKERS} | sleep_request={SLEEP_AFTER_REQUEST}s | "
+        f"limite={MAX_RUNTIME_SECONDS}s"
+    )
 
     with app.app_context():
         query = db.session.query(
@@ -179,27 +246,49 @@ def main():
     _log(f"Espécies: {len(species_rows)}")
 
     total = 0
+    total_deleted = 0
     errors = 0
+    blocked = False
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         futures = {
-            pool.submit(_sync_species, row.id, row.scientific_name, row.mushroom_observer_name_id, start_time): row.id
+            pool.submit(
+                _sync_species,
+                row.id,
+                row.scientific_name,
+                row.mushroom_observer_name_id,
+                start_time,
+            ): row.id
             for row in species_rows
         }
         for future in as_completed(futures):
             species_id = futures[future]
             try:
-                inserted, completed = future.result()
+                inserted, deleted, completed = future.result()
                 total += inserted
-                _log(f"[OK] species={species_id} +{inserted}")
+                total_deleted += deleted
+                _log(f"[OK] species={species_id} upsert={inserted} removidos={deleted}")
                 if not completed:
                     pool.shutdown(wait=False, cancel_futures=True)
                     break
             except Exception as e:
                 errors += 1
                 _log(f"[ERRO] species={species_id}: {e}")
+                if (
+                    "Possível bloqueio" in str(e)
+                    or "limitando requests" in str(e)
+                    or "indisponível" in str(e)
+                ):
+                    blocked = True
+                    pool.shutdown(wait=False, cancel_futures=True)
+                    break
 
-    _log(f"Total: {total} | Erros: {errors} | Tempo: {int(time.time() - start_time)}s")
+    _log(
+        f"Total upsert: {total} | Removidos: {total_deleted} | "
+        f"Erros: {errors} | Tempo: {int(time.time() - start_time)}s"
+    )
+    if blocked:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
