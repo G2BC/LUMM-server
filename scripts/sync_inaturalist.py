@@ -1,9 +1,9 @@
 """
 Sincroniza observações do iNaturalist para espécies com inaturalist_taxon_id cadastrado.
 
-- Incremental por padrão (updated_since = last_inaturalist_sync_at)
-- Full sync quando: primeiro sync, FORCE_FULL_SYNC=true ou LUMM_ID especificado
+- Full sync por padrão
 - UPSERT via INSERT ... ON CONFLICT DO UPDATE
+- Reconcilia observações removendo, no final, o que não veio mais da API
 - ThreadPoolExecutor com MAX_WORKERS threads
 - Kill switch por MAX_RUNTIME_SECONDS
 """
@@ -11,8 +11,8 @@ Sincroniza observações do iNaturalist para espécies com inaturalist_taxon_id 
 import os
 import sys
 import time
-from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -23,19 +23,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app import create_app
-from app.extensions import db
-from app.models.observation import Observation
-from app.models.species import Species
-from app.services.cache_service import CacheService
+from app import create_app  # noqa: E402
+from app.extensions import db  # noqa: E402
+from app.models.observation import Observation  # noqa: E402
+from app.models.species import Species  # noqa: E402
+from app.services.cache_service import CacheService  # noqa: E402
 
 INAT_API_URL = os.getenv("INATURALIST_API_URL", "https://api.inaturalist.org/v1")
 INAT_API_KEY = os.getenv("INATURALIST_API_KEY")
 PER_PAGE = 200
 REQUEST_TIMEOUT = 30
-MAX_WORKERS = int(4)
+MAX_WORKERS = 4
 MAX_RUNTIME_SECONDS = int("3540")
-FORCE_FULL_SYNC = os.getenv("FORCE_FULL_SYNC", "").lower() in ("1", "true", "yes")
 
 app = create_app()
 
@@ -54,7 +53,7 @@ def _parse_location(location):
         return None, None
 
 
-def _fetch_page(taxon_id, updated_since, id_above):
+def _fetch_page(taxon_id, id_above):
     params = {
         "taxon_id": taxon_id,
         "has[]": "geo",
@@ -62,8 +61,6 @@ def _fetch_page(taxon_id, updated_since, id_above):
         "order": "asc",
         "order_by": "id",
     }
-    if updated_since:
-        params["updated_since"] = updated_since.isoformat()
     if id_above:
         params["id_above"] = id_above
     if INAT_API_KEY:
@@ -72,7 +69,12 @@ def _fetch_page(taxon_id, updated_since, id_above):
         headers = {}
 
     for attempt in range(3):
-        r = requests.get(f"{INAT_API_URL}/observations", params=params, headers=headers, timeout=REQUEST_TIMEOUT)
+        r = requests.get(
+            f"{INAT_API_URL}/observations",
+            params=params,
+            headers=headers,
+            timeout=REQUEST_TIMEOUT,
+        )
         if r.status_code == 429:
             time.sleep(2 ** attempt * 5)
             continue
@@ -82,13 +84,14 @@ def _fetch_page(taxon_id, updated_since, id_above):
     raise RuntimeError("Máximo de tentativas atingido (429)")
 
 
-def _upsert(species_id, rows):
+def _upsert(rows):
     if not rows:
         return 0
     stmt = pg_insert(Observation).values(rows)
     stmt = stmt.on_conflict_do_update(
         constraint="uq_observation_source_external_id",
         set_={
+            "species_id": stmt.excluded.species_id,
             "latitude": stmt.excluded.latitude,
             "longitude": stmt.excluded.longitude,
             "location_obscured": stmt.excluded.location_obscured,
@@ -104,17 +107,36 @@ def _upsert(species_id, rows):
     return len(rows)
 
 
-def _sync_species(species_id, taxon_id, last_sync_at, force_full, start_time):
+def _delete_stale_observations(species_id, seen_external_ids):
+    current_ids = {
+        external_id
+        for (external_id,) in db.session.query(Observation.external_id).filter_by(
+            species_id=species_id,
+            source="inaturalist",
+        )
+    }
+    stale_ids = current_ids - seen_external_ids
+    if not stale_ids:
+        return 0
+
+    deleted = 0
+    stale_ids = list(stale_ids)
+    for i in range(0, len(stale_ids), 1000):
+        chunk = stale_ids[i:i + 1000]
+        deleted += db.session.query(Observation).filter(
+            Observation.species_id == species_id,
+            Observation.source == "inaturalist",
+            Observation.external_id.in_(chunk),
+        ).delete(synchronize_session=False)
+    db.session.commit()
+    return deleted
+
+
+def _sync_species(species_id, taxon_id, start_time):
     with app.app_context():
-        is_full = force_full or last_sync_at is None
-        updated_since = None if is_full else last_sync_at
+        _log(f"  [{species_id}] modo=full taxon={taxon_id}")
 
-        _log(f"  [{species_id}] modo={'full' if is_full else 'incremental'} taxon={taxon_id}")
-
-        if is_full:
-            db.session.query(Observation).filter_by(species_id=species_id, source="inaturalist").delete()
-            db.session.commit()
-
+        seen_external_ids = set()
         id_above = None
         total = 0
         page = 0
@@ -122,10 +144,10 @@ def _sync_species(species_id, taxon_id, last_sync_at, force_full, start_time):
         while True:
             if time.time() - start_time > MAX_RUNTIME_SECONDS:
                 _log("  Kill switch atingido — abortando espécie")
-                return total, False
+                return total, 0, False
 
             page += 1
-            data = _fetch_page(taxon_id, updated_since, id_above)
+            data = _fetch_page(taxon_id, id_above)
             results = data.get("results", [])
             if not results:
                 break
@@ -149,17 +171,20 @@ def _sync_species(species_id, taxon_id, last_sync_at, force_full, start_time):
                     "photo_url": raw_url.replace("/square.", "/medium.") if raw_url else None,
                     "url": obs.get("uri"),
                 })
+                seen_external_ids.add(str(obs["id"]))
 
-            total += _upsert(species_id, rows)
+            total += _upsert(rows)
             _log(f"  [{species_id}] página {page}: +{len(rows)}")
 
             if len(results) < PER_PAGE:
                 break
             id_above = results[-1]["id"]
 
+        deleted = _delete_stale_observations(species_id, seen_external_ids)
+
         species = db.session.get(Species, species_id)
         if species:
-            species.last_inaturalist_sync_at = datetime.now(timezone.utc)
+            species.last_inaturalist_sync_at = datetime.now(UTC)
             db.session.commit()
 
         prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
@@ -167,7 +192,7 @@ def _sync_species(species_id, taxon_id, last_sync_at, force_full, start_time):
         CacheService.delete(f"{prefix}:{species_id}:inaturalist")
 
         db.session.remove()
-        return total, True
+        return total, deleted, True
 
 
 def main():
@@ -175,14 +200,13 @@ def main():
 
     raw_lumm_ids = os.getenv("LUMM_ID", "")
     lumm_ids = [int(v) for raw in raw_lumm_ids.split(",") if (v := raw.strip()).isdigit()]
-    force_full = FORCE_FULL_SYNC or bool(lumm_ids)
 
     _log("=== Sync iNaturalist ===")
-    _log(f"modo={'FULL' if force_full else 'incremental'} | workers={MAX_WORKERS} | limite={MAX_RUNTIME_SECONDS}s")
+    _log(f"modo=FULL | workers={MAX_WORKERS} | limite={MAX_RUNTIME_SECONDS}s")
 
     with app.app_context():
         query = db.session.query(
-            Species.id, Species.inaturalist_taxon_id, Species.last_inaturalist_sync_at
+            Species.id, Species.inaturalist_taxon_id
         ).filter(Species.inaturalist_taxon_id.isnot(None))
         if lumm_ids:
             query = query.filter(Species.id.in_(lumm_ids))
@@ -191,19 +215,21 @@ def main():
     _log(f"Espécies: {len(species_rows)}")
 
     total = 0
+    total_deleted = 0
     errors = 0
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         futures = {
-            pool.submit(_sync_species, row.id, row.inaturalist_taxon_id, row.last_inaturalist_sync_at, force_full, start_time): row.id
+            pool.submit(_sync_species, row.id, row.inaturalist_taxon_id, start_time): row.id
             for row in species_rows
         }
         for future in as_completed(futures):
             species_id = futures[future]
             try:
-                inserted, completed = future.result()
+                inserted, deleted, completed = future.result()
                 total += inserted
-                _log(f"[OK] species={species_id} +{inserted}")
+                total_deleted += deleted
+                _log(f"[OK] species={species_id} upsert={inserted} removidos={deleted}")
                 if not completed:
                     pool.shutdown(wait=False, cancel_futures=True)
                     break
@@ -211,7 +237,10 @@ def main():
                 errors += 1
                 _log(f"[ERRO] species={species_id}: {e}")
 
-    _log(f"Total: {total} | Erros: {errors} | Tempo: {int(time.time() - start_time)}s")
+    _log(
+        f"Total upsert: {total} | Removidos: {total_deleted} | "
+        f"Erros: {errors} | Tempo: {int(time.time() - start_time)}s"
+    )
 
 
 if __name__ == "__main__":
