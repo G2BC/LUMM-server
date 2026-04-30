@@ -11,7 +11,7 @@ from app.models.species_photo import SpeciesPhoto
 from app.models.species_similarity import SpeciesSimilarity
 from app.models.substrate import Substrate
 from app.utils.object_storage import normalize_object_url
-from sqlalchemy import case, exists
+from sqlalchemy import case, exists, or_
 from sqlalchemy.orm import selectinload
 
 
@@ -321,3 +321,12 @@ class SpeciesRepository:
         """delete + commit. IntegrityError propagates to the caller."""
         db.session.delete(species)
         db.session.commit()
+
+    @staticmethod
+    def delete_similarities_by_species_id(species_id: int) -> None:
+        SpeciesSimilarity.query.filter(
+            or_(
+                SpeciesSimilarity.species_id == species_id,
+                SpeciesSimilarity.similar_species_id == species_id,
+            )
+        ).delete(synchronize_session=False)

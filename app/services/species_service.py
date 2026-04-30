@@ -238,12 +238,7 @@ class SpeciesService:
                 review_note=cls.DELETE_AUTO_REVIEW_NOTE,
             )
             SpeciesChangeRequestRepository.delete_all_by_species_id(species_id)
-            (
-                SpeciesSimilarity.query.filter(
-                    (SpeciesSimilarity.species_id == species_id)
-                    | (SpeciesSimilarity.similar_species_id == species_id)
-                ).delete(synchronize_session=False)
-            )
+            SpeciesRepository.delete_similarities_by_species_id(species_id)
             SpeciesRepository.delete(species)
         except IntegrityError as exc:
             SpeciesRepository.rollback()
