@@ -1,3 +1,12 @@
+# [1.40.0](https://github.com/G2BC/LUMM-server/compare/v1.39.0...v1.40.0) (2026-04-30)
+
+
+### Features
+
+* add method to delete similarities by species ID in SpeciesRepository ([9f9424d](https://github.com/G2BC/LUMM-server/commit/9f9424d19f6ec445578ebc1fa3d1d1348fb9ed4c))
+* implement NCBI data retrieval service ([57085e1](https://github.com/G2BC/LUMM-server/commit/57085e121a5e1e9b835e279a4432d9950e553ec5))
+* integrate token creation into user registration process ([6f5edba](https://github.com/G2BC/LUMM-server/commit/6f5edbad3e1031bd61fb30436f21ca164e03a91d))
+
 # [1.39.0](https://github.com/G2BC/LUMM-server/compare/v1.38.0...v1.39.0) (2026-04-29)
 
 
