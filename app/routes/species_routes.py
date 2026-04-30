@@ -39,6 +39,7 @@ from app.schemas.species_schemas import (
     SpeciesWithPhotosPaginationSchema,
 )
 from app.services.cache_service import CacheService
+from app.services.ncbi_service import NCBIService
 from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_reference_service import SpeciesReferenceService
@@ -461,7 +462,7 @@ class GetNCBISpeciesData(MethodView):
     @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
     def get(self, species: str):
         try:
-            data, is_cached = SpeciesService.get_ncbi_data(species, include_cache_meta=True)
+            data, is_cached = NCBIService.get_data(species, include_cache_meta=True)
             return Response(
                 json.dumps(data, ensure_ascii=False, sort_keys=False),
                 status=200,
