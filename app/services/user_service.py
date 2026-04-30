@@ -5,7 +5,6 @@ from app.exceptions import AppError
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.utils.pagination import build_page_response, resolve_page_params
-from flask_jwt_extended import create_access_token, create_refresh_token
 
 
 class UserService:
@@ -67,30 +66,13 @@ class UserService:
         if UserRepository.get_by_email(email):
             raise AppError(pt="Email já cadastrado", en="Email already registered")
 
-        user = UserRepository.create_user(
+        return UserRepository.create_user(
             name=name,
             institution=normalized_institution,
             email=email,
             password=data["password"],
             is_active=True,
         )
-
-        additional_claims = {
-            "is_admin": user.is_admin,
-            "role": user.role,
-            "is_curator": user.is_curator,
-            "email": user.email,
-            "must_change_password": user.must_change_password,
-        }
-        return {
-            "access_token": create_access_token(
-                identity=str(user.id), additional_claims=additional_claims
-            ),
-            "refresh_token": create_refresh_token(
-                identity=str(user.id), additional_claims=additional_claims
-            ),
-            "must_change_password": user.must_change_password,
-        }
 
     @staticmethod
     def get_user_by_id(id: str):
@@ -194,8 +176,10 @@ class UserService:
         if "new_password" in data and data["new_password"]:
             current_pw = data.get("current_password")
             if not current_pw or not user.check_password(current_pw):
-                raise AppError(pt="Senha atual incorreta", en="Incorrect current password", status=401)
-            
+                raise AppError(
+                    pt="Senha atual incorreta", en="Incorrect current password", status=401
+                )
+
             UserRepository.update_password(user, data["new_password"], False)
 
         return UserRepository.update_user(user)

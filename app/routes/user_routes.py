@@ -14,6 +14,7 @@ from app.schemas.user_schemas import (
     UserSchema,
     UserUpdateSchema,
 )
+from app.services.auth import AuthService
 from app.services.user_service import UserService
 from app.utils.bilingual import bilingual_response
 from app.utils.permissions import require_admin
@@ -49,7 +50,8 @@ class UsersList(MethodView):
     @user_bp.alt_response(400, description="Erro de validação/regra de negócio")
     def post(self, payload):
         try:
-            return UserService.create_user(payload)
+            user = UserService.create_user(payload)
+            return AuthService.create_tokens_for(user)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
 
@@ -201,13 +203,14 @@ class UpdateUserRole(MethodView):
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
 
+
 @user_bp.route("/me")
 class UpdateUserProfile(MethodView):
     @user_bp.arguments(UserUpdateSchema)
     @user_bp.response(200, UserSchema)
     def patch(self, data):
         try:
-            user_id = get_jwt_identity()           
+            user_id = get_jwt_identity()
             return UserService.update_profile(user_id, data)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)

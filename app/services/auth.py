@@ -15,6 +15,20 @@ class AuthService:
         }
 
     @classmethod
+    def create_tokens_for(cls, user):
+        identity = str(user.id)
+        additional_claims = cls._build_claims(user)
+        return {
+            "access_token": create_access_token(
+                identity=identity, additional_claims=additional_claims
+            ),
+            "refresh_token": create_refresh_token(
+                identity=identity, additional_claims=additional_claims
+            ),
+            "must_change_password": user.must_change_password,
+        }
+
+    @classmethod
     def login(cls, email: str, password: str):
         user = UserRepository.get_by_email(email)
 
