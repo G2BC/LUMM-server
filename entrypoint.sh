@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ "$ENV" = "development" ]; then
+if [ "$APP_ENV" = "development" ]; then
   echo "Running database migrations..."
   uv run flask db upgrade
   echo "🚀 Starting in development mode..."
