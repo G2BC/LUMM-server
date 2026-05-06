@@ -2,23 +2,32 @@
 Popula a coluna conservation_status da species_characteristics com os dados da API IUCN
 """
 
-from pathlib import Path
-import sys
-import requests
-import time
 import os
+import sys
+import time
+from pathlib import Path
+
+import requests
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app import create_app
-from app.extensions import db
-from app.models.species import Species
-from app.models.species_characteristics import SpeciesCharacteristics
-
+from app import create_app  # noqa: E402
+from app.extensions import db  # noqa: E402
+from app.models.species import Species  # noqa: E402
+from app.models.species_characteristics import SpeciesCharacteristics  # noqa: E402
 
 app = create_app()
+
+
+def _i(value):
+    if value in (None, ""):
+        return None
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
 
 
 def _log(message: str, level: str = "INFO") -> None:
@@ -26,10 +35,20 @@ def _log(message: str, level: str = "INFO") -> None:
 
 
 def main():
+    raw_lumm_ids = os.environ.get("LUMM_ID", "")
+    lumm_ids = [value for raw in raw_lumm_ids.split(",") if (value := _i(raw))]
+
     _log("=== Import IUCN Red List: inicio ===")
+    if lumm_ids:
+        _log(f"Modo individual: LUMM_IDs={lumm_ids}")
 
     with app.app_context():
-        species_list = Species.query.all()
+        query = Species.query
+
+        if lumm_ids:
+            query = query.filter(Species.id.in_(lumm_ids))
+
+        species_list = query.all()
         total = len(species_list)
 
         updated = 0
@@ -56,7 +75,7 @@ def main():
             species_name = " ".join(name_parts[1:])
 
             response = requests.get(
-                f"https://api.iucnredlist.org/api/v4/taxa/scientific_name",
+                "https://api.iucnredlist.org/api/v4/taxa/scientific_name",
                 headers={
                     "authorization": os.getenv("IUCN_API_KEY"),
                     "accept": "application/json",
@@ -123,7 +142,7 @@ def main():
                     {
                         "conservation_status": conservation_status,
                         "iucn_assessment_year": iucn_assessment_year,
-                        "iucn_assessment_url": url
+                        "iucn_assessment_url": url,
                     },
                     synchronize_session=False,
                 )
@@ -131,7 +150,10 @@ def main():
                 db.session.commit()
                 updated += 1
                 _log(
-                    f"[{idx}/{total}] Atualizado: {species.scientific_name} -> {conservation_status}",
+                    (
+                        f"[{idx}/{total}] Atualizado: "
+                        f"{species.scientific_name} -> {conservation_status}"
+                    ),
                     "OK",
                 )
 

@@ -1,7 +1,12 @@
 name: Sync IUCN Red List
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      lumm_id:
+        description: "LUMM species ID(s) separados por vírgula, ex: 1 ou 1,2,3 (deixe vazio para sincronizar todas)"
+        required: false
+        type: string
   schedule:
     - cron: "0 4 1 * *"
 
@@ -22,6 +27,8 @@ jobs:
     env:
       DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
       APP_ENV: production
+      PYTHONUNBUFFERED: "1"
+      LUMM_ID: ${{ inputs.lumm_id }}
 
     steps:
       - name: Checkout
