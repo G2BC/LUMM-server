@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/G2BC/LUMM-server/compare/v1.40.0...v1.41.0) (2026-05-06)
+
+
+### Features
+
+* update environment variables in synchronization workflows ([4e215c4](https://github.com/G2BC/LUMM-server/commit/4e215c49f5f90fde28dfe7b4915bf85b8d98ba5d))
+
 # [1.40.0](https://github.com/G2BC/LUMM-server/compare/v1.39.0...v1.40.0) (2026-04-30)
 
 
