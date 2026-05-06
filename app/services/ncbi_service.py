@@ -58,7 +58,7 @@ class NCBIService:
     @staticmethod
     def _fetch_from_ncbi(taxid: int, email: str, api_key: str) -> dict[str, Any]:
         Entrez.email = email
-        Entrez.api_key = api_key
+        Entrez.api_key = api_key or None
         Entrez.max_tries = int(current_app.config.get("NCBI_MAX_TRIES", 1))
         Entrez.sleep_between_tries = float(
             current_app.config.get("NCBI_SLEEP_BETWEEN_TRIES_SECONDS", 0.25)

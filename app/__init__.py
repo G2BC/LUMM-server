@@ -12,7 +12,7 @@ from .extensions import db, jwt
 from .utils.require_api_key import enforce_api_key
 
 migrate = Migrate()
-load_dotenv()
+load_dotenv(override=False)
 
 
 def create_app():
