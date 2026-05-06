@@ -34,6 +34,10 @@ source .venv/bin/activate       # Linux/macOS
 cp .env.example .env
 ```
 
+Em produção, as variáveis são gerenciadas pelo dashboard do Dotenv Vault. O servidor
+não usa `.env`; o deploy via GitHub Actions usa o `.env.vault` versionado no repositório
+e a secret `DOTENV_KEY` cadastrada em `Settings > Secrets and variables > Actions`.
+
 ### 5. Executar migrações
 
 ```bash

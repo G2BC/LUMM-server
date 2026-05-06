@@ -25,6 +25,7 @@ jobs:
     env:
       APP_DIR: ${{ vars.APP_DIR }}
       APP_IMAGE: ${{ vars.APP_IMAGE }}
+      DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
       SERVICE: api
 
     steps:

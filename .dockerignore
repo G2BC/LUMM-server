@@ -2,6 +2,7 @@
 .gitignore
 __pycache__/
 .env
+.env.me
 *.pyc
 *.pyo
 *.pyd
@@ -13,3 +14,8 @@ __pycache__/
 .vscode/
 .idea/
 *.log
+
+.env*
+.flaskenv*
+!.env.project
+!.env.vault

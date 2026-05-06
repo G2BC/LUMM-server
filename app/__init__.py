@@ -1,7 +1,7 @@
 import os
 
 import sentry_sdk
-from dotenv import load_dotenv
+from dotenv_vault import load_dotenv
 from flask import Flask, request
 from flask_cors import CORS
 from flask_jwt_extended import get_jwt, verify_jwt_in_request

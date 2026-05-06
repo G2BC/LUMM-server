@@ -18,7 +18,7 @@ dependencies = [
     "marshmallow==3.26.2",
     "numpy==2.0.2",
     "psycopg2-binary==2.9.9",
-    "python-dotenv==1.0.1",
+    "python-dotenv-vault==0.6.4",
     "requests==2.33.0",
     "SQLAlchemy==2.0.46",
     "webargs==8.6.0",
