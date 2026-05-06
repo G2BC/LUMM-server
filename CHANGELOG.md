@@ -1,3 +1,10 @@
+## [1.41.1](https://github.com/G2BC/LUMM-server/compare/v1.41.0...v1.41.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* update environment variable references in Docker configuration ([385a205](https://github.com/G2BC/LUMM-server/commit/385a205b72091c079270a77874379418f9b15f9d))
+
 # [1.41.0](https://github.com/G2BC/LUMM-server/compare/v1.40.0...v1.41.0) (2026-05-06)
 
 
