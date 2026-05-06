@@ -1,3 +1,10 @@
+## [1.41.2](https://github.com/G2BC/LUMM-server/compare/v1.41.1...v1.41.2) (2026-05-06)
+
+
+### Bug Fixes
+
+* update NCBI service configuration and environment variable handling ([3442a3c](https://github.com/G2BC/LUMM-server/commit/3442a3c2e7683d7677eb43bfbaf65a703a12ad67))
+
 ## [1.41.1](https://github.com/G2BC/LUMM-server/compare/v1.41.0...v1.41.1) (2026-05-06)
 
 
