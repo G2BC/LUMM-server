@@ -26,9 +26,7 @@ jobs:
       options: --network redis-shared
     timeout-minutes: 60
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      REDIS_URL: ${{ secrets.REDIS_URL }}
-      SPECIESLINK_API_KEY: ${{ secrets.SPECIESLINK_API_KEY }}
+      DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
       APP_ENV: production
       PYTHONUNBUFFERED: "1"
       UV_LINK_MODE: copy

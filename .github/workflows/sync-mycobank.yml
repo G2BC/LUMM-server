@@ -24,7 +24,7 @@ jobs:
       image: python:3.12-slim
     timeout-minutes: 30
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
       APP_ENV: production
       PYTHONUNBUFFERED: "1"
       UV_LINK_MODE: copy
