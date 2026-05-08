@@ -19,7 +19,10 @@ class Observation(db.Model):
         nullable=False,
     )
 
-    source = db.Column(db.Text, nullable=False)  # "inaturalist" | "mushroom_observer"
+    source = db.Column(
+        db.Text,
+        nullable=False,
+    )  # "inaturalist" | "mushroom_observer" | "specieslink" | "bold"
     external_id = db.Column(db.Text, nullable=False)
 
     latitude = db.Column(db.Numeric(10, 6), nullable=True)
