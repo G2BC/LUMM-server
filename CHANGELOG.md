@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/G2BC/LUMM-server/compare/v1.41.2...v1.42.0) (2026-05-08)
+
+
+### Features
+
+* add BOLD synchronization workflow and script ([d64e0c0](https://github.com/G2BC/LUMM-server/commit/d64e0c0f47e3afce90a996e22a063ee737c346ec))
+
 ## [1.41.2](https://github.com/G2BC/LUMM-server/compare/v1.41.1...v1.41.2) (2026-05-06)
 
 
