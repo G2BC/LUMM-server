@@ -1,17 +1,20 @@
 from sqlalchemy.sql import func
 
 from app.extensions import db
+from app.utils.generate_uuid import generate_uuid
 
 
 class Species(db.Model):
     __tablename__ = "species"
     __table_args__ = (
         db.UniqueConstraint("scientific_name", name="uq_species_scientific_name"),
+        db.UniqueConstraint("uid", name="uq_species_uid"),
         db.Index("idx_species_family", "family"),
         db.Index("idx_species_lineage", "lineage"),
     )
 
     id = db.Column(db.BigInteger, primary_key=True)
+    uid = db.Column(db.String(36), nullable=False, default=generate_uuid)
 
     # Identidade científica
     scientific_name = db.Column(db.Text, nullable=True)

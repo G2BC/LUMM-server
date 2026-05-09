@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from app.extensions import db
 from app.models.decay_type import DecayType
 from app.models.distribution import Distribution
@@ -116,8 +118,13 @@ class SpeciesRepository:
             id = int(species)
             base = base.filter(Species.id == id)
         else:
-            name = species.replace("+", " ")
-            base = base.filter(Species.scientific_name.ilike(f"%{name}%"))
+            try:
+                uid = str(UUID(species))
+            except ValueError:
+                name = species.replace("+", " ")
+                base = base.filter(Species.scientific_name.ilike(f"%{name}%"))
+            else:
+                base = base.filter(Species.uid == uid)
 
         return base.first()
 
@@ -215,6 +222,7 @@ class SpeciesRepository:
         return [
             {
                 "id": item.id,
+                "uid": item.uid,
                 "label": item.scientific_name,
                 "photo": pick_photo(item),
             }
@@ -290,7 +298,10 @@ class SpeciesRepository:
     def list_outdated(cls, page: int | None = None, per_page: int | None = None):
         base = (
             Species.query.with_entities(
-                Species.id, Species.scientific_name, Species.mycobank_index_fungorum_id
+                Species.id,
+                Species.uid,
+                Species.scientific_name,
+                Species.mycobank_index_fungorum_id,
             )
             .filter(Species.is_outdated_mycobank.is_(True))
             .order_by(Species.scientific_name.asc())
