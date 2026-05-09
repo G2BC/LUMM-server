@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/G2BC/LUMM-server/compare/v1.42.0...v1.43.0) (2026-05-09)
+
+
+### Features
+
+* add unique identifier (uid) to species model ([18c2137](https://github.com/G2BC/LUMM-server/commit/18c21373c340acfe55a17a34405abcf8ac2caae7))
+
 # [1.42.0](https://github.com/G2BC/LUMM-server/compare/v1.41.2...v1.42.0) (2026-05-08)
 
 
