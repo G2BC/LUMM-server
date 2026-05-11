@@ -1,3 +1,10 @@
+## [1.43.1](https://github.com/G2BC/LUMM-server/compare/v1.43.0...v1.43.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* update cache prefix for observations and NCBI ([e5920aa](https://github.com/G2BC/LUMM-server/commit/e5920aa48c1c629a16e4f799de23a8a15ce21d63))
+
 # [1.43.0](https://github.com/G2BC/LUMM-server/compare/v1.42.0...v1.43.0) (2026-05-09)
 
 
