@@ -4,14 +4,14 @@ Sincroniza observações do Mushroom Observer para espécies com scientific_name
 - Full sync por padrão
 - UPSERT via INSERT ... ON CONFLICT DO UPDATE
 - Reconcilia observações removendo, no final, o que não veio mais da API
-- ThreadPoolExecutor com MAX_WORKERS threads
-- Kill switch por MAX_RUNTIME_SECONDS
+- Lock Redis + checkpoint por espécie (via SyncRunner)
+- Agrupamento por group_name com pausa configurável entre grupos
+- Para imediatamente em caso de bloqueio (HTTP 403 ou indisponibilidade)
 """
 
 import os
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
@@ -27,21 +27,18 @@ from app.extensions import db  # noqa: E402
 from app.models.observation import Observation  # noqa: E402
 from app.models.species import Species  # noqa: E402
 from app.services.cache_service import CacheService  # noqa: E402
+from scripts.sync_base import SyncRunner  # noqa: E402
 
 MO_API_URL = os.getenv("MUSHROOM_OBSERVER_API_URL", "https://mushroomobserver.org/api2")
 REQUEST_TIMEOUT = 30
 SLEEP_AFTER_REQUEST = float(os.getenv("MO_SLEEP_AFTER_REQUEST", "12"))
-MAX_WORKERS = int(os.getenv("MO_MAX_WORKERS", "1"))
-MAX_RUNTIME_SECONDS = int("3540")
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 BLOCK_STATUS_CODES = {403}
 HEADERS = {"User-Agent": "LUMM-server/1.0 (lumm.uneb.br; contact: lumm.g2bc@gmail.com)"}
 
-app = create_app()
 
-
-def _log(msg):
-    print(msg, flush=True)
+class MushroomObserverBlocked(RuntimeError):
+    pass
 
 
 def _center_of_bbox(loc):
@@ -88,7 +85,9 @@ def _fetch_page(name_id, scientific_name, page):
             timeout=REQUEST_TIMEOUT,
         )
         if r.status_code in BLOCK_STATUS_CODES:
-            raise RuntimeError(f"Possível bloqueio do Mushroom Observer: HTTP {r.status_code}")
+            raise MushroomObserverBlocked(
+                f"Possível bloqueio do Mushroom Observer: HTTP {r.status_code}"
+            )
         if r.status_code in RETRYABLE_STATUS_CODES:
             raise RuntimeError(
                 f"Mushroom Observer indisponível ou limitando requests: HTTP {r.status_code}"
@@ -137,29 +136,50 @@ def _delete_stale_observations(species_id, seen_external_ids):
     deleted = 0
     stale_ids = list(stale_ids)
     for i in range(0, len(stale_ids), 1000):
-        chunk = stale_ids[i:i + 1000]
-        deleted += db.session.query(Observation).filter(
-            Observation.species_id == species_id,
-            Observation.source == "mushroom_observer",
-            Observation.external_id.in_(chunk),
-        ).delete(synchronize_session=False)
+        chunk = stale_ids[i : i + 1000]
+        deleted += (
+            db.session.query(Observation)
+            .filter(
+                Observation.species_id == species_id,
+                Observation.source == "mushroom_observer",
+                Observation.external_id.in_(chunk),
+            )
+            .delete(synchronize_session=False)
+        )
     db.session.commit()
     return deleted
 
 
-def _sync_species(species_id, scientific_name, mo_name_id, start_time):
-    with app.app_context():
+class MushroomObserverSync(SyncRunner):
+    source_name = "mushroom_observer"
+    env_prefix = "MO"
+
+    def get_species_rows(self, session, lumm_ids):
+        query = session.query(
+            Species.id,
+            Species.scientific_name,
+            Species.mushroom_observer_name_id,
+            Species.group_name,
+        ).filter(Species.scientific_name.isnot(None))
+        if lumm_ids:
+            query = query.filter(Species.id.in_(lumm_ids))
+        return query.all()
+
+    def is_fatal_error(self, exc):
+        return isinstance(exc, MushroomObserverBlocked)
+
+    def sync_species(self, row, start_time):
         seen_external_ids = set()
         discovered_name_id = None
         total = 0
         page = 1
 
         while True:
-            if time.time() - start_time > MAX_RUNTIME_SECONDS:
-                _log(f"  [{species_id}] Kill switch — abortando")
+            if time.time() - start_time > self.max_runtime:
+                self._log(f"  [{row.id}] Kill switch — abortando")
                 return total, 0, False
 
-            data = _fetch_page(mo_name_id, scientific_name, page)
+            data = _fetch_page(row.mushroom_observer_name_id, row.scientific_name, page)
             if data.get("errors"):
                 raise RuntimeError(f"Erro da API MO: {data['errors']}")
 
@@ -169,8 +189,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
 
             rows_by_external_id = {}
             for obs in results:
-                # salva o name_id do primeiro resultado se ainda não temos
-                if discovered_name_id is None and not mo_name_id:
+                if discovered_name_id is None and not row.mushroom_observer_name_id:
                     discovered_name_id = (obs.get("consensus") or {}).get("id")
 
                 lat, lng = _parse_coords(obs)
@@ -179,7 +198,7 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
                 has_precise = obs.get("latitude") is not None
                 obs_id = str(obs["id"])
                 rows_by_external_id[obs_id] = {
-                    "species_id": species_id,
+                    "species_id": row.id,
                     "source": "mushroom_observer",
                     "external_id": obs_id,
                     "latitude": lat,
@@ -196,100 +215,29 @@ def _sync_species(species_id, scientific_name, mo_name_id, start_time):
             total += _upsert(rows)
 
             total_pages = data.get("number_of_pages", 1)
-            _log(
-                f"  [{species_id}] página {page}/{total_pages}: {len(results)} obs, "
-                f"{len(rows)} válidas (via {'id' if mo_name_id else 'name'})"
+            self._log(
+                f"  [{row.id}] página {page}/{total_pages}: {len(results)} obs, "
+                f"{len(rows)} válidas (via {'id' if row.mushroom_observer_name_id else 'name'})"
             )
 
             if page >= total_pages:
                 break
             page += 1
 
-        # persiste o name_id descoberto para os próximos syncs
         if discovered_name_id:
-            species = db.session.get(Species, species_id)
+            species = db.session.get(Species, row.id)
             if species and not species.mushroom_observer_name_id:
                 species.mushroom_observer_name_id = discovered_name_id
 
         db.session.commit()
-        deleted = _delete_stale_observations(species_id, seen_external_ids)
+        deleted = _delete_stale_observations(row.id, seen_external_ids)
 
-        prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
-        CacheService.delete(f"{prefix}:{species_id}:all")
-        CacheService.delete(f"{prefix}:{species_id}:mushroom_observer")
-
-        db.session.remove()
+        prefix = self.app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
+        CacheService.delete(f"{prefix}:{row.id}:all")
+        CacheService.delete(f"{prefix}:{row.id}:mushroom_observer")
 
         return total, deleted, True
 
 
-def main():
-    start_time = time.time()
-
-    raw_lumm_ids = os.getenv("LUMM_ID", "")
-    lumm_ids = [int(v) for raw in raw_lumm_ids.split(",") if (v := raw.strip()).isdigit()]
-
-    _log("=== Sync Mushroom Observer ===")
-    _log(
-        f"workers={MAX_WORKERS} | sleep_request={SLEEP_AFTER_REQUEST}s | "
-        f"limite={MAX_RUNTIME_SECONDS}s"
-    )
-
-    with app.app_context():
-        query = db.session.query(
-            Species.id, Species.scientific_name, Species.mushroom_observer_name_id
-        ).filter(Species.scientific_name.isnot(None))
-        if lumm_ids:
-            query = query.filter(Species.id.in_(lumm_ids))
-        species_rows = query.all()
-
-    _log(f"Espécies: {len(species_rows)}")
-
-    total = 0
-    total_deleted = 0
-    errors = 0
-    blocked = False
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        futures = {
-            pool.submit(
-                _sync_species,
-                row.id,
-                row.scientific_name,
-                row.mushroom_observer_name_id,
-                start_time,
-            ): row.id
-            for row in species_rows
-        }
-        for future in as_completed(futures):
-            species_id = futures[future]
-            try:
-                inserted, deleted, completed = future.result()
-                total += inserted
-                total_deleted += deleted
-                _log(f"[OK] species={species_id} upsert={inserted} removidos={deleted}")
-                if not completed:
-                    pool.shutdown(wait=False, cancel_futures=True)
-                    break
-            except Exception as e:
-                errors += 1
-                _log(f"[ERRO] species={species_id}: {e}")
-                if (
-                    "Possível bloqueio" in str(e)
-                    or "limitando requests" in str(e)
-                    or "indisponível" in str(e)
-                ):
-                    blocked = True
-                    pool.shutdown(wait=False, cancel_futures=True)
-                    break
-
-    _log(
-        f"Total upsert: {total} | Removidos: {total_deleted} | "
-        f"Erros: {errors} | Tempo: {int(time.time() - start_time)}s"
-    )
-    if blocked:
-        raise SystemExit(2)
-
-
 if __name__ == "__main__":
-    main()
+    MushroomObserverSync(create_app()).run()

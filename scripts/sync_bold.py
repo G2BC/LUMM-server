@@ -5,15 +5,14 @@ Sincroniza registros georreferenciados do BOLD para espécies com scientific_nam
 - UPSERT via INSERT ... ON CONFLICT DO UPDATE
 - Reconcilia observações removendo, no final, o que não veio mais da API
 - Paginação via /api/documents/{query_id}
-- ThreadPoolExecutor com BOLD_MAX_WORKERS threads
-- Kill switch por MAX_RUNTIME_SECONDS
+- Lock Redis + checkpoint por espécie (via SyncRunner)
+- Agrupamento por group_name com pausa configurável entre grupos
 """
 
 import hashlib
 import os
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
 from urllib.parse import quote
@@ -31,13 +30,12 @@ from app.extensions import db  # noqa: E402
 from app.models.observation import Observation  # noqa: E402
 from app.models.species import Species  # noqa: E402
 from app.services.cache_service import CacheService  # noqa: E402
+from scripts.sync_base import SyncRunner  # noqa: E402
 
 BOLD_API_URL = os.getenv("BOLD_API_URL", "https://portal.boldsystems.org/api").rstrip("/")
 PAGE_SIZE = int(os.getenv("BOLD_PAGE_SIZE", "500"))
 REQUEST_TIMEOUT = float(os.getenv("BOLD_REQUEST_TIMEOUT", "45"))
 SLEEP_BETWEEN_REQUESTS = float(os.getenv("BOLD_SLEEP_BETWEEN_REQUESTS", "1.0"))
-MAX_WORKERS = int(os.getenv("BOLD_MAX_WORKERS", "2"))
-MAX_RUNTIME_SECONDS = int(os.getenv("BOLD_MAX_RUNTIME_SECONDS", "3540"))
 MAX_RETRIES = int(os.getenv("BOLD_MAX_RETRIES", "3"))
 MAX_RECORDS_PER_SPECIES = int(os.getenv("BOLD_MAX_RECORDS_PER_SPECIES", "20000"))
 BOLD_GEO_QUERY = os.getenv("BOLD_GEO_QUERY", "").strip()
@@ -48,8 +46,6 @@ BOLD_SKIP_PREPROCESSOR = os.getenv("BOLD_SKIP_PREPROCESSOR", "").strip().lower()
 }
 HEADERS = {"User-Agent": "LUMM-server/1.0 (lumm.uneb.br; contact: lumm.g2bc@gmail.com)"}
 
-app = create_app()
-
 
 class BoldNoTaxonMatch(RuntimeError):
     pass
@@ -57,10 +53,6 @@ class BoldNoTaxonMatch(RuntimeError):
 
 class BoldBlocked(RuntimeError):
     pass
-
-
-def _log(msg):
-    print(msg, flush=True)
 
 
 def _normalize_text(value):
@@ -79,14 +71,15 @@ def _request_json(path, params):
                 )
             if response.status_code == 429:
                 wait = 2**attempt * 10
-                _log(f"  429 recebido do BOLD — aguardando {wait}s")
+                print(f"  429 recebido do BOLD — aguardando {wait}s", flush=True)
                 time.sleep(wait)
                 continue
             if response.status_code >= 500:
                 wait = 2**attempt * 5
-                _log(
+                print(
                     f"  BOLD HTTP {response.status_code} — aguardando {wait}s "
-                    f"(tentativa {attempt + 1}/{MAX_RETRIES})"
+                    f"(tentativa {attempt + 1}/{MAX_RETRIES})",
+                    flush=True,
                 )
                 time.sleep(wait)
                 continue
@@ -152,29 +145,12 @@ def _extract_coordinates(document):
     coord = _first_value(document, ("coord", "coordinates", "collection.coord"))
     if isinstance(coord, dict):
         lat = _float_value(
-            _first_value(
-                coord,
-                (
-                    "lat",
-                    "latitude",
-                    "decimalLatitude",
-                    "decimal_latitude",
-                    "y",
-                ),
-            )
+            _first_value(coord, ("lat", "latitude", "decimalLatitude", "decimal_latitude", "y"))
         )
         lng = _float_value(
             _first_value(
                 coord,
-                (
-                    "lon",
-                    "lng",
-                    "long",
-                    "longitude",
-                    "decimalLongitude",
-                    "decimal_longitude",
-                    "x",
-                ),
+                ("lon", "lng", "long", "longitude", "decimalLongitude", "decimal_longitude", "x"),
             )
         )
         return lat, lng
@@ -353,12 +329,16 @@ def _delete_stale_observations(species_id, seen_external_ids):
     deleted = 0
     stale_ids = list(stale_ids)
     for i in range(0, len(stale_ids), 1000):
-        chunk = stale_ids[i:i + 1000]
-        deleted += db.session.query(Observation).filter(
-            Observation.species_id == species_id,
-            Observation.source == "bold",
-            Observation.external_id.in_(chunk),
-        ).delete(synchronize_session=False)
+        chunk = stale_ids[i : i + 1000]
+        deleted += (
+            db.session.query(Observation)
+            .filter(
+                Observation.species_id == species_id,
+                Observation.source == "bold",
+                Observation.external_id.in_(chunk),
+            )
+            .delete(synchronize_session=False)
+        )
     db.session.commit()
     return deleted
 
@@ -374,12 +354,7 @@ def _build_row(species_id, scientific_name, document):
     bold_species = _text_value(
         _first_value(
             document,
-            (
-                "species",
-                "taxonomy.species",
-                "identification.species",
-                "tax.species",
-            ),
+            ("species", "taxonomy.species", "identification.species", "tax.species"),
         )
     )
     if bold_species and _normalize_text(bold_species) != _normalize_text(scientific_name):
@@ -418,31 +393,44 @@ def _build_row(species_id, scientific_name, document):
     }
 
 
-def _sync_species(species_id, scientific_name, start_time):
-    with app.app_context():
+class BoldSync(SyncRunner):
+    source_name = "bold"
+    env_prefix = "BOLD"
+
+    def get_species_rows(self, session, lumm_ids):
+        query = session.query(
+            Species.id, Species.scientific_name, Species.group_name
+        ).filter(Species.scientific_name.isnot(None))
+        if lumm_ids:
+            query = query.filter(Species.id.in_(lumm_ids))
+        return query.all()
+
+    def is_fatal_error(self, exc):
+        return isinstance(exc, BoldBlocked)
+
+    def sync_species(self, row, start_time):
         seen_external_ids = set()
         total = 0
         start = 0
         completed = False
 
         try:
-            query = _resolved_query(scientific_name)
+            query = _resolved_query(row.scientific_name)
         except BoldNoTaxonMatch as exc:
-            _log(f"  [{species_id}] {exc}; ignorando espécie")
-            db.session.remove()
+            self._log(f"  [{row.id}] {exc}; ignorando espécie")
             return 0, 0, True
 
         query_id = _query_id(query)
-        _log(f"  [{species_id}] query={query}")
+        self._log(f"  [{row.id}] query={query}")
 
         while True:
-            if time.time() - start_time > MAX_RUNTIME_SECONDS:
-                _log(f"  [{species_id}] Kill switch — abortando")
+            if time.time() - start_time > self.max_runtime:
+                self._log(f"  [{row.id}] Kill switch — abortando")
                 return total, 0, False
 
             if start >= MAX_RECORDS_PER_SPECIES:
-                _log(
-                    f"  [{species_id}] limite BOLD_MAX_RECORDS_PER_SPECIES="
+                self._log(
+                    f"  [{row.id}] limite BOLD_MAX_RECORDS_PER_SPECIES="
                     f"{MAX_RECORDS_PER_SPECIES} atingido; sem reconciliação de antigos"
                 )
                 return total, 0, True
@@ -455,18 +443,18 @@ def _sync_species(species_id, scientific_name, start_time):
             for document in documents:
                 if not isinstance(document, dict):
                     continue
-                row = _build_row(species_id, scientific_name, document)
-                if not row:
+                built = _build_row(row.id, row.scientific_name, document)
+                if not built:
                     continue
-                rows_by_external_id[row["external_id"]] = row
-                seen_external_ids.add(row["external_id"])
+                rows_by_external_id[built["external_id"]] = built
+                seen_external_ids.add(built["external_id"])
 
             rows = list(rows_by_external_id.values())
             total += _upsert(rows)
 
             page = start // PAGE_SIZE + 1
-            _log(
-                f"  [{species_id}] página {page}: {len(documents)} docs, "
+            self._log(
+                f"  [{row.id}] página {page}: {len(documents)} docs, "
                 f"{len(rows)} válidos (total BOLD: {records_total})"
             )
 
@@ -480,73 +468,14 @@ def _sync_species(species_id, scientific_name, start_time):
 
             time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-        deleted = _delete_stale_observations(species_id, seen_external_ids) if completed else 0
+        deleted = _delete_stale_observations(row.id, seen_external_ids) if completed else 0
 
-        prefix = app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
-        CacheService.delete(f"{prefix}:{species_id}:all")
-        CacheService.delete(f"{prefix}:{species_id}:bold")
+        prefix = self.app.config.get("OBSERVATIONS_CACHE_PREFIX", "observations")
+        CacheService.delete(f"{prefix}:{row.id}:all")
+        CacheService.delete(f"{prefix}:{row.id}:bold")
 
-        db.session.remove()
         return total, deleted, completed
 
 
-def main():
-    start_time = time.time()
-
-    raw_lumm_ids = os.getenv("LUMM_ID", "")
-    lumm_ids = [int(v) for raw in raw_lumm_ids.split(",") if (v := raw.strip()).isdigit()]
-
-    _log("=== Sync BOLD ===")
-    _log(
-        f"workers={MAX_WORKERS} | page_size={PAGE_SIZE} | "
-        f"limite={MAX_RUNTIME_SECONDS}s | max_records_species={MAX_RECORDS_PER_SPECIES}"
-    )
-    if BOLD_GEO_QUERY:
-        _log(f"geo_query={BOLD_GEO_QUERY}")
-
-    with app.app_context():
-        query = db.session.query(Species.id, Species.scientific_name).filter(
-            Species.scientific_name.isnot(None)
-        )
-        if lumm_ids:
-            query = query.filter(Species.id.in_(lumm_ids))
-        species_rows = query.all()
-
-    _log(f"Espécies: {len(species_rows)}")
-
-    total = 0
-    total_deleted = 0
-    errors = 0
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        futures = {
-            pool.submit(_sync_species, row.id, row.scientific_name, start_time): row.id
-            for row in species_rows
-        }
-        for future in as_completed(futures):
-            species_id = futures[future]
-            try:
-                inserted, deleted, completed = future.result()
-                total += inserted
-                total_deleted += deleted
-                _log(f"[OK] species={species_id} upsert={inserted} removidos={deleted}")
-                if not completed:
-                    pool.shutdown(wait=False, cancel_futures=True)
-                    break
-            except BoldBlocked as e:
-                errors += 1
-                _log(f"[BLOQUEADO] species={species_id}: {e}")
-                pool.shutdown(wait=False, cancel_futures=True)
-                break
-            except Exception as e:
-                errors += 1
-                _log(f"[ERRO] species={species_id}: {e}")
-
-    _log(
-        f"Total upsert: {total} | Removidos: {total_deleted} | "
-        f"Erros: {errors} | Tempo: {int(time.time() - start_time)}s"
-    )
-
-
 if __name__ == "__main__":
-    main()
+    BoldSync(create_app()).run()

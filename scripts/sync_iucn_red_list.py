@@ -1,5 +1,8 @@
 """
-Popula a coluna conservation_status da species_characteristics com os dados da API IUCN
+Popula a coluna conservation_status da species_characteristics com os dados da API IUCN.
+
+- Lock Redis + checkpoint por espécie (via SyncRunner)
+- Agrupamento por group_name com pausa configurável entre grupos
 """
 
 import os
@@ -17,8 +20,9 @@ from app import create_app  # noqa: E402
 from app.extensions import db  # noqa: E402
 from app.models.species import Species  # noqa: E402
 from app.models.species_characteristics import SpeciesCharacteristics  # noqa: E402
+from scripts.sync_base import SyncRunner  # noqa: E402
 
-app = create_app()
+IUCN_REQUEST_TIMEOUT = 30
 
 
 def _i(value):
@@ -30,143 +34,90 @@ def _i(value):
         return None
 
 
-def _log(message: str, level: str = "INFO") -> None:
-    print(f"[{level}] {message}")
+class IucnSync(SyncRunner):
+    source_name = "iucn_red_list"
+    env_prefix = "IUCN"
 
-
-def main():
-    raw_lumm_ids = os.environ.get("LUMM_ID", "")
-    lumm_ids = [value for raw in raw_lumm_ids.split(",") if (value := _i(raw))]
-
-    _log("=== Import IUCN Red List: inicio ===")
-    if lumm_ids:
-        _log(f"Modo individual: LUMM_IDs={lumm_ids}")
-
-    with app.app_context():
-        query = Species.query
-
+    def get_species_rows(self, session, lumm_ids):
+        query = session.query(Species.id, Species.scientific_name, Species.group_name)
         if lumm_ids:
             query = query.filter(Species.id.in_(lumm_ids))
+        return query.all()
 
-        species_list = query.all()
-        total = len(species_list)
+    def sync_species(self, row, start_time):
+        name_parts = (row.scientific_name or "").split()
+        if len(name_parts) < 2:
+            self._log(f"  [{row.id}] nome científico inválido: {row.scientific_name!r}")
+            return 0, 0, True
 
-        updated = 0
-        invalid_name = 0
-        api_errors = 0
-        invalid_response = 0
-        no_latest_assessment = 0
+        genus_name = name_parts[0]
+        species_name = " ".join(name_parts[1:])
 
-        _log(f"Especies carregadas: {total}", "OK")
+        response = requests.get(
+            "https://api.iucnredlist.org/api/v4/taxa/scientific_name",
+            headers={
+                "authorization": os.getenv("IUCN_API_KEY"),
+                "accept": "application/json",
+            },
+            params={"genus_name": genus_name, "species_name": species_name},
+            timeout=IUCN_REQUEST_TIMEOUT,
+        )
 
-        for idx, species in enumerate(species_list, start=1):
-            _log(f"[{idx}/{total}] Buscando: {species.scientific_name}")
-
-            name_parts = (species.scientific_name or "").split()
-            if len(name_parts) < 2:
-                invalid_name += 1
-                _log(
-                    f"[{idx}/{total}] {species.scientific_name} - nome cientifico invalido",
-                    "ERRO",
-                )
-                continue
-
-            genus_name = name_parts[0]
-            species_name = " ".join(name_parts[1:])
-
-            response = requests.get(
-                "https://api.iucnredlist.org/api/v4/taxa/scientific_name",
-                headers={
-                    "authorization": os.getenv("IUCN_API_KEY"),
-                    "accept": "application/json",
-                },
-                params={
-                    "genus_name": genus_name,
-                    "species_name": species_name,
-                },
-                timeout=30,
-            )
-
-            if response.status_code != 200:
-                api_errors += 1
-                _log(
-                    f"[{idx}/{total}] {species.scientific_name} - HTTP {response.status_code}",
-                    "ERRO",
-                )
-                time.sleep(1)
-                continue
-
-            data = response.json()
-
-            if not isinstance(data, dict):
-                invalid_response += 1
-                _log(
-                    f"[{idx}/{total}] {species.scientific_name} - resposta invalida",
-                    "ERRO",
-                )
-                time.sleep(1)
-                continue
-
-            assessments = data.get("assessments")
-            if not isinstance(assessments, list):
-                invalid_response += 1
-                _log(
-                    f"[{idx}/{total}] {species.scientific_name} - assessments invalido",
-                    "ERRO",
-                )
-                time.sleep(1)
-                continue
-
-            latest_assessment = next(
-                (assessment for assessment in assessments if assessment.get("latest", False)),
-                None,
-            )
-
-            if not latest_assessment:
-                no_latest_assessment += 1
-                _log(
-                    f"[{idx}/{total}] {species.scientific_name} - sem assessment latest",
-                    "ERRO",
-                )
-            else:
-                conservation_status = latest_assessment.get("red_list_category_code")
-                assessment_id = latest_assessment.get("assessment_id")
-                iucn_assessment_year = latest_assessment.get("year_published")
-                url = latest_assessment.get("url")
-
-                Species.query.filter_by(id=species.id).update(
-                    {"iucn_redlist": assessment_id},
-                    synchronize_session=False,
-                )
-                SpeciesCharacteristics.query.filter_by(species_id=species.id).update(
-                    {
-                        "conservation_status": conservation_status,
-                        "iucn_assessment_year": iucn_assessment_year,
-                        "iucn_assessment_url": url,
-                    },
-                    synchronize_session=False,
-                )
-
-                db.session.commit()
-                updated += 1
-                _log(
-                    (
-                        f"[{idx}/{total}] Atualizado: "
-                        f"{species.scientific_name} -> {conservation_status}"
-                    ),
-                    "OK",
-                )
-
+        if response.status_code != 200:
             time.sleep(1)
+            raise RuntimeError(
+                f"IUCN API HTTP {response.status_code} para {row.scientific_name!r}"
+            )
 
-    _log(
-        "Atualizadas: "
-        f"{updated} | Nome invalido: {invalid_name} | Erros API: {api_errors} | "
-        f"Resposta invalida: {invalid_response} | Sem latest: {no_latest_assessment}",
-        "RESUMO",
-    )
-    _log("Importacao finalizada", "OK")
+        data = response.json()
+
+        if not isinstance(data, dict):
+            time.sleep(1)
+            self._log(f"  [{row.id}] resposta inválida da API IUCN")
+            return 0, 0, True
+
+        assessments = data.get("assessments")
+        if not isinstance(assessments, list):
+            time.sleep(1)
+            self._log(f"  [{row.id}] campo assessments inválido")
+            return 0, 0, True
+
+        latest_assessment = next(
+            (a for a in assessments if a.get("latest", False)),
+            None,
+        )
+
+        if not latest_assessment:
+            time.sleep(1)
+            self._log(f"  [{row.id}] sem assessment latest")
+            return 0, 0, True
+
+        conservation_status = latest_assessment.get("red_list_category_code")
+        assessment_id = latest_assessment.get("assessment_id")
+        iucn_assessment_year = latest_assessment.get("year_published")
+        url = latest_assessment.get("url")
+
+        db.session.query(Species).filter_by(id=row.id).update(
+            {"iucn_redlist": assessment_id},
+            synchronize_session=False,
+        )
+        db.session.query(SpeciesCharacteristics).filter_by(species_id=row.id).update(
+            {
+                "conservation_status": conservation_status,
+                "iucn_assessment_year": iucn_assessment_year,
+                "iucn_assessment_url": url,
+            },
+            synchronize_session=False,
+        )
+        db.session.commit()
+
+        self._log(
+            f"  [{row.id}] {row.scientific_name} → {conservation_status}"
+        )
+
+        time.sleep(1)
+        return 1, 0, True
 
 
 if __name__ == "__main__":
-    main()
+    IucnSync(create_app()).run()
