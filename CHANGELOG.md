@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/G2BC/LUMM-server/compare/v1.45.1...v1.46.0) (2026-05-22)
+
+
+### Features
+
+* add species change request routes and update existing routes ([0ad0166](https://github.com/G2BC/LUMM-server/commit/0ad016670055316ff1821854c0727b7de1641a87))
+
 ## [1.45.1](https://github.com/G2BC/LUMM-server/compare/v1.45.0...v1.45.1) (2026-05-22)
 
 
