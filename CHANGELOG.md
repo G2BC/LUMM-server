@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/G2BC/LUMM-server/compare/v1.44.0...v1.45.0) (2026-05-22)
+
+
+### Features
+
+* remove dotenv_vault dependency and enhance route visibility ([4974e00](https://github.com/G2BC/LUMM-server/commit/4974e00d6456316ee4c55e1b1524a1b0a49713fa))
+
 # [1.44.0](https://github.com/G2BC/LUMM-server/compare/v1.43.1...v1.44.0) (2026-05-22)
 
 
