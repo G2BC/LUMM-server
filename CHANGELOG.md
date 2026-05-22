@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/G2BC/LUMM-server/compare/v1.46.1...v1.47.0) (2026-05-22)
+
+
+### Features
+
+* add security schemes for API authentication ([c6a0f11](https://github.com/G2BC/LUMM-server/commit/c6a0f117a23a68c6d2e8dd3187f4c759fc4c2972))
+
 ## [1.46.1](https://github.com/G2BC/LUMM-server/compare/v1.46.0...v1.46.1) (2026-05-22)
 
 
