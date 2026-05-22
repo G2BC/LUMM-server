@@ -11,7 +11,7 @@ from app.utils.permissions import require_curator_or_admin
 reference_bp = Blueprint(
     "references",
     "references",
-    url_prefix="/references",
+    url_prefix="/admin/references",
 )
 
 

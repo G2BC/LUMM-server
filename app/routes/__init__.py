@@ -6,9 +6,9 @@ def register_blueprints(api) -> None:
     from .species_routes import specie_bp
     from .user_routes import user_bp
 
-    api.register_blueprint(auth_bp, url_prefix="/auth")
-    api.register_blueprint(user_bp, url_prefix="/users")
+    api.register_blueprint(auth_bp, url_prefix="/auth", spec_opts={"hidden": True})
     api.register_blueprint(specie_bp, url_prefix="/species")
-    api.register_blueprint(reference_bp, url_prefix="/references")
-    api.register_blueprint(contact_bp, url_prefix="/contact")
-    api.register_blueprint(snapshot_bp, url_prefix="/snapshot")
+    api.register_blueprint(contact_bp, url_prefix="/contact-messages", spec_opts={"hidden": True})
+    api.register_blueprint(snapshot_bp, url_prefix="/snapshots")
+    api.register_blueprint(user_bp, url_prefix="/admin/users", spec_opts={"hidden": True})
+    api.register_blueprint(reference_bp, url_prefix="/admin/references", spec_opts={"hidden": True})

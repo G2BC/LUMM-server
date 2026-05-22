@@ -11,7 +11,7 @@ from app.utils.send_email import send_email
 contact_bp = Blueprint(
     "contact",
     "contact",
-    url_prefix="/contact",
+    url_prefix="/contact-messages",
 )
 
 GMAIL_TO = os.getenv("GMAIL_TO", "alenz@uneb.br")

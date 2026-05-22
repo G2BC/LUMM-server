@@ -9,7 +9,7 @@ from app.utils.object_storage import generate_presigned_get_url, list_objects
 snapshot_bp = Blueprint(
     "snapshot",
     "snapshot",
-    url_prefix="/snapshot",
+    url_prefix="/snapshots",
 )
 
 _FORMATS = {"xlsx", "json"}
