@@ -1,3 +1,10 @@
+## [1.46.1](https://github.com/G2BC/LUMM-server/compare/v1.46.0...v1.46.1) (2026-05-22)
+
+
+### Bug Fixes
+
+* restore SpeciesPhotoUploadUrlResponseSchema import ([8b7869e](https://github.com/G2BC/LUMM-server/commit/8b7869ed0a0a1b3ea05a6afcab0eb0c4915ef9a5))
+
 # [1.46.0](https://github.com/G2BC/LUMM-server/compare/v1.45.1...v1.46.0) (2026-05-22)
 
 
