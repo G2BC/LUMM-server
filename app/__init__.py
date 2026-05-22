@@ -114,6 +114,6 @@ def create_app():
         from app import models  # noqa: F401
         from app.routes import register_blueprints
 
-        register_blueprints(api)
+        register_blueprints(api, app)
 
     return app
