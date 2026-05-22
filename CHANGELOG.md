@@ -1,3 +1,10 @@
+## [1.47.1](https://github.com/G2BC/LUMM-server/compare/v1.47.0...v1.47.1) (2026-05-22)
+
+
+### Bug Fixes
+
+* improve species retrieval logic in SpeciesRepository ([23d279a](https://github.com/G2BC/LUMM-server/commit/23d279a86485a5a0902418aa1f7b4b89169ffe00))
+
 # [1.47.0](https://github.com/G2BC/LUMM-server/compare/v1.46.1...v1.47.0) (2026-05-22)
 
 
