@@ -16,6 +16,7 @@ from app.schemas.reference_schemas import (
     ReferenceCreateAndAssociateSchema,
     ReferenceSchema,
 )
+from app.schemas.species_change_request_schemas import SpeciesPhotoUploadUrlResponseSchema
 from app.schemas.species_schemas import (
     SpeciesCreateRequestSchema,
     SpeciesDetailSchema,
@@ -25,7 +26,6 @@ from app.schemas.species_schemas import (
     SpeciesPhotoCreateResponseSchema,
     SpeciesPhotoUpdateRequestSchema,
     SpeciesPhotoUploadUrlPayloadSchema,
-    SpeciesPhotoUploadUrlResponseSchema,
     SpeciesSelectSchema,
     SpeciesWithPhotosPaginationSchema,
 )
