@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/G2BC/LUMM-server/compare/v1.43.1...v1.44.0) (2026-05-22)
+
+
+### Features
+
+* update CORS handling and route prefixes ([3baa058](https://github.com/G2BC/LUMM-server/commit/3baa0581bbf63c7c7caaee873e0e7fcf93fccc0c))
+
 ## [1.43.1](https://github.com/G2BC/LUMM-server/compare/v1.43.0...v1.43.1) (2026-05-11)
 
 
