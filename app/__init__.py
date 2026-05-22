@@ -63,7 +63,13 @@ def create_app():
             return None
 
         path = request.path
-        protected_prefixes = ("/admin", "/auth", "/species", "/contact-messages")
+        protected_prefixes = (
+            "/admin",
+            "/auth",
+            "/species",
+            "/species-change-requests",
+            "/contact-messages",
+        )
 
         if any(path == prefix or path.startswith(f"{prefix}/") for prefix in protected_prefixes):
             result = enforce_api_key()

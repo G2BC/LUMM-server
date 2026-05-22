@@ -2,7 +2,6 @@ import json
 
 from flask import Response, current_app, request
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 from flask_smorest import Blueprint
 
 from app.exceptions import AppError, AppRuntimeError
@@ -17,15 +16,6 @@ from app.schemas.reference_schemas import (
     ReferenceCreateAndAssociateSchema,
     ReferenceSchema,
 )
-from app.schemas.species_change_request_schemas import (
-    SpeciesChangeRequestCreateSchema,
-    SpeciesChangeRequestPaginationSchema,
-    SpeciesChangeRequestReviewSchema,
-    SpeciesChangeRequestSchema,
-    SpeciesPhotoUploadUrlRequestSchema,
-    SpeciesPhotoUploadUrlResponseSchema,
-    SpeciesTmpCleanupResponseSchema,
-)
 from app.schemas.species_schemas import (
     SpeciesCreateRequestSchema,
     SpeciesDetailSchema,
@@ -35,12 +25,12 @@ from app.schemas.species_schemas import (
     SpeciesPhotoCreateResponseSchema,
     SpeciesPhotoUpdateRequestSchema,
     SpeciesPhotoUploadUrlPayloadSchema,
+    SpeciesPhotoUploadUrlResponseSchema,
     SpeciesSelectSchema,
     SpeciesWithPhotosPaginationSchema,
 )
 from app.services.cache_service import CacheService
 from app.services.ncbi_service import NCBIService
-from app.services.species_change_request import SpeciesChangeRequestService
 from app.services.species_photo_service import SpeciesPhotoService
 from app.services.species_reference_service import SpeciesReferenceService
 from app.services.species_service import SpeciesService
@@ -50,7 +40,10 @@ from app.utils.permissions import require_curator_or_admin
 specie_bp = Blueprint(
     "species",
     "species",
-    url_prefix="/species",
+)
+admin_specie_bp = Blueprint(
+    "admin_species",
+    "admin_species",
 )
 
 
@@ -73,8 +66,8 @@ def _parse_optional_bool_query(name: str) -> bool | None:
     )
 
 
-@specie_bp.route("/list")
-class SpeciesSearchList(MethodView):
+@specie_bp.route("")
+class SpeciesCollection(MethodView):
     @specie_bp.response(200, SpeciesWithPhotosPaginationSchema)
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
     def get(self):
@@ -97,21 +90,7 @@ class SpeciesSearchList(MethodView):
             return bilingual_response(exc.status, exc.pt, exc.en)
 
 
-@specie_bp.route("")
-class SpeciesCreate(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesCreateRequestSchema, location="json")
-    @specie_bp.response(201, SpeciesDetailSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    def post(self, payload):
-        try:
-            return SpeciesService.create(payload)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/lineage/select")
+@specie_bp.route("/options/lineages")
 class LineageSelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
@@ -119,7 +98,7 @@ class LineageSelect(MethodView):
         return SpeciesService.select_lineage(search)
 
 
-@specie_bp.route("/country/select")
+@specie_bp.route("/options/countries")
 class SpeciesCountrySelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
@@ -127,7 +106,7 @@ class SpeciesCountrySelect(MethodView):
         return SpeciesService.country_select(search)
 
 
-@specie_bp.route("/family/select")
+@specie_bp.route("/options/families")
 class SpeciesFamilySelect(MethodView):
     @specie_bp.response(200, SelectSchema(many=True))
     def get(self):
@@ -135,7 +114,7 @@ class SpeciesFamilySelect(MethodView):
         return SpeciesService.family_select(search)
 
 
-@specie_bp.route("/select")
+@specie_bp.route("/options/species")
 class SpeciesSelect(MethodView):
     @specie_bp.response(200, SpeciesSelectSchema(many=True))
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
@@ -149,7 +128,7 @@ class SpeciesSelect(MethodView):
             return bilingual_response(exc.status, exc.pt, exc.en)
 
 
-@specie_bp.route("/domains/select")
+@specie_bp.route("/options/domains")
 class SpeciesDomainsSelect(MethodView):
     @specie_bp.response(200, DomainSelectSchema(many=True))
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
@@ -163,56 +142,27 @@ class SpeciesDomainsSelect(MethodView):
             return bilingual_response(exc.status, exc.pt, exc.en)
 
 
-@specie_bp.route("/distributions/select")
+@specie_bp.route("/options/distributions")
 class SpeciesDistributionsSelect(MethodView):
     @specie_bp.response(200, DistributionSchema(many=True))
     def get(self):
         return SpeciesService.distributions_select()
 
 
-@specie_bp.route("/outdated")
-class SpeciesOutdated(MethodView):
-    @require_curator_or_admin
-    @specie_bp.response(200, SpeciesOutdatedPaginationSchema)
-    @specie_bp.alt_response(400, description="Parâmetros inválidos")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    def get(self):
-        page = request.args.get("page", type=int)
-        per_page = request.args.get("per_page", type=int)
-        try:
-            return SpeciesService.list_outdated(page, per_page)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
 @specie_bp.route("/<int:species_id>")
-class UpdateSpecies(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesPatchRequestSchema, location="json")
+class SpeciesDetail(MethodView):
     @specie_bp.response(200, SpeciesDetailSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @specie_bp.alt_response(400, description="Parâmetros inválidos")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
-    def patch(self, payload, species_id: int):
+    def get(self, species_id: int):
         try:
-            return SpeciesService.update(species_id, payload)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-    @require_curator_or_admin
-    @specie_bp.response(204)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie não encontrada")
-    def delete(self, species_id: int):
-        try:
-            SpeciesService.delete(species_id)
-            return None
+            is_visible = _parse_optional_bool_query("is_visible")
+            return SpeciesService.get(str(species_id), is_visible=is_visible)
         except AppError as exc:
             return bilingual_response(exc.status, exc.pt, exc.en)
 
 
-@specie_bp.route("/<string:species>")
+@specie_bp.route("/by-name/<path:species>")
 class GetSpecies(MethodView):
     @specie_bp.response(200, SpeciesDetailSchema)
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
@@ -225,244 +175,17 @@ class GetSpecies(MethodView):
             return bilingual_response(exc.status, exc.pt, exc.en)
 
 
-@specie_bp.route("/<int:species_id>/photos/upload-url")
-class SpeciesPhotoUploadUrl(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesPhotoUploadUrlPayloadSchema, location="json")
-    @specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie não encontrada")
-    def post(self, payload, species_id: int):
-        try:
-            return SpeciesPhotoService.generate_upload_url(
-                species_id=species_id,
-                filename=payload["filename"],
-                mime_type=payload["mime_type"],
-                size_bytes=payload["size_bytes"],
-            )
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<int:species_id>/photos")
-class SpeciesPhotos(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesPhotoCreateRequestSchema, location="json")
-    @specie_bp.response(201, SpeciesPhotoCreateResponseSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie não encontrada")
-    def post(self, payload, species_id: int):
-        try:
-            return SpeciesPhotoService.create_photo(species_id=species_id, payload=payload)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<int:species_id>/photos/<string:photo_id>")
-class SpeciesPhotoDetail(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesPhotoUpdateRequestSchema, location="json")
-    @specie_bp.response(200, SpeciesPhotoCreateResponseSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
-    def patch(self, payload, species_id: int, photo_id: str):
-        try:
-            return SpeciesPhotoService.update_photo(
-                species_id=species_id,
-                photo_id=photo_id,
-                payload=payload,
-            )
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-    @require_curator_or_admin
-    @specie_bp.response(204)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie/foto não encontrada")
-    def delete(self, species_id: int, photo_id: str):
-        try:
-            SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
-            return None
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<int:species_id>/references/associate")
-class SpeciesReferenceAssociate(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(ReferenceAssociateExistingSchema, location="json")
-    @specie_bp.response(201, ReferenceSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
-    def post(self, payload, species_id: int):
-        """Associate an already-existing reference to a species."""
-        try:
-            return SpeciesReferenceService.associate_existing(
-                species_id=species_id,
-                reference_id=payload["reference_id"],
-            ), 201
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<int:species_id>/references")
-class SpeciesReferences(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(ReferenceCreateAndAssociateSchema, location="json")
-    @specie_bp.response(201, ReferenceSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie não encontrada")
-    def post(self, payload, species_id: int):
-        """Create a new reference and associate it to a species."""
-        try:
-            return SpeciesReferenceService.create_and_associate(
-                species_id=species_id,
-                apa=payload.get("apa"),
-                doi=payload.get("doi"),
-                url=payload.get("url"),
-            ), 201
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<int:species_id>/references/<int:reference_id>")
-class SpeciesReferenceDetail(MethodView):
-    @require_curator_or_admin
-    @specie_bp.response(204)
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
-    def delete(self, species_id: int, reference_id: int):
-        """Disassociate a reference from a species (and delete it if orphaned)."""
-        try:
-            SpeciesReferenceService.disassociate(
-                species_id=species_id,
-                reference_id=reference_id,
-            )
-            return None
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/requests")
-class SpeciesChangeRequests(MethodView):
-    @specie_bp.arguments(SpeciesChangeRequestCreateSchema)
-    @specie_bp.response(201, SpeciesChangeRequestSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    def post(self, payload):
-        verify_jwt_in_request(optional=True)
-        identity = None
-        if get_jwt():
-            identity = get_jwt_identity()
-
-        try:
-            return SpeciesChangeRequestService.create_request(payload, identity)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-    @require_curator_or_admin
-    @specie_bp.response(200, SpeciesChangeRequestPaginationSchema)
-    @specie_bp.alt_response(400, description="Parâmetros inválidos")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    def get(self):
-        status = request.args.get("status", type=str)
-        page = request.args.get("page", type=int)
-        per_page = request.args.get("per_page", type=int)
-
-        try:
-            return SpeciesChangeRequestService.list_requests(status, page, per_page)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/requests/<string:request_id>")
-class GetSpeciesChangeRequest(MethodView):
-    @require_curator_or_admin
-    @specie_bp.response(200, SpeciesChangeRequestSchema)
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Solicitação não encontrada")
-    def get(self, request_id: str):
-        try:
-            return SpeciesChangeRequestService.get_request(request_id)
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/requests/upload-url")
-class SpeciesChangeRequestUploadUrl(MethodView):
-    @specie_bp.arguments(SpeciesPhotoUploadUrlRequestSchema, location="json")
-    @specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    def post(self, payload):
-        try:
-            return SpeciesChangeRequestService.generate_upload_url(
-                filename=payload["filename"],
-                mime_type=payload["mime_type"],
-                size_bytes=payload["size_bytes"],
-                species_id=payload.get("species_id"),
-            )
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/requests/cleanup-tmp")
-class CleanupSpeciesTmpUploads(MethodView):
-    @require_curator_or_admin
-    @specie_bp.response(200, SpeciesTmpCleanupResponseSchema)
-    @specie_bp.alt_response(400, description="Parâmetros inválidos")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    def post(self):
-        retention_days = request.args.get("retention_days", type=int)
-        dry_run = request.args.get("dry_run", default="true", type=str).lower() != "false"
-
-        try:
-            return SpeciesChangeRequestService.cleanup_tmp_objects(
-                retention_days=retention_days,
-                dry_run=dry_run,
-            )
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/requests/<string:request_id>/review")
-class ReviewSpeciesChangeRequest(MethodView):
-    @require_curator_or_admin
-    @specie_bp.arguments(SpeciesChangeRequestReviewSchema)
-    @specie_bp.response(200, SpeciesChangeRequestSchema)
-    @specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
-    @specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
-    @specie_bp.alt_response(404, description="Solicitação não encontrada")
-    def patch(self, payload, request_id: str):
-        identity = get_jwt_identity()
-
-        try:
-            return SpeciesChangeRequestService.review_request(
-                request_id=request_id,
-                reviewer_user_id=str(identity),
-                decision=payload.get("decision"),
-                review_note=payload.get("review_note"),
-                proposed_data_decision=payload.get("proposed_data_decision"),
-                proposed_data_fields=payload.get("proposed_data_fields") or [],
-                photo_decisions=payload.get("photos") or [],
-            )
-        except AppError as exc:
-            return bilingual_response(exc.status, exc.pt, exc.en)
-
-
-@specie_bp.route("/<string:species>/ncbi")
+@specie_bp.route("/<int:species_id>/ncbi")
+@specie_bp.route("/by-name/<path:species>/ncbi")
 class GetNCBISpeciesData(MethodView):
     @specie_bp.response(200)
     @specie_bp.alt_response(400, description="Parâmetros inválidos")
     @specie_bp.alt_response(404, description="Espécie não encontrada")
     @specie_bp.alt_response(502, description="Falha ao consultar serviço externo")
-    def get(self, species: str):
+    def get(self, species: str | None = None, species_id: int | None = None):
         try:
-            data, is_cached = NCBIService.get_data(species, include_cache_meta=True)
+            species_key = str(species_id) if species_id is not None else species
+            data, is_cached = NCBIService.get_data(species_key, include_cache_meta=True)
             return Response(
                 json.dumps(data, ensure_ascii=False, sort_keys=False),
                 status=200,
@@ -507,3 +230,183 @@ class SpeciesObservations(MethodView):
         CacheService.set(cache_key, body, ttl_seconds=cache_ttl)
 
         return Response(body, status=200, mimetype="application/json", headers={"X-Cache": "MISS"})
+
+
+@admin_specie_bp.route("")
+class AdminSpeciesCollection(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(SpeciesCreateRequestSchema, location="json")
+    @admin_specie_bp.response(201, SpeciesDetailSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def post(self, payload):
+        try:
+            return SpeciesService.create(payload)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/outdated")
+class SpeciesOutdated(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.response(200, SpeciesOutdatedPaginationSchema)
+    @admin_specie_bp.alt_response(400, description="Parâmetros inválidos")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    def get(self):
+        page = request.args.get("page", type=int)
+        per_page = request.args.get("per_page", type=int)
+        try:
+            return SpeciesService.list_outdated(page, per_page)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>")
+class AdminSpeciesDetail(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(SpeciesPatchRequestSchema, location="json")
+    @admin_specie_bp.response(200, SpeciesDetailSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie não encontrada")
+    def patch(self, payload, species_id: int):
+        try:
+            return SpeciesService.update(species_id, payload)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+    @require_curator_or_admin
+    @admin_specie_bp.response(204)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie não encontrada")
+    def delete(self, species_id: int):
+        try:
+            SpeciesService.delete(species_id)
+            return None
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/photo-upload-urls")
+class SpeciesPhotoUploadUrl(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(SpeciesPhotoUploadUrlPayloadSchema, location="json")
+    @admin_specie_bp.response(200, SpeciesPhotoUploadUrlResponseSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        try:
+            return SpeciesPhotoService.generate_upload_url(
+                species_id=species_id,
+                filename=payload["filename"],
+                mime_type=payload["mime_type"],
+                size_bytes=payload["size_bytes"],
+            )
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/photos")
+class SpeciesPhotos(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(SpeciesPhotoCreateRequestSchema, location="json")
+    @admin_specie_bp.response(201, SpeciesPhotoCreateResponseSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        try:
+            return SpeciesPhotoService.create_photo(species_id=species_id, payload=payload)
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/photos/<string:photo_id>")
+class SpeciesPhotoDetail(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(SpeciesPhotoUpdateRequestSchema, location="json")
+    @admin_specie_bp.response(200, SpeciesPhotoCreateResponseSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie/foto não encontrada")
+    def patch(self, payload, species_id: int, photo_id: str):
+        try:
+            return SpeciesPhotoService.update_photo(
+                species_id=species_id,
+                photo_id=photo_id,
+                payload=payload,
+            )
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+    @require_curator_or_admin
+    @admin_specie_bp.response(204)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie/foto não encontrada")
+    def delete(self, species_id: int, photo_id: str):
+        try:
+            SpeciesPhotoService.delete_photo(species_id=species_id, photo_id=photo_id)
+            return None
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/reference-associations")
+class SpeciesReferenceAssociate(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(ReferenceAssociateExistingSchema, location="json")
+    @admin_specie_bp.response(201, ReferenceSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
+    def post(self, payload, species_id: int):
+        """Associate an already-existing reference to a species."""
+        try:
+            return SpeciesReferenceService.associate_existing(
+                species_id=species_id,
+                reference_id=payload["reference_id"],
+            ), 201
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/references")
+class SpeciesReferences(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.arguments(ReferenceCreateAndAssociateSchema, location="json")
+    @admin_specie_bp.response(201, ReferenceSchema)
+    @admin_specie_bp.alt_response(400, description="Erro de validação/regra de negócio")
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie não encontrada")
+    def post(self, payload, species_id: int):
+        """Create a new reference and associate it to a species."""
+        try:
+            return SpeciesReferenceService.create_and_associate(
+                species_id=species_id,
+                apa=payload.get("apa"),
+                doi=payload.get("doi"),
+                url=payload.get("url"),
+            ), 201
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
+
+
+@admin_specie_bp.route("/<int:species_id>/references/<int:reference_id>")
+class SpeciesReferenceDetail(MethodView):
+    @require_curator_or_admin
+    @admin_specie_bp.response(204)
+    @admin_specie_bp.alt_response(403, description="Acesso permitido apenas para curadores/admins")
+    @admin_specie_bp.alt_response(404, description="Espécie ou referência não encontrada")
+    def delete(self, species_id: int, reference_id: int):
+        """Disassociate a reference from a species (and delete it if orphaned)."""
+        try:
+            SpeciesReferenceService.disassociate(
+                species_id=species_id,
+                reference_id=reference_id,
+            )
+            return None
+        except AppError as exc:
+            return bilingual_response(exc.status, exc.pt, exc.en)
